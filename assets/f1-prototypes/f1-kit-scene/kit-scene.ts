@@ -14,7 +14,6 @@
 import {
   Color,
   DirectionalLight,
-  Float32BufferAttribute,
   Group,
   HemisphereLight,
   Mesh,
@@ -26,7 +25,7 @@ import {
   Vector3,
 } from 'three/webgpu'
 
-import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, shade } from '../f1-kit-core/index.ts'
+import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, asphaltTexture, shade } from '../f1-kit-core/index.ts'
 import { createModel as createTyre } from '../f1-tyre/model.ts'
 import { createModel as createStack } from '../f1-tyre-stack/model.ts'
 import { createModel as createReel } from '../f1-hose-reel/model.ts'
@@ -150,10 +149,11 @@ export function createScene(): F1KitScene {
     live.push(instance)
   }
 
+  const asphaltMap = asphaltTexture(256)
   const asphaltMat = new MeshStandardMaterial({
     name: 'f1-kit / scene asphalt',
-    color: 0xffffff,
-    vertexColors: true,
+    color: shade(TOKEN.GRAPHITE_800, 0.16),
+    map: asphaltMap,
     roughness: 0.92,
     metalness: 0,
   })
@@ -171,6 +171,7 @@ export function createScene(): F1KitScene {
   })
   extras.push({
     dispose: () => {
+      asphaltMap.dispose()
       asphaltMat.dispose()
       apronMat.dispose()
       groundMat.dispose()
@@ -187,21 +188,7 @@ export function createScene(): F1KitScene {
 
   // Keep this *under* grid-box pads (top 6 mm) and SF chequer (top 8 mm).
   // At y=0.012 those tiles were buried and only the numbers poked through.
-  const roadGeo = new PlaneGeometry(ROAD_W, ROAD_LEN, 36, 110)
-  const roadPos = roadGeo.getAttribute('position')
-  const roadCol = new Float32Array(roadPos.count * 3)
-  for (let i = 0; i < roadPos.count; i++) {
-    const x = roadPos.getX(i)
-    const y = roadPos.getY(i)
-    const stone = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
-    const chip = Math.sin(x * 19.3 + y * 17.1) * 23456.789
-    const k = 0.22 + (stone - Math.floor(stone)) * 0.2 + (chip - Math.floor(chip)) * 0.1
-    roadCol[i * 3] = (52 + 38 * k) / 255
-    roadCol[i * 3 + 1] = (56 + 34 * k) / 255
-    roadCol[i * 3 + 2] = (60 + 30 * k) / 255
-  }
-  roadGeo.setAttribute('color', new Float32BufferAttribute(roadCol, 3))
-  const road = new Mesh(roadGeo, asphaltMat)
+  const road = new Mesh(new PlaneGeometry(ROAD_W, ROAD_LEN), asphaltMat)
   road.name = 'scene-asphalt'
   road.rotation.x = -Math.PI / 2
   road.position.set(ROAD_X, 0.001, ROAD_Z)
