@@ -240,17 +240,18 @@ export function createScene(): F1KitScene {
   // Spectator (+X): fence and stand wall. Fence runs the full asphalt.
   add(createCatchFence({ length: 200, height: 5 }), RIBBON_HALF + 3.4, ROAD_Z, ALONG)
   add(createCrowdFence({ length: 200 }), 18, ROAD_Z, ALONG)
-  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, -2 * STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, -STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, 0, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, STAND_PITCH, FACE_SPEC)
-  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, 2 * STAND_PITCH, FACE_SPEC)
-  add(createJumbotron(), 29, -2 * STAND_PITCH, FACE_SPEC)
-  add(createLedRibbon({ length: 8 }), 29, 2 * STAND_PITCH, FACE_SPEC)
+  add(createJumbotron(), 29, -STAND_PITCH, FACE_SPEC)
   add(createFloodlight({ height: 12 }), 30, 0)
   add(createPaHorn(), 28, 6, FACE_SPEC)
-  add(createFlagPole({ height: 6 }), 28, -28)
-  add(createCameraPlatform(), 28, -24)
+  add(createFlagPole({ height: 6 }), 28, -18)
+  add(createCameraPlatform(), 28, -14)
+  const stand2Z = 54
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z - STAND_PITCH / 2, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z + STAND_PITCH / 2, FACE_SPEC)
+  add(createLedRibbon({ length: 8 }), 29, stand2Z, FACE_SPEC)
 
   // MID — one gantry over the road, no stairs.
   add(createSectorGantry({ span: 18, sector: 2 }), 0, 36)
@@ -362,10 +363,10 @@ export function createPreview({ aspect, time }: { aspect: number; time?: number 
   scene.add(kit.root)
   lightScene(scene)
 
-  const camera = new PerspectiveCamera(34, aspect > 0 ? aspect : 1, 0.5, 420)
+  const camera = new PerspectiveCamera(38, aspect > 0 ? aspect : 1, 0.5, 420)
   camera.name = 'f1-kit / scene camera'
-  camera.position.set(16, 20, -40)
-  const focus = new Vector3(0, 1.0, 36)
+  camera.position.set(34, 28, -52)
+  const focus = new Vector3(0, 1.4, 32)
   camera.lookAt(focus)
   camera.updateProjectionMatrix()
   scene.add(camera)
