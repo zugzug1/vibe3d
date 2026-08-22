@@ -25,7 +25,7 @@ import {
   Vector3,
 } from 'three/webgpu'
 
-import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, shade } from '../f1-kit-core/index.ts'
+import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, RACE_CONTROL, TOKEN, TRUCK, shade } from '../f1-kit-core/index.ts'
 import { createModel as createTyre } from '../f1-tyre/model.ts'
 import { createModel as createStack } from '../f1-tyre-stack/model.ts'
 import { createModel as createReel } from '../f1-hose-reel/model.ts'
@@ -175,10 +175,10 @@ export function createScene(): F1KitScene {
     },
   })
 
-  const ground = new Mesh(new PlaneGeometry(88, 220), groundMat)
+  const ground = new Mesh(new PlaneGeometry(110, 220), groundMat)
   ground.name = 'scene-ground'
   ground.rotation.x = -Math.PI / 2
-  ground.position.set(-8, -0.02, ROAD_Z)
+  ground.position.set(-16, -0.02, ROAD_Z)
   ground.receiveShadow = true
   root.add(ground)
   extras.push({ dispose: () => { ground.geometry.dispose() } })
@@ -240,15 +240,17 @@ export function createScene(): F1KitScene {
   // Spectator (+X): fence and stand wall. Fence runs the full asphalt.
   add(createCatchFence({ length: 200, height: 5 }), RIBBON_HALF + 3.4, ROAD_Z, ALONG)
   add(createCrowdFence({ length: 200 }), 18, ROAD_Z, ALONG)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, -2 * STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, -STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, 0, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, STAND_PITCH, FACE_SPEC)
-  add(createJumbotron(), 29, -STAND_PITCH, FACE_SPEC)
-  add(createLedRibbon({ length: 8 }), 29, STAND_PITCH, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, 2 * STAND_PITCH, FACE_SPEC)
+  add(createJumbotron(), 29, -2 * STAND_PITCH, FACE_SPEC)
+  add(createLedRibbon({ length: 8 }), 29, 2 * STAND_PITCH, FACE_SPEC)
   add(createFloodlight({ height: 12 }), 30, 0)
   add(createPaHorn(), 28, 6, FACE_SPEC)
-  add(createFlagPole({ height: 6 }), 28, -18)
-  add(createCameraPlatform(), 28, -14)
+  add(createFlagPole({ height: 6 }), 28, -28)
+  add(createCameraPlatform(), 28, -24)
 
   // MID — one gantry over the road, no stairs.
   add(createSectorGantry({ span: 18, sector: 2 }), 0, 36)
@@ -288,6 +290,30 @@ export function createScene(): F1KitScene {
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
+  const teamX = GARAGE_X - 18 - RACE_CONTROL.depth / 2 - TRUCK.width / 2 - 2
+  const teamPitch = TRUCK.length + 1.5
+  const teamRow = [
+    { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
+    { kind: 'curtainside', paint: TOKEN.SHELL_200, legend: 'STEEL', number: '63', paper: TOKEN.SHELL_200, ink: TOKEN.GRAPHITE_800, accent: TOKEN.GRAPHITE_800 },
+    { kind: 'reefer', paint: TOKEN.INK_900, legend: 'NAVY', number: '1', paper: TOKEN.SHELL_050, ink: TOKEN.INK_900, accent: TOKEN.AMBER_400 },
+    { kind: 'box', paint: TOKEN.ORANGE_500, legend: 'CITRUS', number: '4', paper: TOKEN.ORANGE_500, ink: TOKEN.INK_950, accent: TOKEN.INK_950 },
+  ] as const
+  for (let i = 0; i < teamRow.length; i++) {
+    const spec = teamRow[i]!
+    const teamTruck = createServiceTruck({
+      kind: spec.kind,
+      lamps: true,
+      wheelRpm: 0,
+      paint: spec.paint,
+      legend: spec.legend,
+      number: spec.number,
+      paper: spec.paper,
+      ink: spec.ink,
+      accent: spec.accent,
+    })
+    teamTruck.setGround(ground)
+    add(teamTruck, teamX, 40 + (i - 1.5) * teamPitch, FACE_PIT)
+  }
   add(createWeighbridge(), GARAGE_X - 8, 8, FACE_PIT)
   add(createParcFerme(), GARAGE_X - 12, 2, FACE_PIT)
   add(createMedicalPost(), GARAGE_X - 20, 12)

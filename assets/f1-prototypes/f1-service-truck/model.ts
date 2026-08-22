@@ -65,6 +65,12 @@ export interface F1ServiceTruckConfig {
   livery: FasciaStyle
   lamps: boolean
   wheelRpm: number
+  paint: number
+  legend: string
+  number: string
+  paper: number
+  ink: number
+  accent: number
 }
 
 export interface F1ServiceTruckOptions extends Partial<F1ServiceTruckConfig> {
@@ -109,6 +115,21 @@ const defaults: F1ServiceTruckConfig = {
   livery: 'stamp',
   lamps: true,
   wheelRpm: 0,
+  paint: 0x0a0a0c,
+  legend: 'TEAM',
+  number: DRIVER.number,
+  paper: 0xf2f4f6,
+  ink: 0x0c0c0e,
+  accent: 0xf8f8fa,
+}
+
+function splitHex(hex: number): [number, number, number] {
+  return [(hex >> 16) & 255, (hex >> 8) & 255, hex & 255]
+}
+
+function clampHex(value: number, fallback: number): number {
+  if (!Number.isFinite(value)) return fallback
+  return value >>> 0 & 0xffffff
 }
 
 /** Rounded-rect ring in YZ at X — same width at belt and roof (not a Semi teardrop). */
@@ -147,6 +168,12 @@ function clampConfig(config: F1ServiceTruckConfig): void {
   config.livery = isFasciaStyle(config.livery) ? config.livery : 'stamp'
   config.lamps = Boolean(config.lamps)
   config.wheelRpm = Math.max(0, config.wheelRpm)
+  config.paint = clampHex(config.paint, 0x0a0a0c)
+  config.paper = clampHex(config.paper, 0xf2f4f6)
+  config.ink = clampHex(config.ink, 0x0c0c0e)
+  config.accent = clampHex(config.accent, 0xf8f8fa)
+  config.legend = String(config.legend ?? '').replace(/[^0-9A-Za-z ]/g, '').slice(0, 8).toUpperCase()
+  config.number = String(config.number ?? '').replace(/[^0-9A-Za-z]/g, '').slice(0, 3).toUpperCase() || DRIVER.number
 }
 
 /** Solid of revolution about +Z (the axle) from `[radius, z]` samples. */
@@ -291,6 +318,12 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
     livery: options.livery ?? defaults.livery,
     lamps: options.lamps ?? defaults.lamps,
     wheelRpm: options.wheelRpm ?? defaults.wheelRpm,
+    paint: options.paint ?? defaults.paint,
+    legend: options.legend ?? defaults.legend,
+    number: options.number ?? defaults.number,
+    paper: options.paper ?? defaults.paper,
+    ink: options.ink ?? defaults.ink,
+    accent: options.accent ?? defaults.accent,
   }
   clampConfig(config)
 
@@ -303,7 +336,7 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
   const ownsCab = options.materials?.cab === undefined
   const cabPaint = options.materials?.cab ?? new MeshPhysicalMaterial({
     name: 'f1-kit / cab paint',
-    color: 0x0a0a0c,
+    color: config.paint,
     metalness: 0.28,
     roughness: 0.22,
     clearcoat: 1,
@@ -939,8 +972,11 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
     rear.translate(boxX1 + CLEAR * 2, yBot + cargoH / 2, 0)
     if (ownsLivery) {
       const tex = truckLiveryTexture({
-        number: DRIVER.number,
-        legend: config.livery === 'blank' ? '' : 'TEAM',
+        number: config.number,
+        legend: config.livery === 'blank' ? '' : config.legend,
+        paper: splitHex(config.paper),
+        ink: splitHex(config.ink),
+        accent: splitHex(config.accent),
       })
       textures.push(tex)
       const mat = new MeshStandardMaterial({
@@ -975,9 +1011,18 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
       if (patch.boxLength !== undefined) { config.boxLength = patch.boxLength; dirty = true }
       if (patch.axles !== undefined) { config.axles = patch.axles; dirty = true }
       if (patch.livery !== undefined) { config.livery = patch.livery; dirty = true }
+      if (patch.paint !== undefined) { config.paint = patch.paint; dirty = true }
+      if (patch.legend !== undefined) { config.legend = patch.legend; dirty = true }
+      if (patch.number !== undefined) { config.number = patch.number; dirty = true }
+      if (patch.paper !== undefined) { config.paper = patch.paper; dirty = true }
+      if (patch.ink !== undefined) { config.ink = patch.ink; dirty = true }
+      if (patch.accent !== undefined) { config.accent = patch.accent; dirty = true }
       if (patch.wheelRpm !== undefined) config.wheelRpm = patch.wheelRpm
       if (patch.lamps !== undefined) config.lamps = patch.lamps
       clampConfig(config)
+      if (ownsCab) {
+        cabPaint.color.set(config.paint)
+      }
       if (dirty) rebuild()
       else {
         applySpin()

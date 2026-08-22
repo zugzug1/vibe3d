@@ -554,24 +554,28 @@ export function sponsorWallTexture(options: {
   return finishStamp(data, w, h)
 }
 
-/** Black-to-white trailer swoop with an unbranded TEAM disc. No Cadillac / DAF marks. */
+/** Trailer swoop with an unbranded TEAM disc. No Cadillac / DAF marks. */
 export function truckLiveryTexture(options: {
   readonly width?: number
   readonly height?: number
   readonly number?: string
   readonly legend?: string
+  readonly paper?: readonly [number, number, number]
+  readonly ink?: readonly [number, number, number]
+  readonly accent?: readonly [number, number, number]
 } = {}): DataTexture {
   const w = options.width ?? 1024
   const h = options.height ?? 256
   const data = new Uint8Array(w * h * 4)
-  const black: [number, number, number] = [12, 12, 14]
-  const white: [number, number, number] = [242, 244, 246]
+  const ink = options.ink ?? [12, 12, 14]
+  const paper = options.paper ?? [242, 244, 246]
+  const accent = options.accent ?? [248, 248, 250]
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const u = x / w
       const v = y / h
       const split = 0.40 + (v - 0.5) * 0.58
-      const rgb = u > split ? white : black
+      const rgb = u > split ? paper : ink
       put(data, w, x, y, rgb[0], rgb[1], rgb[2])
     }
   }
@@ -582,17 +586,19 @@ export function truckLiveryTexture(options: {
   for (let y = cy - outer; y <= cy + outer; y++) {
     for (let x = cx - outer; x <= cx + outer; x++) {
       const d = Math.hypot(x - cx, y - cy)
-      if (d <= outer && d >= inner) put(data, w, x, y, 248, 248, 250)
+      if (d <= outer && d >= inner) put(data, w, x, y, accent[0], accent[1], accent[2])
     }
   }
   const number = (options.number ?? '11').replace(/[^0-9A-Za-z]/g, '').slice(0, 3).toUpperCase() || '11'
   const legend = (options.legend ?? 'TEAM').replace(/[^0-9A-Za-z ]/g, '').slice(0, 8).toUpperCase()
   const nCell = 12
   const nW = number.length * glyphAdvance(nCell) - Math.max(4, Math.round(nCell * 0.4))
-  writeGlyphWord(data, w, Math.max(8, cx - Math.round(nW / 2)), cy - Math.round(5 * nCell / 2), number, [248, 248, 250], nCell)
+  const numberInk: [number, number, number] = ink[0] + ink[1] + ink[2] > 360 ? [16, 16, 18] : [248, 248, 250]
+  writeGlyphWord(data, w, Math.max(8, cx - Math.round(nW / 2)), cy - Math.round(5 * nCell / 2), number, numberInk, nCell)
   if (legend) {
     const lCell = 5
-    writeGlyphWord(data, w, Math.round(w * 0.62), Math.round(h * 0.38), legend, [16, 16, 18], lCell)
+    const legendInk: [number, number, number] = paper[0] + paper[1] + paper[2] > 360 ? [16, 16, 18] : [248, 248, 250]
+    writeGlyphWord(data, w, Math.round(w * 0.62), Math.round(h * 0.38), legend, legendInk, lCell)
   }
   return finishStamp(data, w, h)
 }
