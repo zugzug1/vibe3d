@@ -5,10 +5,10 @@
  *
  *   END   tunnel · stairs/bridge · armco/jersey/pit-wall (barriers live here)
  *   MID   empty asphalt + kerb/fence the full length · sector gantry only
- *   START grid / SF / lights · grandstands | ribbon | clear pit apron | garages
+ *   START grid / SF / lights · grandstands | ribbon | pit wall | pit lane | garages
  *
- * Stairs and runoff barriers are at the far end. The pit apron in front of
- * the garage doors stays clear. Every kit id appears at least once.
+ * Pit wall runs the garage frontage. One pit gantry hangs over each bay.
+ * Every kit id appears at least once.
  */
 
 import {
@@ -135,6 +135,8 @@ const GARAGE_X = DOOR_X - GARAGE.depth / 2
 const WALL_X = -(RIBBON_HALF + 0.6 + PIT_WALL.depth / 2)
 const TOOL_X = DOOR_X + 0.55
 const EDGE_X = RIBBON_HALF + 2.35
+const BAYS = 6
+const GARAGE_SPAN = BAYS * GARAGE_BAY_PITCH
 
 export function createScene(): F1KitScene {
   const root = new Group()
@@ -167,11 +169,18 @@ export function createScene(): F1KitScene {
     roughness: 0.96,
     metalness: 0,
   })
+  const paintMat = new MeshStandardMaterial({
+    name: 'f1-kit / scene pit paint',
+    color: TOKEN.CYAN_400,
+    roughness: 0.88,
+    metalness: 0,
+  })
   extras.push({
     dispose: () => {
       asphaltMat.dispose()
       apronMat.dispose()
       groundMat.dispose()
+      paintMat.dispose()
     },
   })
 
@@ -201,7 +210,15 @@ export function createScene(): F1KitScene {
   root.add(apron)
   extras.push({ dispose: () => { apron.geometry.dispose() } })
 
-  // START — grid, SF, lights. Pit apron in front of the garages stays clear.
+  const paint = new Mesh(new PlaneGeometry(2.2, GARAGE_SPAN + 8), paintMat)
+  paint.name = 'scene-pit-paint'
+  paint.rotation.x = -Math.PI / 2
+  paint.position.set(-(RIBBON_HALF + 1.1), 0.003, 0)
+  paint.receiveShadow = true
+  root.add(paint)
+  extras.push({ dispose: () => { paint.geometry.dispose() } })
+
+  // START — grid, SF, lights.
   add(createGridBox({ index: 1, pad: false, width: RIBBON_W }), 0, -8)
   add(createGridBox({ index: 2, pad: false, width: RIBBON_W }), 0, 0)
   add(createGridBox({ index: 3, pad: false, width: RIBBON_W }), 0, 8)
@@ -223,9 +240,13 @@ export function createScene(): F1KitScene {
   add(createGravelTrap({ modules: 8 }), 16, 18, ALONG)
   add(createGravelTrap({ modules: 8 }), 16, END_Z - 10, ALONG)
 
-  // Pit (−X): garage + tools on the door line. No wall/barriers on this apron.
-  add(createGarageBox({ count: 3, number: '11', legend: 'CHECO' }), GARAGE_X, 0, FACE_PIT)
-  add(createPitGantry({ span: 5, height: 2.5 }), TOOL_X - 2.2, END_Z)
+  // Pit (−X): garage, pit wall, per-bay gantries, tools on the door line.
+  add(createGarageBox({ count: BAYS, number: '11', legend: 'CHECO' }), GARAGE_X, 0, FACE_PIT)
+  add(createPitWall({ bays: BAYS, labels: ['11', '12', '13', '14', '15', '16'] }), WALL_X, 0, FACE_SPEC)
+  for (let i = 0; i < BAYS; i++) {
+    const z = -GARAGE_SPAN / 2 + (i + 0.5) * GARAGE_BAY_PITCH
+    add(createPitGantry({ span: 5, height: 2.5 }), DOOR_X + 2.6, z)
+  }
   add(createLollipop(), TOOL_X - 1.6, -GARAGE_BAY_PITCH + 1.4)
   add(createPitBoard(), TOOL_X - 1.4, -GARAGE_BAY_PITCH + 2.6)
   add(createStack(), TOOL_X, -GARAGE_BAY_PITCH - 1.6)
@@ -249,8 +270,9 @@ export function createScene(): F1KitScene {
   add(createFlagPole({ height: 6 }), 28, -18)
   add(createCameraPlatform(), 28, -14)
   const stand2Z = 54
-  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z - STAND_PITCH / 2, FACE_SPEC)
-  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z + STAND_PITCH / 2, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z - STAND_PITCH, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z + STAND_PITCH, FACE_SPEC)
   add(createLedRibbon({ length: 8 }), 29, stand2Z, FACE_SPEC)
 
   // MID — one gantry over the road, no stairs.
@@ -291,7 +313,8 @@ export function createScene(): F1KitScene {
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
-  const teamX = -(RIBBON_HALF + 0.2 + TRUCK.width / 2)
+  // Track-side of the pit wall, centred on the garage (Zandvoort pit photo).
+  const teamX = WALL_X + PIT_WALL.depth / 2 + 0.25 + TRUCK.width / 2
   const teamPitch = TRUCK.length + 1.5
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
@@ -313,7 +336,7 @@ export function createScene(): F1KitScene {
       accent: spec.accent,
     })
     teamTruck.setGround(ground)
-    add(teamTruck, teamX, 40 + (i - 1.5) * teamPitch, FACE_PIT)
+    add(teamTruck, teamX, (i - 1.5) * teamPitch, FACE_PIT)
   }
   add(createWeighbridge(), GARAGE_X - 8, 8, FACE_PIT)
   add(createParcFerme(), GARAGE_X - 12, 2, FACE_PIT)
@@ -363,10 +386,11 @@ export function createPreview({ aspect, time }: { aspect: number; time?: number 
   scene.add(kit.root)
   lightScene(scene)
 
-  const camera = new PerspectiveCamera(38, aspect > 0 ? aspect : 1, 0.5, 420)
+  const camera = new PerspectiveCamera(42, aspect > 0 ? aspect : 1, 0.5, 420)
   camera.name = 'f1-kit / scene camera'
-  camera.position.set(34, 28, -52)
-  const focus = new Vector3(0, 1.4, 32)
+  // Looking +Z down the pit: garages (−X) sit on the right of frame.
+  camera.position.set(-10, 12, -38)
+  const focus = new Vector3(-14, 1.2, 10)
   camera.lookAt(focus)
   camera.updateProjectionMatrix()
   scene.add(camera)
