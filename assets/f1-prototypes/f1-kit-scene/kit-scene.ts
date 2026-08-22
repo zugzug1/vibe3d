@@ -25,7 +25,7 @@ import {
   Vector3,
 } from 'three/webgpu'
 
-import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, RACE_CONTROL, TOKEN, TRUCK, shade } from '../f1-kit-core/index.ts'
+import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, TRUCK, shade } from '../f1-kit-core/index.ts'
 import { createModel as createTyre } from '../f1-tyre/model.ts'
 import { createModel as createStack } from '../f1-tyre-stack/model.ts'
 import { createModel as createReel } from '../f1-hose-reel/model.ts'
@@ -219,7 +219,7 @@ export function createScene(): F1KitScene {
   add(createSlotDrain({ modules: 40 }), -(RIBBON_HALF - 0.9), 80, ALONG)
   add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.0, 8, ALONG)
   add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.0, 84, ALONG)
-  add(createAstroturf({ modules: 70 }), -(RIBBON_HALF + 1.0), 12, ALONG)
+  add(createAstroturf({ modules: 24 }), -(RIBBON_HALF + 1.0), -28, ALONG)
   add(createGravelTrap({ modules: 8 }), 16, 18, ALONG)
   add(createGravelTrap({ modules: 8 }), 16, END_Z - 10, ALONG)
 
@@ -290,7 +290,7 @@ export function createScene(): F1KitScene {
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
-  const teamX = GARAGE_X - 18 - RACE_CONTROL.depth / 2 - TRUCK.width / 2 - 2
+  const teamX = -(RIBBON_HALF + 0.2 + TRUCK.width / 2)
   const teamPitch = TRUCK.length + 1.5
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
