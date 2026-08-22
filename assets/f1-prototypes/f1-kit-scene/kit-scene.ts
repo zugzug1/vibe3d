@@ -166,7 +166,7 @@ export function createScene(): F1KitScene {
   })
   const groundMat = new MeshStandardMaterial({
     name: 'f1-kit / scene ground',
-    color: shade(TOKEN.DUST_300, -0.62),
+    color: shade(TOKEN.DUST_300, -0.28),
     roughness: 0.96,
     metalness: 0,
   })

@@ -93,12 +93,12 @@ export function asphaltTexture(size = 256): DataTexture {
       const stone = hash(x * 0.37, y * 0.41)
       const chip = hash(x * 1.9, y * 1.7)
       const seam = Math.abs(Math.sin((x / n) * Math.PI * 6)) < 0.012 ? 0.05 : 0
-      const k = 0.38 + stone * 0.16 + chip * 0.08 - seam
+      const k = 0.28 + stone * 0.14 + chip * 0.08 - seam
       put(
         data, n, x, y,
-        Math.round(36 + 52 * k),
-        Math.round(40 + 48 * k),
-        Math.round(44 + 42 * k),
+        Math.round(16 + 22 * k),
+        Math.round(18 + 20 * k),
+        Math.round(20 + 18 * k),
       )
     }
   }
