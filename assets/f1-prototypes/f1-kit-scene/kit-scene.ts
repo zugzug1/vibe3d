@@ -196,9 +196,9 @@ export function createScene(): F1KitScene {
     const stone = Math.sin(x * 127.1 + y * 311.7) * 43758.5453
     const chip = Math.sin(x * 19.3 + y * 17.1) * 23456.789
     const k = 0.22 + (stone - Math.floor(stone)) * 0.2 + (chip - Math.floor(chip)) * 0.1
-    roadCol[i * 3] = (14 + 26 * k) / 255
-    roadCol[i * 3 + 1] = (16 + 24 * k) / 255
-    roadCol[i * 3 + 2] = (18 + 22 * k) / 255
+    roadCol[i * 3] = (52 + 38 * k) / 255
+    roadCol[i * 3 + 1] = (56 + 34 * k) / 255
+    roadCol[i * 3 + 2] = (60 + 30 * k) / 255
   }
   roadGeo.setAttribute('color', new Float32BufferAttribute(roadCol, 3))
   const road = new Mesh(roadGeo, asphaltMat)
