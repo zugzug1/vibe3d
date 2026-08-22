@@ -25,7 +25,7 @@ import {
   Vector3,
 } from 'three/webgpu'
 
-import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, asphaltTexture, shade } from '../f1-kit-core/index.ts'
+import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, shade } from '../f1-kit-core/index.ts'
 import { createModel as createTyre } from '../f1-tyre/model.ts'
 import { createModel as createStack } from '../f1-tyre-stack/model.ts'
 import { createModel as createReel } from '../f1-hose-reel/model.ts'
@@ -149,11 +149,9 @@ export function createScene(): F1KitScene {
     live.push(instance)
   }
 
-  const asphaltMap = asphaltTexture(256)
   const asphaltMat = new MeshStandardMaterial({
     name: 'f1-kit / scene asphalt',
     color: shade(TOKEN.GRAPHITE_800, 0.16),
-    map: asphaltMap,
     roughness: 0.92,
     metalness: 0,
   })
@@ -171,7 +169,6 @@ export function createScene(): F1KitScene {
   })
   extras.push({
     dispose: () => {
-      asphaltMap.dispose()
       asphaltMat.dispose()
       apronMat.dispose()
       groundMat.dispose()
