@@ -38,6 +38,7 @@ export {
   lampLensTexture,
   paintedShellTexture,
   roofSheetTexture,
+  asphaltTexture,
   marshalPlateTexture,
   daisNumberTexture,
   fasciaTexture,

@@ -26,6 +26,8 @@ type Slot = 'pad' | 'plate'
 
 export interface F1GridBoxConfig {
   index: number
+  /** When false, only the painted stall sits on the host asphalt. */
+  pad: boolean
 }
 
 export interface F1GridBoxOptions extends Partial<F1GridBoxConfig> {
@@ -43,7 +45,7 @@ export interface F1GridBoxInstance {
   dispose(): void
 }
 
-const defaults: F1GridBoxConfig = { index: 1 }
+const defaults: F1GridBoxConfig = { index: 1, pad: true }
 const W = GRID_BOX.width
 const D = GRID_BOX.length
 const THICK = 0.01
@@ -52,6 +54,7 @@ const LINE = 0.1
 export function createModel(options: F1GridBoxOptions = {}): F1GridBoxInstance {
   const config: F1GridBoxConfig = {
     index: Math.max(1, Math.round(options.index ?? defaults.index)),
+    pad: options.pad ?? defaults.pad,
   }
 
   const bundle = acquireF1Materials()
@@ -97,11 +100,13 @@ export function createModel(options: F1GridBoxOptions = {}): F1GridBoxInstance {
 
   const rebuild = (): void => {
     releaseGenerated()
-    const asphalt = bevelBox(W, 0.006, D, 0.001)
-    asphalt.translate(0, 0.003, 0)
-    emit('pad', asphalt, pad, 'asphalt', kit.ink)
+    if (config.pad) {
+      const asphalt = bevelBox(W, 0.006, D, 0.001)
+      asphalt.translate(0, 0.003, 0)
+      emit('pad', asphalt, pad, 'asphalt', kit.ink)
+    }
 
-    const y = 0.006 + THICK / 2
+    const y = (config.pad ? 0.006 : 0.002) + THICK / 2
     const bars: BufferGeometry[] = []
     bars.push(bevelBox(W, THICK, LINE, 0.001).translate(0, y, D / 2 - LINE / 2))
     bars.push(bevelBox(W, THICK, LINE, 0.001).translate(0, y, -D / 2 + LINE / 2))
@@ -138,6 +143,7 @@ export function createModel(options: F1GridBoxOptions = {}): F1GridBoxInstance {
     getConfig: () => ({ ...config }),
     configure(patch) {
       if (patch.index !== undefined) config.index = Math.max(1, Math.round(patch.index))
+      if (patch.pad !== undefined) config.pad = patch.pad
       rebuild()
     },
     setMaterial(slot, material) {

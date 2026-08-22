@@ -84,6 +84,34 @@ export function roofSheetTexture(size = 128): DataTexture {
   return tex
 }
 
+/** Tarmac grain. Repeat in world metres on the scene ribbon so it reads kerb-to-kerb. */
+export function asphaltTexture(size = 256): DataTexture {
+  const n = Math.max(32, size)
+  const data = new Uint8Array(n * n * 4)
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const stone = hash(x * 0.37, y * 0.41)
+      const chip = hash(x * 1.9, y * 1.7)
+      const seam = Math.abs(Math.sin((x / n) * Math.PI * 6)) < 0.012 ? 0.05 : 0
+      const k = 0.38 + stone * 0.16 + chip * 0.08 - seam
+      put(
+        data, n, x, y,
+        Math.round(36 + 52 * k),
+        Math.round(40 + 48 * k),
+        Math.round(44 + 42 * k),
+      )
+    }
+  }
+  const tex = new DataTexture(data, n, n, RGBAFormat, UnsignedByteType)
+  tex.colorSpace = SRGBColorSpace
+  tex.wrapS = RepeatWrapping
+  tex.wrapT = RepeatWrapping
+  tex.magFilter = LinearFilter
+  tex.minFilter = LinearMipmapLinearFilter
+  tex.generateMipmaps = true
+  tex.needsUpdate = true
+  return tex
+}
 
 export const FASCIA_STYLES = ['stamp', 'fia', 'blank'] as const
 export type FasciaStyle = (typeof FASCIA_STYLES)[number]

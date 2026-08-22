@@ -25,7 +25,7 @@ import {
   Vector3,
 } from 'three/webgpu'
 
-import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, shade } from '../f1-kit-core/index.ts'
+import { GARAGE, GARAGE_BAY_PITCH, PIT_WALL, TOKEN, asphaltTexture, shade } from '../f1-kit-core/index.ts'
 import { createModel as createTyre } from '../f1-tyre/model.ts'
 import { createModel as createStack } from '../f1-tyre-stack/model.ts'
 import { createModel as createReel } from '../f1-hose-reel/model.ts'
@@ -149,9 +149,12 @@ export function createScene(): F1KitScene {
     live.push(instance)
   }
 
+  const asphaltMap = asphaltTexture(256)
+  asphaltMap.repeat.set(ROAD_W / 2, ROAD_LEN / 2)
   const asphaltMat = new MeshStandardMaterial({
     name: 'f1-kit / scene asphalt',
-    color: shade(TOKEN.GRAPHITE_800, 0.08),
+    color: 0xffffff,
+    map: asphaltMap,
     roughness: 0.92,
     metalness: 0,
   })
@@ -169,6 +172,7 @@ export function createScene(): F1KitScene {
   })
   extras.push({
     dispose: () => {
+      asphaltMap.dispose()
       asphaltMat.dispose()
       apronMat.dispose()
       groundMat.dispose()
@@ -202,9 +206,9 @@ export function createScene(): F1KitScene {
   extras.push({ dispose: () => { apron.geometry.dispose() } })
 
   // START — grid, SF, lights. Pit apron in front of the garages stays clear.
-  add(createGridBox({ index: 1 }), 0, -8)
-  add(createGridBox({ index: 2 }), 0, 0)
-  add(createGridBox({ index: 3 }), 0, 8)
+  add(createGridBox({ index: 1, pad: false }), 0, -8)
+  add(createGridBox({ index: 2, pad: false }), 0, 0)
+  add(createGridBox({ index: 3, pad: false }), 0, 8)
   add(createStartFinishLine({ kind: 'SF', width: RIBBON_W }), 0, -16, 0)
   add(createStartGantry({ span: 16, height: 7.2 }), 0, -18)
   // Standalone FIA panel is its own gantry (posts + beam). Do not perch it on the SF truss.
