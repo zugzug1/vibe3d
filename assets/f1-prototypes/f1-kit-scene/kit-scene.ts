@@ -119,8 +119,8 @@ const ALONG = Math.PI / 2
 
 const RIBBON_W = 12
 const RIBBON_HALF = RIBBON_W / 2
-/** Asphalt runs past both kerbs into the turf (18 m) so the grain reads kerb-to-kerb. Pit apron is a lighter pad to the doors. */
-const ROAD_W = 18
+/** Racing surface is the 12 m ribbon: SF chequer and kerbs share that width. Pit apron is a lighter pad to the doors. */
+const ROAD_W = RIBBON_W
 const ROAD_X = 0
 const ROAD_LEN = 220
 const ROAD_Z = 20
@@ -215,12 +215,14 @@ export function createScene(): F1KitScene {
   add(createChequeredFlag({ waving: true, windXZ: [0.9, -0.4] }), RIBBON_HALF + 0.55, -16, -0.35)
   add(createKerb({ modules: 100 }), RIBBON_HALF - 0.4, 4, ALONG)
   add(createKerb({ modules: 100 }), RIBBON_HALF - 0.4, 76, ALONG)
+  add(createKerb({ modules: 100 }), -(RIBBON_HALF - 0.4), 4, ALONG)
+  add(createKerb({ modules: 100 }), -(RIBBON_HALF - 0.4), 76, ALONG)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, 88, ALONG)
-  add(createSlotDrain({ modules: 50 }), -(RIBBON_HALF - 0.35), 0, ALONG)
-  add(createSlotDrain({ modules: 40 }), -(RIBBON_HALF - 0.35), 80, ALONG)
-  add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.5, 8, ALONG)
-  add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.5, 84, ALONG)
-  add(createAstroturf({ modules: 70 }), -(RIBBON_HALF + 1.5), 12, ALONG)
+  add(createSlotDrain({ modules: 50 }), -(RIBBON_HALF - 0.9), 0, ALONG)
+  add(createSlotDrain({ modules: 40 }), -(RIBBON_HALF - 0.9), 80, ALONG)
+  add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.0, 8, ALONG)
+  add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.0, 84, ALONG)
+  add(createAstroturf({ modules: 70 }), -(RIBBON_HALF + 1.0), 12, ALONG)
   add(createGravelTrap({ modules: 8 }), 16, 18, ALONG)
   add(createGravelTrap({ modules: 8 }), 16, END_Z - 10, ALONG)
 
