@@ -202,9 +202,9 @@ export function createScene(): F1KitScene {
   extras.push({ dispose: () => { apron.geometry.dispose() } })
 
   // START — grid, SF, lights. Pit apron in front of the garages stays clear.
-  add(createGridBox({ index: 1, pad: false }), 0, -8)
-  add(createGridBox({ index: 2, pad: false }), 0, 0)
-  add(createGridBox({ index: 3, pad: false }), 0, 8)
+  add(createGridBox({ index: 1, pad: false, width: RIBBON_W }), 0, -8)
+  add(createGridBox({ index: 2, pad: false, width: RIBBON_W }), 0, 0)
+  add(createGridBox({ index: 3, pad: false, width: RIBBON_W }), 0, 8)
   add(createStartFinishLine({ kind: 'SF', width: RIBBON_W }), 0, -16, 0)
   add(createStartGantry({ span: 16, height: 7.2 }), 0, -18)
   // Standalone FIA panel is its own gantry (posts + beam). Do not perch it on the SF truss.

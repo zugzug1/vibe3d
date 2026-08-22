@@ -28,6 +28,8 @@ export interface F1GridBoxConfig {
   index: number
   /** When false, only the painted stall sits on the host asphalt. */
   pad: boolean
+  /** Stall width in metres. Default is the FIA 2.7 m box. */
+  width: number
 }
 
 export interface F1GridBoxOptions extends Partial<F1GridBoxConfig> {
@@ -45,8 +47,7 @@ export interface F1GridBoxInstance {
   dispose(): void
 }
 
-const defaults: F1GridBoxConfig = { index: 1, pad: true }
-const W = GRID_BOX.width
+const defaults: F1GridBoxConfig = { index: 1, pad: true, width: GRID_BOX.width }
 const D = GRID_BOX.length
 const THICK = 0.01
 const LINE = 0.1
@@ -55,6 +56,7 @@ export function createModel(options: F1GridBoxOptions = {}): F1GridBoxInstance {
   const config: F1GridBoxConfig = {
     index: Math.max(1, Math.round(options.index ?? defaults.index)),
     pad: options.pad ?? defaults.pad,
+    width: Math.max(1, options.width ?? defaults.width),
   }
 
   const bundle = acquireF1Materials()
@@ -100,20 +102,21 @@ export function createModel(options: F1GridBoxOptions = {}): F1GridBoxInstance {
 
   const rebuild = (): void => {
     releaseGenerated()
+    const w = config.width
     if (config.pad) {
-      const asphalt = bevelBox(W, 0.006, D, 0.001)
+      const asphalt = bevelBox(w, 0.006, D, 0.001)
       asphalt.translate(0, 0.003, 0)
       emit('pad', asphalt, pad, 'asphalt', kit.ink)
     }
 
     const y = (config.pad ? 0.006 : 0.002) + THICK / 2
     const bars: BufferGeometry[] = []
-    bars.push(bevelBox(W, THICK, LINE, 0.001).translate(0, y, D / 2 - LINE / 2))
-    bars.push(bevelBox(W, THICK, LINE, 0.001).translate(0, y, -D / 2 + LINE / 2))
-    bars.push(bevelBox(LINE, THICK, D - LINE * 2, 0.001).translate(-W / 2 + LINE / 2, y, 0))
-    bars.push(bevelBox(LINE, THICK, D - LINE * 2, 0.001).translate(W / 2 - LINE / 2, y, 0))
+    bars.push(bevelBox(w, THICK, LINE, 0.001).translate(0, y, D / 2 - LINE / 2))
+    bars.push(bevelBox(w, THICK, LINE, 0.001).translate(0, y, -D / 2 + LINE / 2))
+    bars.push(bevelBox(LINE, THICK, D - LINE * 2, 0.001).translate(-w / 2 + LINE / 2, y, 0))
+    bars.push(bevelBox(LINE, THICK, D - LINE * 2, 0.001).translate(w / 2 - LINE / 2, y, 0))
     bars.push(bevelBox(0.05, THICK, D - LINE * 4, 0.001).translate(0, y, 0))
-    bars.push(bevelBox(W * 0.55, THICK, LINE, 0.001).translate(0, y, D / 2 - 1.15))
+    bars.push(bevelBox(w * 0.55, THICK, LINE, 0.001).translate(0, y, D / 2 - 1.15))
     emit('pad', mergeParts(bars, 'box'), pad, 'box')
 
     const face = new PlaneGeometry(1.35, 1.05)
@@ -144,6 +147,7 @@ export function createModel(options: F1GridBoxOptions = {}): F1GridBoxInstance {
     configure(patch) {
       if (patch.index !== undefined) config.index = Math.max(1, Math.round(patch.index))
       if (patch.pad !== undefined) config.pad = patch.pad
+      if (patch.width !== undefined) config.width = Math.max(1, patch.width)
       rebuild()
     },
     setMaterial(slot, material) {
