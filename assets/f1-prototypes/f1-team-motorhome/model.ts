@@ -1,6 +1,7 @@
 // f1-team-motorhome — assembled Cadillac / Schuler 2026 hospitality house.
 // 15 × 17 m, three storeys + slatted rooftop terrace. Floating stair in a
 // glazed atrium. Crest + wordmark are drawn stamps, not photo textures.
+// Interior is dressed from the official tour stills (see interior.ts).
 
 import {
   BufferGeometry,
@@ -32,6 +33,7 @@ import {
   shade,
   writeGlyphWord,
 } from '../f1-kit-core/index.ts'
+import { dressInterior, type InteriorLive, type InteriorMats } from './interior.ts'
 
 type Slot = 'shell' | 'glass' | 'deck'
 
@@ -63,9 +65,11 @@ const STOREYS = MOTORHOME.storeys
 const TERRACE = MOTORHOME.terrace
 const WALL = 0.22
 const ATRIUM_W = 4.2
+const REVEAL = 0.045
+const PERSIST = 7
 
 function crestTexture(): DataTexture {
-  const n = 128
+  const n = 256
   const data = new Uint8Array(n * n * 4)
   const gold: readonly [number, number, number] = [201, 168, 88]
   const ink: readonly [number, number, number] = [12, 14, 18]
@@ -75,35 +79,33 @@ function crestTexture(): DataTexture {
     data[i + 2] = ink[2]
     data[i + 3] = 255
   }
-  const cx = 64
-  const cy = 52
+  const cx = 128
+  const cy = 118
   for (let y = 0; y < n; y++) {
     for (let x = 0; x < n; x++) {
       const dx = x - cx
       const dy = y - cy
       const r = Math.hypot(dx, dy)
+      const a = Math.atan2(dy, dx)
       const i = (y * n + x) * 4
-      if (r > 28 && r < 34) {
-        const a = Math.atan2(dy, dx)
-        if (Math.floor(a * 7 + 8) % 2 === 0) {
-          data[i] = gold[0]
-          data[i + 1] = gold[1]
-          data[i + 2] = gold[2]
-        }
-      }
-      if (Math.abs(dx) < 12 && dy > -8 && dy < 18 && r < 22) {
+      const leaf = 58 + Math.sin(a * 14) * 6
+      if (r > leaf - 5 && r < leaf + 5) {
         data[i] = gold[0]
         data[i + 1] = gold[1]
         data[i + 2] = gold[2]
       }
-      if (Math.abs(dx) < 7 && dy > -2 && dy < 12 && r < 16) {
+      if (Math.abs(dx) < 28 && dy > -18 && dy < 36 && r < 44) {
+        data[i] = gold[0]
+        data[i + 1] = gold[1]
+        data[i + 2] = gold[2]
+      }
+      if (Math.abs(dx) < 16 && dy > -6 && dy < 24 && r < 32) {
         data[i] = ink[0]
         data[i + 1] = ink[1]
         data[i + 2] = ink[2]
       }
     }
   }
-  writeGlyphWord(data, n, 18, 100, 'CADILLAC', gold, 3)
   const tex = new DataTexture(data, n, n, RGBAFormat, UnsignedByteType)
   tex.colorSpace = SRGBColorSpace
   tex.magFilter = LinearFilter
@@ -111,6 +113,50 @@ function crestTexture(): DataTexture {
   tex.generateMipmaps = true
   tex.needsUpdate = true
   return tex
+}
+
+function wordmarkTexture(): DataTexture {
+  const n = 256
+  const data = new Uint8Array(n * n * 4)
+  const gold: readonly [number, number, number] = [201, 168, 88]
+  const ink: readonly [number, number, number] = [12, 14, 18]
+  for (let i = 0; i < data.length; i += 4) {
+    data[i] = ink[0]
+    data[i + 1] = ink[1]
+    data[i + 2] = ink[2]
+    data[i + 3] = 255
+  }
+  writeGlyphWord(data, n, 16, 100, 'CADILLAC', gold, 6)
+  const tex = new DataTexture(data, n, n, RGBAFormat, UnsignedByteType)
+  tex.colorSpace = SRGBColorSpace
+  tex.magFilter = LinearFilter
+  tex.minFilter = LinearMipmapLinearFilter
+  tex.generateMipmaps = true
+  tex.needsUpdate = true
+  return tex
+}
+
+/** Vertical Schuler panels along X or Z. Widths cycle by index, not a PRNG. */
+function paneledWall(
+  span: number,
+  height: number,
+  thick: number,
+  count: number,
+  along: 'x' | 'z',
+): BufferGeometry[] {
+  const parts: BufferGeometry[] = []
+  const scales = [1, 0.92, 1.06] as const
+  let cursor = -span / 2
+  for (let i = 0; i < count; i++) {
+    const remaining = count - i
+    const raw = (span - (cursor + span / 2)) / remaining
+    const pw = Math.min(raw - REVEAL, raw * scales[i % 3]!)
+    const mid = cursor + pw / 2
+    if (along === 'x') parts.push(bevelBox(pw, height, thick, 0.012).translate(mid, 0, 0))
+    else parts.push(bevelBox(thick, height, pw, 0.012).translate(0, 0, mid))
+    cursor += pw + REVEAL
+  }
+  return parts
 }
 
 export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorhomeInstance {
@@ -142,9 +188,36 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     roughness: 0.08,
     metalness: 0.42,
     transparent: true,
-    opacity: 0.72,
+    opacity: 0.38,
   })
-  extras.push(blackMat, creamMat, glassMat)
+  const woodMat = new MeshStandardMaterial({
+    name: 'f1-kit / motorhome wood',
+    color: shade(TOKEN.DUST_300, -0.28),
+    roughness: 0.68,
+    metalness: 0.04,
+  })
+  const stoneMat = new MeshStandardMaterial({
+    name: 'f1-kit / motorhome stone',
+    color: shade(TOKEN.DUST_300, -0.08),
+    roughness: 0.78,
+    metalness: 0.02,
+  })
+  const greyMat = new MeshStandardMaterial({
+    name: 'f1-kit / motorhome grey',
+    color: shade(TOKEN.SLATE_650, 0.12),
+    roughness: 0.82,
+    metalness: 0.02,
+  })
+  const fireMat = new MeshStandardMaterial({
+    name: 'f1-kit / motorhome fire',
+    color: TOKEN.ORANGE_500,
+    emissive: TOKEN.AMBER_400,
+    emissiveIntensity: 1.55,
+    roughness: 0.42,
+    metalness: 0,
+    toneMapped: false,
+  })
+  extras.push(blackMat, creamMat, glassMat, woodMat, stoneMat, greyMat, fireMat)
 
   const materialSlots: Record<Slot, Material> = {
     shell: options.materials?.shell ?? blackMat,
@@ -161,16 +234,27 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
 
   const generated: BufferGeometry[] = []
   const meshesBySlot: Record<Slot, Mesh[]> = { shell: [], glass: [], deck: [] }
+  const groups: Record<Slot, Group> = { shell, glass, deck }
+  const kitRoot = new Group()
+  kitRoot.name = 'interior-kit'
+  root.add(kitRoot)
+  const kitLive: InteriorLive[] = []
+
+  const releaseKit = (): void => {
+    for (const instance of kitLive) instance.dispose()
+    kitLive.length = 0
+  }
 
   const releaseGenerated = (): void => {
+    releaseKit()
     shell.clear(); glass.clear(); deck.clear()
     for (const geometry of generated) geometry.dispose()
     generated.length = 0
     for (const slot of Object.keys(meshesBySlot) as Slot[]) meshesBySlot[slot].length = 0
     for (const texture of textures) texture.dispose()
     textures.length = 0
-    for (let i = 3; i < extras.length; i++) extras[i]!.dispose()
-    extras.length = 3
+    for (let i = PERSIST; i < extras.length; i++) extras[i]!.dispose()
+    extras.length = PERSIST
   }
 
   const emit = (slot: Slot, geometry: BufferGeometry, group: Group, name: string, material?: Material): void => {
@@ -183,13 +267,23 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     group.add(mesh)
   }
 
+  const interiorMats = (): InteriorMats => ({
+    black: blackMat,
+    cream: creamMat,
+    glass: glassMat,
+    wood: woodMat,
+    stone: stoneMat,
+    grey: greyMat,
+    fire: fireMat,
+    kit: { graphite: kit.graphite, steel: kit.steel, ink: kit.ink, cobalt: kit.cobalt },
+  })
+
   const rebuild = (): void => {
     releaseGenerated()
     const w = config.width
     const d = config.depth
     const h = STOREYS * STOREY
-    const atriumX0 = -ATRIUM_W / 2
-    const atriumX1 = ATRIUM_W / 2
+    const wing = (w - ATRIUM_W) / 2 - WALL
 
     const plinth = bevelBox(w + 0.6, 0.18, d + 0.6, 0.02)
     plinth.translate(0, 0.09, 0)
@@ -200,20 +294,27 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     for (let s = 0; s < STOREYS; s++) {
       const y0 = s * STOREY
       const band = s === 1 ? light : dark
-      const left = bevelBox(WALL, STOREY - 0.04, d, 0.016)
-      left.translate(-(w / 2 - WALL / 2), y0 + STOREY / 2, 0)
-      const right = bevelBox(WALL, STOREY - 0.04, d, 0.016)
-      right.translate(w / 2 - WALL / 2, y0 + STOREY / 2, 0)
-      const back = bevelBox(w - WALL * 2, STOREY - 0.04, WALL, 0.016)
-      back.translate(0, y0 + STOREY / 2, -(d / 2 - WALL / 2))
-      band.push(left, right, back)
-
-      const frontLeft = bevelBox((w - ATRIUM_W) / 2 - WALL, STOREY - 0.04, WALL, 0.016)
-      frontLeft.translate(-(w / 2 + ATRIUM_W / 2) / 2, y0 + STOREY / 2, d / 2 - WALL / 2)
-      const frontRight = bevelBox((w - ATRIUM_W) / 2 - WALL, STOREY - 0.04, WALL, 0.016)
-      frontRight.translate((w / 2 + ATRIUM_W / 2) / 2, y0 + STOREY / 2, d / 2 - WALL / 2)
-      band.push(frontLeft, frontRight)
-
+      const vip = s === 1
+      const sill = vip ? 0.48 : 0.95
+      const gh = STOREY * (vip ? 0.78 : 0.38)
+      const head = Math.max(0.28, STOREY - sill - gh - 0.04)
+      const sideN = 7 + (s % 2)
+      const frontN = 3 + (s % 2)
+      const stack = (span: number, along: 'x' | 'z', count: number, ox: number, oz: number): void => {
+        for (const part of paneledWall(span, sill, WALL, count, along)) {
+          part.translate(ox, y0 + sill / 2, oz)
+          band.push(part)
+        }
+        for (const part of paneledWall(span, head, WALL, count, along)) {
+          part.translate(ox, y0 + sill + gh + head / 2, oz)
+          band.push(part)
+        }
+      }
+      stack(d, 'z', sideN, -(w / 2 - WALL / 2), 0)
+      stack(d, 'z', sideN, w / 2 - WALL / 2, 0)
+      stack(w - WALL * 2, 'x', 8, 0, -(d / 2 - WALL / 2))
+      stack(wing, 'x', frontN, -(w / 2 + ATRIUM_W / 2) / 2, d / 2 - WALL / 2)
+      stack(wing, 'x', frontN, (w / 2 + ATRIUM_W / 2) / 2, d / 2 - WALL / 2)
       if (s < STOREYS - 1) {
         const slab = bevelBox(w - WALL * 2, 0.12, d - WALL * 2, 0.01)
         slab.translate(0, y0 + STOREY, 0)
@@ -226,13 +327,17 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     const glassParts: BufferGeometry[] = []
     const frames: BufferGeometry[] = []
     for (let s = 0; s < STOREYS; s++) {
-      const yMid = s * STOREY + STOREY * 0.55
-      const gh = STOREY * 0.62
-      for (const face of [
-        { x: 0, z: d / 2 - 0.06, sx: w - ATRIUM_W - 1.2, sz: 0.04, split: 6 },
-        { x: -(w / 2 - 0.08), z: 0, sx: 0.04, sz: d - 1.2, split: 7 },
-        { x: w / 2 - 0.08, z: 0, sx: 0.04, sz: d - 1.2, split: 7 },
-      ] as const) {
+      const vip = s === 1
+      const sill = vip ? 0.48 : 0.95
+      const gh = STOREY * (vip ? 0.78 : 0.38)
+      const yMid = s * STOREY + sill + gh / 2
+      const split = vip ? 4 : 5
+      const faces = [
+        { x: 0, z: d / 2 + 0.02, sx: w - ATRIUM_W - 1.2, sz: 0.04, split },
+        { x: -(w / 2 - 0.08), z: 0, sx: 0.04, sz: d - 1.2, split: vip ? 5 : 6 },
+        { x: w / 2 - 0.08, z: 0, sx: 0.04, sz: d - 1.2, split: vip ? 5 : 6 },
+      ] as const
+      for (const face of faces) {
         const pane = bevelBox(face.sx, gh, face.sz, 0.004)
         pane.translate(face.x, yMid, face.z)
         glassParts.push(pane)
@@ -241,22 +346,22 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
           const t = k / face.split
           if (horizontal) {
             const x = face.x - face.sx / 2 + t * face.sx
-            frames.push(bevelBox(0.07, gh + 0.08, 0.08, 0.004).translate(x, yMid, face.z + 0.02))
+            frames.push(bevelBox(0.06, gh + 0.08, 0.07, 0.004).translate(x, yMid, face.z + 0.02))
           } else {
             const z = face.z - face.sz / 2 + t * face.sz
-            frames.push(bevelBox(0.08, gh + 0.08, 0.07, 0.004).translate(face.x + 0.02, yMid, z))
+            frames.push(bevelBox(0.07, gh + 0.08, 0.06, 0.004).translate(face.x + 0.02, yMid, z))
           }
         }
         frames.push(bevelBox(
-          horizontal ? face.sx : 0.08,
-          0.07,
-          horizontal ? 0.08 : face.sz,
+          horizontal ? face.sx : 0.07,
+          0.06,
+          horizontal ? 0.07 : face.sz,
           0.004,
         ).translate(face.x, yMid - gh / 2, face.z + (horizontal ? 0.02 : 0)))
         frames.push(bevelBox(
-          horizontal ? face.sx : 0.08,
-          0.07,
-          horizontal ? 0.08 : face.sz,
+          horizontal ? face.sx : 0.07,
+          0.06,
+          horizontal ? 0.07 : face.sz,
           0.004,
         ).translate(face.x, yMid + gh / 2, face.z + (horizontal ? 0.02 : 0)))
       }
@@ -274,41 +379,35 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     handle.translate(0.55, 1.25, d / 2 + 0.09)
     emit('shell', handle, shell, 'handle', kit.steel)
 
-    const canopy = bevelBox(ATRIUM_W + 0.8, 0.1, 1.4, 0.012)
-    canopy.translate(0, 2.55, d / 2 + 0.55)
+    const canopy = bevelBox(ATRIUM_W + 0.8, 0.12, 1.5, 0.012)
+    canopy.translate(0, 2.55, d / 2 + 0.58)
     emit('shell', canopy, shell, 'canopy', blackMat)
 
     const stair: BufferGeometry[] = []
-    const treads = 18
-    const rise = (h - 1.1) / treads
+    const treads = 16
+    const rise = (h - 1.2) / treads
+    const run = 0.34
     for (let i = 0; i < treads; i++) {
-      const tread = bevelBox(1.35, 0.07, 0.32, 0.01)
-      const x = -1.55 + i * 0.16
-      tread.translate(x, 0.28 + i * rise, d / 2 - 1.35)
+      const flight = i < 8 ? 0 : 1
+      const local = flight === 0 ? i : i - 8
+      const tread = bevelBox(1.25, 0.09, run, 0.012)
+      const x = flight === 0 ? -1.35 + local * 0.32 : 1.15 - local * 0.32
+      const z = d / 2 - 1.45 - flight * 0.62
+      tread.translate(x, 0.32 + i * rise, z)
       stair.push(tread)
     }
-    emit('deck', mergeParts(stair, 'stair'), deck, 'stair', creamMat)
-    const rails: BufferGeometry[] = []
-    rails.push(member(
-      new Vector3(-1.5, 1.1, d / 2 - 1.2),
-      new Vector3(1.5, h - 0.6, d / 2 - 1.2),
-      0.02,
-      6,
-    ))
-    rails.push(member(
-      new Vector3(-1.5, 1.1, d / 2 - 1.55),
-      new Vector3(1.5, h - 0.6, d / 2 - 1.55),
-      0.02,
-      6,
-    ))
-    emit('glass', mergeParts(rails, 'stair-rail'), glass, 'stair-rail', kit.steel)
-    const baluster = bevelBox(ATRIUM_W - 0.5, h - 0.8, 0.03, 0.003)
-    baluster.translate(0, h / 2, d / 2 - 1.15)
-    emit('glass', baluster, glass, 'stair-glass', glassMat)
+    emit('deck', mergeParts(stair, 'stair'), deck, 'stair', stoneMat)
+    const glassRail: BufferGeometry[] = []
+    for (let f = 0; f < 2; f++) {
+      const z = d / 2 - 1.28 - f * 0.62
+      const pane = bevelBox(2.7, h * 0.48, 0.02, 0.003)
+      pane.translate(0, 0.4 + (f + 0.5) * (h * 0.42), z)
+      glassRail.push(pane)
+    }
+    emit('glass', mergeParts(glassRail, 'stair-glass'), glass, 'stair-glass', glassMat)
 
     const crest = new PlaneGeometry(1.7, 1.7)
-    crest.rotateY(Math.PI)
-    crest.translate(0, 3.55, d / 2 + 0.06 + LAYER_CLEARANCE * 3)
+    crest.translate(0, STOREY + 1.2, d / 2 + 0.04 + LAYER_CLEARANCE * 3)
     const tex = crestTexture()
     textures.push(tex)
     const crestMat = new MeshStandardMaterial({
@@ -320,20 +419,40 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     extras.push(crestMat)
     emit('shell', crest, shell, 'crest', crestMat)
 
-    const roof = bevelBox(w + 0.35, 0.12, d + 0.35, 0.012)
-    roof.translate(0, h + 0.06, 0)
+    const mark = new PlaneGeometry(2.8, 0.44)
+    mark.translate(0, STOREY + 0.42, d / 2 + 0.04 + LAYER_CLEARANCE * 3)
+    const wordTex = wordmarkTexture()
+    textures.push(wordTex)
+    const wordMat = new MeshStandardMaterial({
+      name: 'f1-kit / motorhome wordmark',
+      map: wordTex,
+      roughness: 0.48,
+      metalness: 0.1,
+    })
+    extras.push(wordMat)
+    emit('shell', mark, shell, 'wordmark', wordMat)
+
+    const roof = bevelBox(w + 0.35, 0.14, d + 0.35, 0.012)
+    roof.translate(0, h + 0.07, 0)
     emit('deck', roof, deck, 'terrace-deck', creamMat)
 
     const slats: BufferGeometry[] = []
-    const slatN = 18
+    const slatN = 20
+    const slatH = 0.16
     for (let i = 0; i < slatN; i++) {
-      const z = -d / 2 + 0.4 + (i + 0.5) * ((d - 0.8) / slatN)
-      slats.push(bevelBox(w - 0.8, 0.06, 0.12, 0.008).translate(0, h + TERRACE + 0.9, z))
+      const z = -d / 2 + 0.45 + (i + 0.5) * ((d - 0.9) / slatN)
+      slats.push(bevelBox(w - 0.7, slatH, 0.18, 0.008).translate(0, h + TERRACE + 0.95, z))
     }
     for (const sx of [-1, 1] as const) {
-      slats.push(bevelBox(0.12, TERRACE + 1.0, d - 0.6, 0.01).translate(sx * (w / 2 - 0.5), h + (TERRACE + 1.0) / 2, 0))
+      slats.push(bevelBox(0.16, TERRACE + 1.15, d - 0.5, 0.01).translate(
+        sx * (w / 2 - 0.42),
+        h + (TERRACE + 1.15) / 2,
+        0,
+      ))
     }
-    slats.push(bevelBox(w - 0.8, 0.1, 0.12, 0.008).translate(0, h + TERRACE + 1.15, 0))
+    slats.push(bevelBox(w - 0.7, 0.14, 0.18, 0.008).translate(0, h + TERRACE + 1.22, -d / 2 + 0.4))
+    slats.push(bevelBox(w - 0.7, 0.14, 0.18, 0.008).translate(0, h + TERRACE + 1.22, d / 2 - 0.4))
+    slats.push(bevelBox(w - 0.55, 0.12, d - 0.55, 0.01).translate(0, h + TERRACE + 0.78, 0))
     emit('shell', mergeParts(slats, 'pergola'), shell, 'pergola', blackMat)
 
     const terraceRail: BufferGeometry[] = []
@@ -371,6 +490,15 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     const rim = bevelDisc(0.55, 0.05, 0.01, 16)
     rim.translate(w / 2 - 1.4, h + 0.2, -d / 2 + 1.2)
     emit('deck', rim, deck, 'hearth', kit.graphite)
+
+    dressInterior(w, d, (slot, geometry, name, material) => {
+      emit(slot, geometry, groups[slot], name, material)
+    }, interiorMats(), textures, extras, (instance, x, y, z, yaw = 0) => {
+      instance.root.position.set(x, y, z)
+      instance.root.rotation.y = yaw
+      kitRoot.add(instance.root)
+      kitLive.push(instance)
+    })
   }
   rebuild()
 
@@ -391,6 +519,7 @@ export function createModel(options: F1TeamMotorhomeOptions = {}): F1TeamMotorho
     update: () => {},
     dispose() {
       releaseGenerated()
+      kitRoot.removeFromParent()
       for (const material of extras) material.dispose()
       disposeF1Materials(bundle)
       root.removeFromParent()
@@ -417,5 +546,41 @@ export function createAltPreview({ aspect }: { aspect: number; time?: number }) 
     fov: 32,
     yaw: 0.08,
     pitch: 0.12,
+  })
+}
+
+export function createGroundPreview({ aspect }: { aspect: number; time?: number }) {
+  return createF1Preview(createModel(), {
+    aspect,
+    target: [0, 1.4, -5.4],
+    distance: 9.2,
+    fov: 36,
+    yaw: 0.42,
+    pitch: 0.08,
+    bloom: true,
+  })
+}
+
+export function createVipPreview({ aspect }: { aspect: number; time?: number }) {
+  return createF1Preview(createModel(), {
+    aspect,
+    target: [0.2, STOREY + 1.15, -1.4],
+    distance: 9,
+    fov: 36,
+    yaw: 0.62,
+    pitch: 0.1,
+    bloom: true,
+  })
+}
+
+export function createOfficePreview({ aspect }: { aspect: number; time?: number }) {
+  return createF1Preview(createModel(), {
+    aspect,
+    target: [0, STOREY * 2 + 1.15, -3.8],
+    distance: 8.2,
+    fov: 36,
+    yaw: 0.48,
+    pitch: 0.1,
+    bloom: true,
   })
 }
