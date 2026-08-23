@@ -403,7 +403,11 @@ function lightScene(scene: Scene): void {
   scene.add(fill)
 }
 
-export function createPreview({ aspect, time }: { aspect: number; time?: number }) {
+function kitBeautyPreview(
+  name: string,
+  place: (camera: PerspectiveCamera) => Vector3,
+  { aspect, time }: { aspect: number; time?: number },
+) {
   const kit = createScene()
   const scene = new Scene()
   scene.name = 'f1-kit / circuit scene'
@@ -412,10 +416,8 @@ export function createPreview({ aspect, time }: { aspect: number; time?: number 
   lightScene(scene)
 
   const camera = new PerspectiveCamera(42, aspect > 0 ? aspect : 1, 0.5, 420)
-  camera.name = 'f1-kit / scene camera'
-  // Looking +Z down the pit: garages (−X) sit on the right of frame.
-  camera.position.set(-10, 16, -38)
-  const focus = new Vector3(-14, 1.2, 12)
+  camera.name = name
+  const focus = place(camera)
   camera.lookAt(focus)
   camera.updateProjectionMatrix()
   scene.add(camera)
@@ -435,6 +437,23 @@ export function createPreview({ aspect, time }: { aspect: number; time?: number 
       scene.clear()
     },
   }
+}
+
+export function createPreview({ aspect, time }: { aspect: number; time?: number }) {
+  return kitBeautyPreview('f1-kit / scene camera', (camera) => {
+    // Looking +Z down the pit: garages (−X) sit on the right of frame.
+    camera.position.set(-10, 16, -38)
+    return new Vector3(-14, 1.2, 12)
+  }, { aspect, time })
+}
+
+/** 3/4 from the ribbon, framed on the 2×2 truck group. */
+export function createAltPreview({ aspect, time }: { aspect: number; time?: number }) {
+  return kitBeautyPreview('f1-kit / street camera', (camera) => {
+    camera.fov = 40
+    camera.position.set(5, 10, -10)
+    return new Vector3(-6, 1.5, 8)
+  }, { aspect, time })
 }
 
 /** True top-down plan of the diorama. +Z (end of track) is up. */
