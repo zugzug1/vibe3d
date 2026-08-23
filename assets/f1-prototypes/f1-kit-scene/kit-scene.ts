@@ -250,7 +250,7 @@ export function createScene(): F1KitScene {
   tile(() => createGravelTrap({ modules: 32, pebblesPerModule: 90 }), GRAVEL_X)
   tile(() => createSlotDrain({ modules: 50 }), DRAIN_X)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, -56, ALONG)
-  add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, 88, ALONG)
+  add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, 70, ALONG)
   // Pit-side turf only where the wall/trucks are not: before the garage and after it.
   add(createAstroturf({ modules: 40, pileStep: 0.22 }), -TURF_X, -52, ALONG)
   add(createAstroturf({ modules: 50, pileStep: 0.22 }), -TURF_X, 72, ALONG)
@@ -292,10 +292,10 @@ export function createScene(): F1KitScene {
   add(createJumbotron(), CROWD_X + 1, GAP_Z, FACE_SPEC)
   add(createCameraPlatform(), CROWD_X + 1, GAP_Z - 5, FACE_SPEC)
   add(createPaHorn(), CROWD_X + 1, GAP_Z + 5, FACE_SPEC)
-  add(createLedRibbon({ length: 8 }), CROWD_X + 1, GAP_Z + 9, FACE_SPEC)
+  add(createLedRibbon({ length: 8 }), CROWD_X + 1, GAP_Z + 4, FACE_SPEC)
   add(createFloodlight({ height: 12 }), EDGE_X, -18)
   add(createFloodlight({ height: 12 }), EDGE_X, 74)
-  add(createFlagPole({ height: 6 }), EDGE_X + 0.8, -18)
+  add(createFlagPole({ height: 6 }), EDGE_X + 0.8, -21)
 
   // MID — one gantry over the road, no stairs.
   add(createSectorGantry({ span: 18, sector: 2 }), 0, 36)
@@ -316,13 +316,13 @@ export function createScene(): F1KitScene {
   add(createStairs({ kind: 'flight', steps: 16, width: 1.4 }), SPAN / 2 + 2, END_Z + 2)
   add(createPitWall({ bays: 3, labels: ['11', '22', '33'] }), WALL_X, END_Z, FACE_PIT)
   add(createNameboard(), WALL_X + 0.2, END_Z - GARAGE_BAY_PITCH, FACE_PIT)
-  add(createArmco({ bays: 14 }), RIBBON_HALF + 0.55, END_Z - 12, ALONG)
-  add(createCrashCushion({ fits: 'armco' }), RIBBON_HALF + 0.55, END_Z - 24, ALONG)
-  add(createAccessGate({ fits: 'armco', width: 3 }), RIBBON_HALF + 0.55, END_Z + 2, ALONG)
+  add(createArmco({ bays: 14 }), RIBBON_HALF + 0.55, END_Z - 14, ALONG)
+  add(createCrashCushion({ fits: 'armco' }), RIBBON_HALF + 0.55, END_Z - 28, ALONG)
+  add(createAccessGate({ fits: 'armco', width: 3 }), RIBBON_HALF + 0.55, END_Z, ALONG)
   add(createJersey({ modules: 8 }), GRAVEL_X, END_Z + 8, ALONG)
-  add(createConcreteWall({ bays: 4 }), GRAVEL_X + 3, END_Z + 14, 0.2)
-  add(createTecpro({ columns: 3, rows: 2 }), GRAVEL_X + 2, END_Z + 6, 0.2)
-  add(createTyreBarrier({ columns: 4, rows: 3, depth: 1 }), GRAVEL_X + 5, END_Z + 12, 0.35)
+  add(createConcreteWall({ bays: 4 }), GRAVEL_X + 2.5, END_Z + 8, ALONG)
+  add(createTecpro({ columns: 3, rows: 2 }), GRAVEL_X, END_Z + 16, ALONG)
+  add(createTyreBarrier({ columns: 4, rows: 3, depth: 1 }), GRAVEL_X + 2.5, END_Z + 16, ALONG)
   add(createChevronBoard(), EDGE_X, END_Z - 8, 0.2)
   add(createCameraTower({ height: 8 }), EDGE_X, END_Z - 6)
   add(createFoamMonitor(), RIBBON_HALF + 1.4, END_Z - 14, 0.2)
@@ -331,7 +331,7 @@ export function createScene(): F1KitScene {
   add(createTunnelPortal(), 0, END_Z + 16, Math.PI)
 
   // Paddock (behind the garage). Cab toward −Z so the still sees cab+box as one artic.
-  add(createRaceControl(), GARAGE_X - 18, 40, FACE_PIT)
+  add(createRaceControl(), GARAGE_X - 20, 40, FACE_PIT)
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
@@ -363,10 +363,10 @@ export function createScene(): F1KitScene {
     teamTruck.setGround(ground)
     add(teamTruck, teamX + col * teamLane, (row - 0.5) * teamPitch, FACE_PIT)
   }
-  add(createWeighbridge(), GARAGE_X - 8, 8, FACE_PIT)
+  add(createWeighbridge(), GARAGE_X - 20, 16, FACE_PIT)
   add(createParcFerme(), GARAGE_X - 12, 2, FACE_PIT)
-  add(createMedicalPost(), GARAGE_X - 20, 12)
-  add(createGeneratorCabin(), GARAGE_X - 20, 4)
+  add(createMedicalPost(), GARAGE_X - 20, 8, FACE_PIT)
+  add(createGeneratorCabin(), GARAGE_X - 20, 0, FACE_PIT)
 
   // Ceremony cluster — behind the service row, not on the straight.
   add(createPodium(), GARAGE_X - 12, -32, Math.PI)
