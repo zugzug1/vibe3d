@@ -3,12 +3,13 @@
  *
  * Overhead (looking down, +Z is the far end of the road):
  *
- *   END   tunnel · stairs/bridge · armco/jersey/pit-wall (barriers live here)
- *   MID   empty asphalt + kerb/fence the full length · sector gantry only
- *   START grid / SF / lights · grandstands | ribbon | pit wall | pit lane | garages
+ *   END   tunnel · stairs/bridge · armco/jersey/tecpro (runoff lives here)
+ *   MID   ribbon + kerb/turf/gravel/fence the full length · sector gantry
+ *   START grid / SF / lights · grandstands | verge | ribbon | pit wall | pit | garages
  *
- * Pit wall runs the garage frontage. One pit gantry hangs over each bay.
- * Every kit id appears at least once.
+ * Linear verge props (kerb, turf, gravel, drain, fence) tile the full ribbon.
+ * Trackside furniture sits on the marshalling strip or in the stand gap — never
+ * behind a grandstand. Every kit id appears at least once.
  */
 
 import {
@@ -134,9 +135,20 @@ const APRON_X = -(ROAD_W / 2 + APRON_W / 2)
 const GARAGE_X = DOOR_X - GARAGE.depth / 2
 const WALL_X = -(RIBBON_HALF + 0.6 + PIT_WALL.depth / 2)
 const TOOL_X = DOOR_X + 0.55
+const KERB_X = RIBBON_HALF - 0.4
+const TURF_X = RIBBON_HALF + 1.0
+const CATCH_X = RIBBON_HALF + 3.4
+const GRAVEL_X = CATCH_X + 0.4 + 1.25
+const CROWD_X = 18
+/** Marshalling strip: between spec kerb and catch fence, in front of the stands. */
 const EDGE_X = RIBBON_HALF + 2.35
+const DRAIN_X = -(RIBBON_HALF - 0.9)
 const BAYS = 6
 const GARAGE_SPAN = BAYS * GARAGE_BAY_PITCH
+/** Stand block 1 occupies z −15…15; block 2 occupies z 39…69. Furniture goes in the gap. */
+const GAP_Z = 27
+/** Three overlapping runs cover the 220 m ribbon (same trick as the catch fence). */
+const RUN_Z = [-48, 20, 88] as const
 
 export function createScene(): F1KitScene {
   const root = new Group()
@@ -149,6 +161,10 @@ export function createScene(): F1KitScene {
     instance.root.rotation.y = yaw
     root.add(instance.root)
     live.push(instance)
+  }
+
+  const tile = (make: () => Live, x: number): void => {
+    for (const z of RUN_Z) add(make(), x, z, ALONG)
   }
 
   const asphaltMat = new MeshStandardMaterial({
@@ -218,27 +234,26 @@ export function createScene(): F1KitScene {
   root.add(paint)
   extras.push({ dispose: () => { paint.geometry.dispose() } })
 
-  // START — grid, SF, lights.
+  // START — grid, SF, lights over the boxes, not mid-straight.
   add(createGridBox({ index: 1, pad: false, width: RIBBON_W }), 0, -8)
   add(createGridBox({ index: 2, pad: false, width: RIBBON_W }), 0, 0)
   add(createGridBox({ index: 3, pad: false, width: RIBBON_W }), 0, 8)
   add(createStartFinishLine({ kind: 'SF', width: RIBBON_W }), 0, -16, 0)
   add(createStartGantry({ span: 16, height: 7.2 }), 0, -18)
-  // Standalone FIA panel is its own gantry (posts + beam). Do not perch it on the SF truss.
-  add(createStartLights({ lit: 5 }), 0, 64)
+  add(createStartLights({ lit: 5 }), 0, -14)
   add(createChequeredFlag({ waving: true, windXZ: [0.9, -0.4] }), RIBBON_HALF + 0.55, -16, -0.35)
-  add(createKerb({ modules: 100 }), RIBBON_HALF - 0.4, 4, ALONG)
-  add(createKerb({ modules: 100 }), RIBBON_HALF - 0.4, 76, ALONG)
-  add(createKerb({ modules: 100 }), -(RIBBON_HALF - 0.4), 4, ALONG)
-  add(createKerb({ modules: 100 }), -(RIBBON_HALF - 0.4), 76, ALONG)
+
+  // Verge — same full-ribbon tiling as the catch fence. Spec side: kerb → turf → gravel.
+  tile(() => createKerb({ modules: 110 }), KERB_X)
+  tile(() => createKerb({ modules: 110 }), -KERB_X)
+  tile(() => createAstroturf({ modules: 100 }), TURF_X)
+  tile(() => createGravelTrap({ modules: 32 }), GRAVEL_X)
+  tile(() => createSlotDrain({ modules: 50 }), DRAIN_X)
+  add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, -56, ALONG)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, 88, ALONG)
-  add(createSlotDrain({ modules: 50 }), -(RIBBON_HALF - 0.9), 0, ALONG)
-  add(createSlotDrain({ modules: 40 }), -(RIBBON_HALF - 0.9), 80, ALONG)
-  add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.0, 8, ALONG)
-  add(createAstroturf({ modules: 90 }), RIBBON_HALF + 1.0, 84, ALONG)
-  add(createAstroturf({ modules: 24 }), -(RIBBON_HALF + 1.0), -28, ALONG)
-  add(createGravelTrap({ modules: 8 }), 16, 18, ALONG)
-  add(createGravelTrap({ modules: 8 }), 16, END_Z - 10, ALONG)
+  // Pit-side turf only where the wall/trucks are not: before the garage and after it.
+  add(createAstroturf({ modules: 40 }), -TURF_X, -52, ALONG)
+  add(createAstroturf({ modules: 50 }), -TURF_X, 72, ALONG)
 
   // Pit (−X): garage, pit wall, per-bay gantries, tools on the door line.
   add(createGarageBox({ count: BAYS, number: '11', legend: 'CHECO' }), GARAGE_X, 0, FACE_PIT)
@@ -258,52 +273,59 @@ export function createScene(): F1KitScene {
   add(createPitJack(), TOOL_X + 0.7, 0.9)
   add(createExtinguisher(), TOOL_X + 0.45, GARAGE_BAY_PITCH + 0.2)
 
-  // Spectator (+X): fence and stand wall. Fence runs the full asphalt.
-  add(createCatchFence({ length: 200, height: 5 }), RIBBON_HALF + 3.4, ROAD_Z, ALONG)
-  add(createCrowdFence({ length: 200 }), 18, ROAD_Z, ALONG)
+  // Spectator (+X): fence the full asphalt; two stand blocks with a dressed gap.
+  add(createCatchFence({ length: 200, height: 5 }), CATCH_X, ROAD_Z, ALONG)
+  add(createCrowdFence({ length: 200 }), CROWD_X, ROAD_Z, ALONG)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, -2 * STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, -STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, 0, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, STAND_PITCH, FACE_SPEC)
-  add(createJumbotron(), 29, -STAND_PITCH, FACE_SPEC)
-  add(createFloodlight({ height: 12 }), 30, 0)
-  add(createPaHorn(), 28, 6, FACE_SPEC)
-  add(createFlagPole({ height: 6 }), 28, -18)
-  add(createCameraPlatform(), 28, -14)
   const stand2Z = 54
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z - STAND_PITCH, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z, FACE_SPEC)
   add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand2Z + STAND_PITCH, FACE_SPEC)
-  add(createLedRibbon({ length: 8 }), 29, stand2Z, FACE_SPEC)
+  const stand3Z = 90
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand3Z - STAND_PITCH, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand3Z, FACE_SPEC)
+  add(createGrandstandBay({ rows: 6, width: 10 }), STAND_X, stand3Z + STAND_PITCH, FACE_SPEC)
+  // Gap furniture sits on the walkway in front of the seats, not behind a roof.
+  add(createJumbotron(), CROWD_X + 1, GAP_Z, FACE_SPEC)
+  add(createCameraPlatform(), CROWD_X + 1, GAP_Z - 5, FACE_SPEC)
+  add(createPaHorn(), CROWD_X + 1, GAP_Z + 5, FACE_SPEC)
+  add(createLedRibbon({ length: 8 }), CROWD_X + 1, GAP_Z + 9, FACE_SPEC)
+  add(createFloodlight({ height: 12 }), EDGE_X, -18)
+  add(createFloodlight({ height: 12 }), EDGE_X, 74)
+  add(createFlagPole({ height: 6 }), EDGE_X + 0.8, -18)
 
   // MID — one gantry over the road, no stairs.
   add(createSectorGantry({ span: 18, sector: 2 }), 0, 36)
 
-  // Marshalling line along the ribbon edge.
+  // Marshalling line on the catch-fence strip, in the open (start, gap, after stands).
   add(createFiaLightPanel(), EDGE_X, -24, FACE_SPEC)
   add(createSectorBoard({ sector: 1 }), EDGE_X, -20, FACE_SPEC)
   add(createTimingPylon(), EDGE_X, -12)
   add(createCctvMast(), EDGE_X, -6)
-  add(createCircuitSign({ kind: 'DRS' }), EDGE_X, 20, FACE_SPEC)
-  add(createMarkerPost(), EDGE_X, 48)
-  add(createBrakeMarker({ distance: 100 }), EDGE_X, 64, FACE_SPEC)
+  add(createCircuitSign({ kind: 'DRS' }), EDGE_X, GAP_Z - 4, FACE_SPEC)
+  add(createMarkerPost(), EDGE_X, GAP_Z + 6)
+  add(createBrakeMarker({ distance: 100 }), EDGE_X, 78, FACE_SPEC)
   add(createMarshalPost({ number: '11', flag: 'yellow' }), EDGE_X, 84, FACE_SPEC)
   add(createOranjeCan({ lit: true }), EDGE_X + 1.6, 84)
 
-  // END of the track — stairs, bridge, pit wall, runoff barriers.
+  // END of the track — stairs next to the bridge, runoff barriers in the verge.
   add(createSpectatorBridge({ span: SPAN }), 0, END_Z)
-  add(createStairs({ kind: 'flight', steps: 16, width: 1.4 }), STAND_X, END_Z + 8)
+  add(createStairs({ kind: 'flight', steps: 16, width: 1.4 }), SPAN / 2 + 2, END_Z + 2)
   add(createPitWall({ bays: 3, labels: ['11', '22', '33'] }), WALL_X, END_Z, FACE_PIT)
   add(createNameboard(), WALL_X + 0.2, END_Z - GARAGE_BAY_PITCH, FACE_PIT)
   add(createArmco({ bays: 14 }), RIBBON_HALF + 0.55, END_Z - 12, ALONG)
   add(createCrashCushion({ fits: 'armco' }), RIBBON_HALF + 0.55, END_Z - 24, ALONG)
   add(createAccessGate({ fits: 'armco', width: 3 }), RIBBON_HALF + 0.55, END_Z + 2, ALONG)
-  add(createJersey({ modules: 8 }), 22, END_Z - 4, ALONG)
-  add(createConcreteWall({ bays: 4 }), 26, END_Z + 6, 0.2)
-  add(createTecpro({ columns: 3, rows: 2 }), 24, END_Z - 2, 0.2)
-  add(createTyreBarrier({ columns: 4, rows: 3, depth: 1 }), 28, END_Z + 2, 0.35)
-  add(createChevronBoard(), EDGE_X, END_Z - 16, 0.2)
-  add(createCameraTower({ height: 8 }), 30, END_Z - 10)
-  add(createFoamMonitor(), 22, END_Z - 14, 0.2)
+  add(createJersey({ modules: 8 }), GRAVEL_X, END_Z + 8, ALONG)
+  add(createConcreteWall({ bays: 4 }), GRAVEL_X + 3, END_Z + 14, 0.2)
+  add(createTecpro({ columns: 3, rows: 2 }), GRAVEL_X + 2, END_Z + 6, 0.2)
+  add(createTyreBarrier({ columns: 4, rows: 3, depth: 1 }), GRAVEL_X + 5, END_Z + 12, 0.35)
+  add(createChevronBoard(), EDGE_X, END_Z - 8, 0.2)
+  add(createCameraTower({ height: 8 }), EDGE_X, END_Z - 6)
+  add(createFoamMonitor(), RIBBON_HALF + 1.4, END_Z - 14, 0.2)
   add(createCone(), -(RIBBON_HALF + 0.45), -22)
   add(createBollard(), -(RIBBON_HALF + 0.35), -26)
   add(createTunnelPortal(), 0, END_Z + 16, Math.PI)
@@ -313,8 +335,8 @@ export function createScene(): F1KitScene {
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
-  // Track-side of the pit wall, centred on the garage (Zandvoort pit photo).
-  const teamX = WALL_X + PIT_WALL.depth / 2 + 0.25 + TRUCK.width / 2
+  // Pit-side of the wall, opposite the garage — on the apron, not the racing line.
+  const teamX = WALL_X - PIT_WALL.depth / 2 - 0.4 - TRUCK.width / 2
   const teamPitch = TRUCK.length + 1.5
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
