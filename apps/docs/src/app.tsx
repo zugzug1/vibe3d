@@ -2,12 +2,17 @@ import { ArrowRight, Box, Braces, PackageOpen, Palette, Terminal } from 'lucide-
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBlock, DocsLayout, Header, PageIntro } from './components.tsx'
-import { catalog, findModel } from './catalog.ts'
+import { catalog, f1PitScene, findModel } from './catalog.ts'
 import { ModelInstallation, ModelUsage } from './model-documentation.tsx'
 
 const ModelPreview = lazy(async () => {
   const module = await import('./model-preview.tsx')
   return { default: module.ModelPreview }
+})
+
+const F1PitInspectPage = lazy(async () => {
+  const module = await import('./f1-pit-inspect.tsx')
+  return { default: module.F1PitInspectPage }
 })
 
 const installOne = 'bunx vibe3d add @scifi-kit/pressure-gauge'
@@ -184,8 +189,44 @@ bunx vibe-model --force`}</CodeBlock>
 function ModelIndex() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
-  const filtered = catalog.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(query.toLowerCase()))
-  return <div className="catalog-page"><PageIntro eyebrow="Sci-Fi Kit · MIT licensed" title="Models ready to become yours."><p>Preview every prop in the browser. Install one file tree or bring in the complete kit.</p></PageIntro><label className="catalog-search"><Terminal /><input value={query} onChange={(event) => setParams(event.target.value ? { q: event.target.value } : {})} placeholder="Search models" /></label><div className="catalog-grid">{filtered.map((model) => <Link className="model-card" key={model.id} to={`/models/${model.id}`}><span>{model.category}</span><Box /><h2>{model.name}</h2><p>{model.description}</p><b>Open model <ArrowRight /></b></Link>)}</div></div>
+  const needle = query.toLowerCase()
+  const filtered = catalog.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
+  const showPitCard = !needle || `${f1PitScene.name} ${f1PitScene.category} ${f1PitScene.description}`.toLowerCase().includes(needle)
+  return (
+    <div className="catalog-page">
+      <PageIntro eyebrow="Source kits · MIT licensed" title="Models ready to become yours.">
+        <p>Preview every prop in the browser. Install one file tree or bring in a complete kit.</p>
+      </PageIntro>
+      <label className="catalog-search">
+        <Terminal />
+        <input
+          value={query}
+          onChange={(event) => setParams(event.target.value ? { q: event.target.value } : {})}
+          placeholder="Search models"
+        />
+      </label>
+      <div className="catalog-grid">
+        {showPitCard ? (
+          <Link className="model-card model-card--scene" to={f1PitScene.href}>
+            <span>{f1PitScene.category} · Scene</span>
+            <Box />
+            <h2>{f1PitScene.name}</h2>
+            <p>{f1PitScene.description}</p>
+            <b>Open pit inspect <ArrowRight /></b>
+          </Link>
+        ) : null}
+        {filtered.map((model) => (
+          <Link className="model-card" key={model.id} to={`/models/${model.id}`}>
+            <span>{model.category}</span>
+            <Box />
+            <h2>{model.name}</h2>
+            <p>{model.description}</p>
+            <b>Open model <ArrowRight /></b>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function ModelPage() {
@@ -204,5 +245,32 @@ function DocumentationShell() {
 }
 
 export function App() {
-  return <Routes><Route path="/" element={<Home />} /><Route element={<DocumentationShell />}><Route path="/docs" element={<DocPage page="docs" />} /><Route path="/docs/installation" element={<DocPage page="installation" />} /><Route path="/docs/configuration" element={<DocPage page="configuration" />} /><Route path="/docs/materials" element={<DocPage page="materials" />} /><Route path="/docs/models" element={<DocPage page="models" />} /><Route path="/docs/registries" element={<DocPage page="registries" />} /><Route path="/docs/model-authoring" element={<ModelAuthoringPage />} /><Route path="/docs/terrain" element={<DocPage page="terrain" />} /><Route path="/docs/terrain-authoring" element={<DocPage page="terrainAuthoring" />} /><Route path="/models" element={<ModelIndex />} /><Route path="/models/:modelId" element={<ModelPage />} /><Route path="/kits/scifi-kit" element={<KitPage />} /></Route><Route path="*" element={<Navigate to="/" replace />} /></Routes>
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route
+        path="/scenes/f1-pit"
+        element={
+          <Suspense fallback={<div className="pit-inspect-page pit-inspect-page--loading" aria-busy="true" />}>
+            <F1PitInspectPage />
+          </Suspense>
+        }
+      />
+      <Route element={<DocumentationShell />}>
+        <Route path="/docs" element={<DocPage page="docs" />} />
+        <Route path="/docs/installation" element={<DocPage page="installation" />} />
+        <Route path="/docs/configuration" element={<DocPage page="configuration" />} />
+        <Route path="/docs/materials" element={<DocPage page="materials" />} />
+        <Route path="/docs/models" element={<DocPage page="models" />} />
+        <Route path="/docs/registries" element={<DocPage page="registries" />} />
+        <Route path="/docs/model-authoring" element={<ModelAuthoringPage />} />
+        <Route path="/docs/terrain" element={<DocPage page="terrain" />} />
+        <Route path="/docs/terrain-authoring" element={<DocPage page="terrainAuthoring" />} />
+        <Route path="/models" element={<ModelIndex />} />
+        <Route path="/models/:modelId" element={<ModelPage />} />
+        <Route path="/kits/scifi-kit" element={<KitPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }
