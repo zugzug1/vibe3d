@@ -4,10 +4,7 @@ import {
   Fog,
   Group,
   HemisphereLight,
-  Mesh,
-  MeshStandardMaterial,
   PerspectiveCamera,
-  PlaneGeometry,
   Scene,
   Vector3,
 } from 'three/webgpu'
@@ -32,20 +29,6 @@ export function createF1KitPlayground(options: PlaygroundOptions): Playground {
   const world = new Group()
   world.name = 'WORLD'
   scene.add(world)
-
-  const floor = new Mesh(
-    new PlaneGeometry(120, 230),
-    new MeshStandardMaterial({
-      color: 0x071018,
-      roughness: 0.94,
-      metalness: 0,
-    }),
-  )
-  floor.name = 'STAGE / FLOOR'
-  floor.rotation.x = -Math.PI / 2
-  floor.position.set(-8, -0.04, 24)
-  floor.receiveShadow = true
-  world.add(floor)
 
   const kit = createScene()
   kit.update(0.38)

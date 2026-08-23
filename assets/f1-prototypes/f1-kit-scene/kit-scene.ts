@@ -246,21 +246,21 @@ export function createScene(): F1KitScene {
   // Verge — same full-ribbon tiling as the catch fence. Spec side: kerb → turf → gravel.
   tile(() => createKerb({ modules: 110 }), KERB_X)
   tile(() => createKerb({ modules: 110 }), -KERB_X)
-  tile(() => createAstroturf({ modules: 100 }), TURF_X)
-  tile(() => createGravelTrap({ modules: 32 }), GRAVEL_X)
+  tile(() => createAstroturf({ modules: 100, pileStep: 0.22 }), TURF_X)
+  tile(() => createGravelTrap({ modules: 32, pebblesPerModule: 90 }), GRAVEL_X)
   tile(() => createSlotDrain({ modules: 50 }), DRAIN_X)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, -56, ALONG)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, 88, ALONG)
   // Pit-side turf only where the wall/trucks are not: before the garage and after it.
-  add(createAstroturf({ modules: 40 }), -TURF_X, -52, ALONG)
-  add(createAstroturf({ modules: 50 }), -TURF_X, 72, ALONG)
+  add(createAstroturf({ modules: 40, pileStep: 0.22 }), -TURF_X, -52, ALONG)
+  add(createAstroturf({ modules: 50, pileStep: 0.22 }), -TURF_X, 72, ALONG)
 
   // Pit (−X): garage, pit wall, per-bay gantries, tools on the door line.
   add(createGarageBox({ count: BAYS, number: '11', legend: 'CHECO' }), GARAGE_X, 0, FACE_PIT)
   add(createPitWall({ bays: BAYS, labels: ['11', '12', '13', '14', '15', '16'] }), WALL_X, 0, FACE_SPEC)
   for (let i = 0; i < BAYS; i++) {
     const z = -GARAGE_SPAN / 2 + (i + 0.5) * GARAGE_BAY_PITCH
-    add(createPitGantry({ span: 5, height: 2.5 }), DOOR_X + 2.6, z)
+    add(createPitGantry({ span: 5, height: 4.0, bays: 4 }), DOOR_X + 2.6, z)
   }
   add(createLollipop(), TOOL_X - 1.6, -GARAGE_BAY_PITCH + 1.4)
   add(createPitBoard(), TOOL_X - 1.4, -GARAGE_BAY_PITCH + 2.6)

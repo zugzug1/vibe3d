@@ -18,6 +18,8 @@ type Slot = 'mat'
 
 export interface F1AstroturfStripConfig {
   modules: number
+  /** Blade spacing in metres. Sheet default 0.05; scene uses ~0.22. */
+  pileStep: number
 }
 
 export interface F1AstroturfStripOptions extends Partial<F1AstroturfStripConfig> {
@@ -35,12 +37,11 @@ export interface F1AstroturfStripInstance {
   dispose(): void
 }
 
-const defaults: F1AstroturfStripConfig = { modules: 6 }
+const defaults: F1AstroturfStripConfig = { modules: 6, pileStep: 0.05 }
 const BAND = ASTROTURF.pitch
 const WIDTH = ASTROTURF.width
 const THICK = ASTROTURF.thick
 const PILE = 0.046
-const STEP = 0.05
 const STRIPE = 0.25
 const NAP = -0.28
 const RIM = 0.04
@@ -48,6 +49,9 @@ const RIM = 0.04
 export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfStripInstance {
   const config: F1AstroturfStripConfig = {
     modules: Math.max(1, Math.round(options.modules ?? defaults.modules)),
+    pileStep: options.pileStep != null && Number.isFinite(options.pileStep) && options.pileStep > 0
+      ? options.pileStep
+      : defaults.pileStep,
   }
 
   const bundle = acquireF1Materials()
@@ -97,7 +101,7 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
     generated.push(geometry)
     const mesh = new Mesh(geometry, material)
     mesh.name = name
-    mesh.castShadow = true
+    mesh.castShadow = name === 'bed'
     mesh.receiveShadow = true
     meshesBySlot.mat.push(mesh)
     mat.add(mesh)
@@ -114,8 +118,9 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
     const dark: BufferGeometry[] = []
     const innerL = length - RIM * 2
     const innerW = WIDTH - RIM * 2
-    const nx = Math.max(8, Math.round(innerL / STEP))
-    const nz = Math.max(8, Math.round(innerW / STEP))
+    const step = config.pileStep
+    const nx = Math.max(8, Math.round(innerL / step))
+    const nz = Math.max(8, Math.round(innerW / step))
     for (let i = 0; i < nx; i++) {
       for (let j = 0; j < nz; j++) {
         const x = -innerL / 2 + (i + 0.5) * (innerL / nx)
@@ -142,6 +147,9 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
     getConfig: () => ({ ...config }),
     configure(patch) {
       if (patch.modules !== undefined) config.modules = Math.max(1, Math.round(patch.modules))
+      if (typeof patch.pileStep === 'number' && Number.isFinite(patch.pileStep) && patch.pileStep > 0) {
+        config.pileStep = patch.pileStep
+      }
       rebuild()
     },
     setMaterial(slot, material) {

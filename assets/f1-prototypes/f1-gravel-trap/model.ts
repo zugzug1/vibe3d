@@ -18,6 +18,8 @@ type Slot = 'bed' | 'stone'
 
 export interface F1GravelTrapConfig {
   modules: number
+  /** Weyl-cycled stones per 2.5 m tile. Sheet default 780; scene uses ~90. */
+  pebblesPerModule: number
 }
 
 export interface F1GravelTrapOptions extends Partial<F1GravelTrapConfig> {
@@ -35,7 +37,7 @@ export interface F1GravelTrapInstance {
   dispose(): void
 }
 
-const defaults: F1GravelTrapConfig = { modules: 2 }
+const defaults: F1GravelTrapConfig = { modules: 2, pebblesPerModule: 780 }
 const TILE = 2.5
 const THICK = 0.04
 const GOLDEN = 0.6180339887498949
@@ -45,6 +47,9 @@ const FURROW_HALF = 0.022
 export function createModel(options: F1GravelTrapOptions = {}): F1GravelTrapInstance {
   const config: F1GravelTrapConfig = {
     modules: Math.max(1, Math.round(options.modules ?? defaults.modules)),
+    pebblesPerModule: options.pebblesPerModule != null && Number.isFinite(options.pebblesPerModule)
+      ? Math.max(0, Math.round(options.pebblesPerModule))
+      : defaults.pebblesPerModule,
   }
 
   const bundle = acquireF1Materials()
@@ -105,7 +110,7 @@ export function createModel(options: F1GravelTrapOptions = {}): F1GravelTrapInst
     generated.push(geometry)
     const mesh = new Mesh(geometry, material)
     mesh.name = name
-    mesh.castShadow = true
+    mesh.castShadow = name === 'bed' || name === 'rake'
     mesh.receiveShadow = true
     meshesBySlot[slot].push(mesh)
     group.add(mesh)
@@ -131,7 +136,7 @@ export function createModel(options: F1GravelTrapOptions = {}): F1GravelTrapInst
 
     const light: BufferGeometry[] = []
     const dark: BufferGeometry[] = []
-    const count = config.modules * 780
+    const count = config.modules * config.pebblesPerModule
     for (let i = 0; i < count; i++) {
       const u = (i * GOLDEN) % 1
       const v = (i * 0.41421356237) % 1
@@ -171,6 +176,9 @@ export function createModel(options: F1GravelTrapOptions = {}): F1GravelTrapInst
     getConfig: () => ({ ...config }),
     configure(patch) {
       if (patch.modules !== undefined) config.modules = Math.max(1, Math.round(patch.modules))
+      if (typeof patch.pebblesPerModule === 'number' && Number.isFinite(patch.pebblesPerModule)) {
+        config.pebblesPerModule = Math.max(0, Math.round(patch.pebblesPerModule))
+      }
       rebuild()
     },
     setMaterial(slot, material) {
