@@ -640,53 +640,66 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
     bunk.translate(cabX1 - 0.55, yCabin + 1.08, 0)
     emit('cab', bunk, cab, 'bunk', vinyl)
 
-    const wBot = WIDTH - 0.24
-    const wTop = WIDTH - 1.12
-    const gY0 = 0.38
-    const gY1 = 1.74
-    const faceX = cabX0 + 0.04
-    const cassette = bevelPrism(
-      [[-wBot / 2, gY0], [wBot / 2, gY0], [wTop / 2, gY1], [-wTop / 2, gY1]],
-      0.09,
-      0.012,
+    const wBot = WIDTH - 0.18
+    const wTop = WIDTH - 1.05
+    const gY0 = 0.34
+    const gY1 = 1.82
+    const faceX = cabX0 + 0.14
+    const bow = (t: number): number => faceX - 0.08 * Math.sin(t * Math.PI)
+    const shield = new LoftGeometry(
+      [
+        boxRing(faceX + 0.12, gY0 - 0.04, gY1 + 0.06, wBot + 0.08, 0.10),
+        boxRing(faceX + 0.02, gY0, gY1 + 0.02, wBot, 0.14),
+        boxRing(faceX - 0.06, gY0 + 0.12, gY1 - 0.08, (wBot + wTop) * 0.5, 0.16),
+        boxRing(faceX + 0.04, gY0 + 0.28, gY1 - 0.02, wTop + 0.16, 0.13),
+      ],
+      { closed: true, capStart: true, capEnd: true },
     )
-    cassette.rotateY(Math.PI / 2)
-    cassette.translate(faceX + 0.06, 0, 0)
-    emit('cab', cassette, cab, 'grille-cassette', kit.ink)
+    emit('cab', shield, cab, 'grille-cassette', kit.ink)
     const rim: BufferGeometry[] = []
-    rim.push(bevelBox(0.07, 0.06, wBot, 0.01).translate(faceX, gY0, 0))
-    rim.push(bevelBox(0.07, 0.055, wTop, 0.01).translate(faceX, gY1, 0))
     rim.push(member(
-      new Vector3(faceX, gY0, -wBot / 2),
-      new Vector3(faceX, gY1, -wTop / 2),
+      new Vector3(bow(0), gY0, -wBot / 2),
+      new Vector3(bow(0), gY0, wBot / 2),
+      0.032,
+      6,
+    ))
+    rim.push(member(
+      new Vector3(bow(1), gY1, -wTop / 2),
+      new Vector3(bow(1), gY1, wTop / 2),
       0.028,
       6,
     ))
     rim.push(member(
-      new Vector3(faceX, gY0, wBot / 2),
-      new Vector3(faceX, gY1, wTop / 2),
-      0.028,
+      new Vector3(bow(0), gY0, -wBot / 2),
+      new Vector3(bow(1), gY1, -wTop / 2),
+      0.032,
+      6,
+    ))
+    rim.push(member(
+      new Vector3(bow(0), gY0, wBot / 2),
+      new Vector3(bow(1), gY1, wTop / 2),
+      0.032,
       6,
     ))
     emit('cab', mergeParts(rim, 'grille-frame'), cab, 'grille-frame', chrome)
 
     const slats: BufferGeometry[] = []
-    const slatN = 6
+    const slatN = 7
     for (let i = 0; i < slatN; i++) {
-      const t = (i + 0.5) / slatN
-      const y = gY0 + 0.12 + t * (gY1 - gY0 - 0.24)
-      const w = wBot - 0.28 - t * (wBot - wTop)
-      const slat = bevelBox(0.05, 0.05, w, 0.006)
-      slat.translate(faceX - 0.02 - 0.05 * Math.sin(t * Math.PI), y, 0)
+      const t = (i + 0.6) / (slatN + 0.3)
+      const y = gY0 + 0.18 + t * (gY1 - gY0 - 0.38)
+      const w = wBot - 0.62 - t * (wBot - wTop - 0.08)
+      const slat = bevelBox(0.048, 0.038, w, 0.006)
+      slat.translate(bow(t) - 0.05, y, 0)
       slats.push(slat)
     }
-    emit('cab', mergeParts(slats, 'grille'), cab, 'grille', kit.steel)
+    emit('cab', mergeParts(slats, 'grille'), cab, 'grille', chrome)
 
-    const bumper = bevelBox(0.16, 0.18, wBot - 0.08, 0.016)
-    bumper.translate(faceX + 0.02, gY0 - 0.06, 0)
+    const bumper = bevelBox(0.20, 0.22, wBot - 0.04, 0.016)
+    bumper.translate(bow(0) + 0.04, gY0 - 0.08, 0)
     emit('cab', bumper, cab, 'bumper', bumperMat)
-    const plate = bevelBox(0.035, 0.12, 0.32, 0.005)
-    plate.translate(faceX - 0.05, gY0 + 0.02, 0)
+    const plate = bevelBox(0.04, 0.13, 0.34, 0.005)
+    plate.translate(bow(0) - 0.08, gY0 + 0.02, 0)
     emit('cab', plate, cab, 'plate-pocket', kit.graphite)
 
     const visor = bevelBox(0.42, 0.09, WIDTH - 0.28, 0.014)
@@ -705,7 +718,7 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
     const screenH = yWin - yBelt + 0.08
     const screen = bevelBox(0.018, screenH, WIDTH - 0.34, 0.004)
     screen.rotateZ(-0.24)
-    screen.translate(cabX0 + 0.12, (yBelt + yWin) / 2 + 0.04, 0)
+    screen.translate(cabX0 + 0.14, (yBelt + yWin) / 2 + 0.02, 0)
     emit('glass', screen, cab, 'windshield')
 
     const header = bevelBox(0.05, 0.06, WIDTH - 0.58, 0.008)
@@ -744,19 +757,22 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
       trim.translate(cabX0 + 1.85, yBelt - 0.04, sz * (hz - 0.03))
       emit('cab', trim, cab, `chrome-${sz}`, chrome)
 
-      const lampZ = sz * (wBot / 2 - 0.22)
-      const lampY = 0.86
-      const pod = bevelBox(0.10, 0.34, 0.22, 0.012)
-      pod.translate(faceX + 0.02, lampY, lampZ)
+      const lampT = 0.28
+      const lampZ = sz * ((wBot + wTop) * 0.25 + 0.12)
+      const lampY = gY0 + 0.42
+      const lampX = bow(lampT) - 0.04
+      const pod = bevelBox(0.08, 0.38, 0.16, 0.01)
+      pod.rotateY(-sz * 0.22)
+      pod.translate(lampX + 0.03, lampY, lampZ)
       emit('cab', pod, cab, `lamp-pod-${sz}`, kit.ink)
-      const lens = bevelBox(0.04, 0.22, 0.14, 0.006)
-      lens.translate(faceX - 0.04, lampY, lampZ)
+      const lens = bevelBox(0.03, 0.22, 0.10, 0.005)
+      lens.rotateY(-sz * 0.22)
+      lens.translate(lampX - 0.02, lampY, lampZ + sz * 0.02)
       emit('lamps', lens, lamps, `lamp-${sz}`)
-      const drl = new TorusGeometry(0.20, 0.018, 6, 20, Math.PI * 1.15)
-      drl.rotateY(Math.PI / 2)
-      drl.rotateX(sz > 0 ? -0.35 : 0.35)
-      drl.rotateZ(sz > 0 ? 0.15 : -0.15)
-      drl.translate(faceX - 0.05, lampY, lampZ + sz * 0.02)
+      const drl = new TorusGeometry(0.17, 0.016, 6, 20, Math.PI * 1.18)
+      drl.rotateY(Math.PI / 2 - sz * 0.28)
+      drl.rotateX(sz > 0 ? -0.62 : 0.62)
+      drl.translate(lampX - 0.01, lampY + 0.02, lampZ + sz * 0.03)
       emit('lamps', drl, lamps, `drl-${sz}`)
 
       const fogBucket = new CylinderGeometry(0.05, 0.06, 0.10, 12)
@@ -1088,11 +1104,11 @@ export function createCabPreview({ aspect }: { aspect: number; time?: number }) 
   const nose = -overall / 2
   const preview = createF1Preview(model, {
     aspect,
-    target: [nose + 0.55, 1.7, 0],
-    distance: 7.4,
-    fov: 32,
-    yaw: -0.22,
-    pitch: 0.08,
+    target: [nose + 1.15, 1.85, 0.1],
+    distance: 8.6,
+    fov: 30,
+    yaw: -0.52,
+    pitch: 0.12,
     ground: true,
     bloom: true,
   })
