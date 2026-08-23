@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { Link } from 'react-router-dom'
 import {
   ACESFilmicToneMapping,
   AgXToneMapping,
@@ -139,6 +140,15 @@ export function ModelPreview({ model }: ModelPreviewProps) {
   return (
     <div className="model-preview" ref={hostRef}>
       <canvas aria-label={`Interactive 3D preview of ${model.name}`} />
+      {model.kind === 'f1' ? (
+        <Link
+          className="pit-link-button"
+          to={`/scenes/f1-pit?focus=${encodeURIComponent(model.id)}`}
+          title="Open this prop in the F1 pit scene"
+        >
+          See in the pit
+        </Link>
+      ) : null}
       <button type="button" className="export-button" onClick={() => void exportGlb()} disabled={exporting}>
         {exporting ? 'Exporting…' : 'Export GLB'}
       </button>

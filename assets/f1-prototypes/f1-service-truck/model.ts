@@ -105,6 +105,12 @@ const GAP = TRUCK.gap
 const MAX_LEN = TRUCK.length
 const CLEAR = LAYER_CLEARANCE * 3
 const DEMO_SPEED = 8
+const DECK = 1.22
+
+/** Bumper-to-tail. Trailer overlaps the tractor; overall is cab + hitch + box. */
+function articLength(boxLen: number): number {
+  return CAB_LEN + GAP + boxLen
+}
 
 const defaults: F1ServiceTruckConfig = {
   kind: 'box',
@@ -161,7 +167,7 @@ function boxRing(
 function clampConfig(config: F1ServiceTruckConfig): void {
   config.kind = isTruckKind(config.kind) ? config.kind : 'box'
   config.axles = config.axles >= 3 ? 3 : 2
-  const maxBox = MAX_LEN - TRACTOR - GAP
+  const maxBox = MAX_LEN - CAB_LEN - GAP
   config.boxLength = Math.min(maxBox, Math.max(6.0, config.boxLength))
   config.wheelbase = Math.min(4.2, Math.max(3.2, config.wheelbase))
   config.livery = isFasciaStyle(config.livery) ? config.livery : 'stamp'
@@ -535,12 +541,12 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
   const rebuild = (): void => {
     releaseGenerated()
     const boxLen = config.boxLength
-    const overall = TRACTOR + GAP + boxLen
+    const overall = articLength(boxLen)
     const nose = -overall / 2
     const cabX0 = nose
     const cabX1 = nose + CAB_LEN
     const fifth = nose + TRACTOR
-    const boxX0 = fifth + GAP
+    const boxX0 = cabX1 + GAP
     const boxX1 = boxX0 + boxLen
     const boxX = boxX0 + boxLen / 2
     const steerX = nose + 1.38
@@ -861,8 +867,8 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
     const spoiler = new LoftGeometry(
       [
         boxRing(cabX1 - 0.12, HEIGHT - 0.18, HEIGHT, WIDTH - 0.12, 0.04),
-        boxRing(cabX1 + 0.35, HEIGHT - 0.10, HEIGHT + 0.02, WIDTH - 0.08, 0.05),
-        boxRing(fifth - 0.05, HEIGHT - 0.22, HEIGHT - 0.04, WIDTH - 0.22, 0.04),
+        boxRing(cabX1 + 0.18, HEIGHT - 0.10, HEIGHT + 0.02, WIDTH - 0.08, 0.05),
+        boxRing(boxX0 - 0.02, HEIGHT - 0.16, HEIGHT - 0.02, WIDTH - 0.18, 0.04),
       ],
       { closed: true, capStart: true, capEnd: true },
     )
@@ -877,8 +883,12 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
     cross.translate(nose + TRACTOR / 2, 0.48, 0)
     emit('chassis', cross, chassis, 'crossmember', kit.graphite)
 
-    const kingpin = bevelBox(0.62, 0.12, 0.78, 0.02)
-    kingpin.translate(fifth - 0.08, 1.08, 0)
+    const hitch = bevelBox(GAP - 0.06, 0.10, 1.08, 0.012)
+    hitch.translate((cabX1 + boxX0) / 2, DECK - 0.08, 0)
+    emit('chassis', hitch, chassis, 'hitch-plate', bumperMat)
+
+    const kingpin = bevelBox(0.72, 0.12, 0.84, 0.02)
+    kingpin.translate(fifth - 0.08, DECK - 0.08, 0)
     emit('chassis', kingpin, chassis, 'fifth-wheel')
 
     const tank = new CylinderGeometry(0.18, 0.18, 1.15, 16)
@@ -898,10 +908,9 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
       emit('chassis', driveArch, chassis, `drive-arch-${sz}`, bumperMat)
     }
 
-    const boxH = HEIGHT - 0.42
-    const cargoH = config.kind === 'reefer' ? boxH : boxH - 0.02
-    const yBot = 0.48
-    const yTop = yBot + cargoH
+    const yBot = DECK
+    const yTop = HEIGHT - 0.08
+    const cargoH = yTop - yBot
     const cargoBox = new LoftGeometry(
       [
         boxRing(boxX0, yBot, yTop, WIDTH - 0.02, 0.12),
@@ -1083,7 +1092,7 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
       if (patch.lamps !== undefined) config.lamps = patch.lamps
       clampConfig(config)
       if (ownsCab) {
-        cabPaint.color.set(config.paint)
+        (cabPaint as MeshPhysicalMaterial).color.set(config.paint)
       }
       if (dirty) rebuild()
       else {
@@ -1125,7 +1134,7 @@ export function createModel(options: F1ServiceTruckOptions = {}): F1ServiceTruck
 }
 
 function attachCabLight(root: Group): PointLight {
-  const overall = TRACTOR + GAP + TRUCK.boxLength
+  const overall = articLength(TRUCK.boxLength)
   const nose = -overall / 2
   const cabLight = new PointLight(0xffe8c8, 7.2, 5.0, 1.45)
   cabLight.name = 'f1-kit / cab light'
@@ -1138,7 +1147,7 @@ function attachCabLight(root: Group): PointLight {
 
 export function createCabPreview({ aspect }: { aspect: number; time?: number }) {
   const model = createModel({ kind: 'box', axles: 3, lamps: true, wheelRpm: 0 })
-  const overall = TRUCK.tractor + TRUCK.gap + TRUCK.boxLength
+  const overall = articLength(TRUCK.boxLength)
   const nose = -overall / 2
   const preview = createF1Preview(model, {
     aspect,

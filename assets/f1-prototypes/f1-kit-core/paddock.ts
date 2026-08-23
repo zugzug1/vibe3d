@@ -16,7 +16,8 @@ export function isTruckKind(value: string): value is TruckKind {
 /**
  * DAF XG+ high-roof artic. Width 2.55 m (EU max), roof ~3.95 m.
  * Tractor bumper-to-fifth-wheel 6.20 m, Super Space Cab body 3.70 m,
- * hitch gap 0.45 m, trailer fills the rest of 16.50 m.
+ * hitch gap 0.45 m behind the cab. Trailer overlaps the tractor chassis
+ * at the fifth wheel and fills the rest of 16.50 m.
  * Trailer bogie defaults to 3 axles. Tyre: 315/80R22.5 OD ≈ 1.08 m.
  */
 export const TRUCK = {
@@ -27,7 +28,7 @@ export const TRUCK = {
   cab: 3.7,
   gap: 0.45,
   wheelbase: 3.8,
-  boxLength: 9.70,
+  boxLength: 12.22,
   tyreOd: 1.08,
   axles: 3,
 } as const

@@ -992,6 +992,21 @@ describe('FIA 1:1 datums', () => {
     model.dispose()
   })
 
+  test('service truck trailer hitches behind the cab, not behind the tractor', () => {
+    const model = createServiceTruck()
+    model.root.updateMatrixWorld(true)
+    const bulkhead = model.root.getObjectByName('bulkhead')
+    const cargo = model.root.getObjectByName('box')
+    expect(bulkhead).toBeDefined()
+    expect(cargo).toBeDefined()
+    const cabRear = new Box3().setFromObject(bulkhead!).max.x
+    const trailerFront = new Box3().setFromObject(cargo!).min.x
+    const hitch = trailerFront - cabRear
+    expect(hitch).toBeGreaterThan(0.2)
+    expect(hitch).toBeLessThan(0.8)
+    model.dispose()
+  })
+
   test('service truck wheels spin from hub transforms', () => {
     const model = createServiceTruck({ wheelRpm: 60 })
     const hub = model.parts.wheels.children[0]

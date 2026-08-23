@@ -146,8 +146,23 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .export-button { position: absolute; right: 15px; bottom: 15px; min-height: 38px; padding: 0 14px; border: 1px solid #3c4650; border-radius: 8px; color: #e6e9ec; background: rgba(12,15,18,.88); backdrop-filter: blur(10px); font-size: 12px; font-weight: 650; }
 .export-button:hover { background: #1a2128; }
 .export-button:disabled { opacity: .6; }
-.model-card--scene { background: linear-gradient(160deg, rgba(24, 36, 42, 0.95), rgba(12, 16, 20, 0.92)); }
-.model-card--scene span { color: var(--green); }
+.pit-link-button {
+  position: absolute;
+  left: 15px;
+  bottom: 15px;
+  z-index: 2;
+  min-height: 28px;
+  padding: 0 10px;
+  border: 1px solid rgba(60, 70, 80, 0.7);
+  border-radius: 999px;
+  color: #9aa3ab;
+  background: rgba(12, 15, 18, 0.58);
+  backdrop-filter: blur(10px);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.01em;
+}
+.pit-link-button:hover { color: #eef2f5; border-color: #5a6672; background: rgba(22, 28, 34, 0.86); }
 .reference-section { margin-top: 72px; scroll-margin-top: 92px; }
 
 .pit-inspect-page {

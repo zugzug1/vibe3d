@@ -2,7 +2,7 @@ import { ArrowRight, Box, Braces, PackageOpen, Palette, Terminal } from 'lucide-
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBlock, DocsLayout, Header, PageIntro } from './components.tsx'
-import { catalog, f1PitScene, findModel } from './catalog.ts'
+import { catalog, findModel } from './catalog.ts'
 import { ModelInstallation, ModelUsage } from './model-documentation.tsx'
 
 const ModelPreview = lazy(async () => {
@@ -191,7 +191,6 @@ function ModelIndex() {
   const query = params.get('q') ?? ''
   const needle = query.toLowerCase()
   const filtered = catalog.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
-  const showPitCard = !needle || `${f1PitScene.name} ${f1PitScene.category} ${f1PitScene.description}`.toLowerCase().includes(needle)
   return (
     <div className="catalog-page">
       <PageIntro eyebrow="Source kits · MIT licensed" title="Models ready to become yours.">
@@ -206,15 +205,6 @@ function ModelIndex() {
         />
       </label>
       <div className="catalog-grid">
-        {showPitCard ? (
-          <Link className="model-card model-card--scene" to={f1PitScene.href}>
-            <span>{f1PitScene.category} · Scene</span>
-            <Box />
-            <h2>{f1PitScene.name}</h2>
-            <p>{f1PitScene.description}</p>
-            <b>Open pit inspect <ArrowRight /></b>
-          </Link>
-        ) : null}
         {filtered.map((model) => (
           <Link className="model-card" key={model.id} to={`/models/${model.id}`}>
             <span>{model.category}</span>
