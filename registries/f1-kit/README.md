@@ -98,3 +98,12 @@ swoop; no DAF or team wordmark. Preview uses kit bloom on DRL / headlamps / roof
 Paddock millimetres live in `f1-kit-core/paddock.ts` (truck envelope) and
 `ceremony.ts` (cup, magnum, bucket, table, LED ribbon). No copied team,
 sponsor, or trophy IP.
+
+## Playground
+
+```sh
+bun run dev:legacy
+```
+
+- Showcase (cinematic orbit, capture framing): `/?playground=f1`
+- Inspect (overview orbit + zoom; click ▲ markers for one of each prop, then Back): `/?playground=f1&mode=inspect`
