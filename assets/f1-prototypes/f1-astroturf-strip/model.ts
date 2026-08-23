@@ -1,7 +1,21 @@
 // f1-astroturf-strip — 2.0 m Grade 1 artificial-grass verge. Dark soil bed,
-// dense two-tone pile with a mown nap. Not a mint slab of card blades.
+// two-tone mown pile as a displaced carpet (not Minecraft card blades).
 
-import { BufferGeometry, Group, Mesh, MeshStandardMaterial, type Material } from 'three/webgpu'
+import {
+  BufferGeometry,
+  DataTexture,
+  Group,
+  LinearFilter,
+  LinearMipmapLinearFilter,
+  Mesh,
+  MeshStandardMaterial,
+  PlaneGeometry,
+  RepeatWrapping,
+  RGBAFormat,
+  SRGBColorSpace,
+  UnsignedByteType,
+  type Material,
+} from 'three/webgpu'
 
 import {
   ASTROTURF,
@@ -10,7 +24,6 @@ import {
   bevelBox,
   createF1Preview,
   disposeF1Materials,
-  mergeParts,
   shade,
 } from '../f1-kit-core/index.ts'
 
@@ -41,10 +54,41 @@ const defaults: F1AstroturfStripConfig = { modules: 6, pileStep: 0.05 }
 const BAND = ASTROTURF.pitch
 const WIDTH = ASTROTURF.width
 const THICK = ASTROTURF.thick
-const PILE = 0.046
-const STRIPE = 0.25
-const NAP = -0.28
+const PILE = 0.038
+const STRIPE = 0.28
 const RIM = 0.04
+
+function turfTexture(): DataTexture {
+  const n = 256
+  const data = new Uint8Array(n * n * 4)
+  const lit: readonly [number, number, number] = [62, 108, 58]
+  const dim: readonly [number, number, number] = [38, 72, 40]
+  for (let y = 0; y < n; y++) {
+    for (let x = 0; x < n; x++) {
+      const i = (y * n + x) * 4
+      const stripe = Math.floor((y / n) * (2 / STRIPE)) % 2 === 0
+      const fiber = Math.sin(x * 0.9 + y * 0.07) * 0.5 + 0.5
+      const grain = (Math.sin(x * 17.1 + y * 3.3) * 43758.5453) % 1
+      const g = grain < 0 ? grain + 1 : grain
+      const k = 0.72 + fiber * 0.18 + g * 0.1
+      const c = stripe ? lit : dim
+      data[i] = Math.round(c[0] * k)
+      data[i + 1] = Math.round(c[1] * k)
+      data[i + 2] = Math.round(c[2] * k)
+      data[i + 3] = 255
+    }
+  }
+  const tex = new DataTexture(data, n, n, RGBAFormat, UnsignedByteType)
+  tex.colorSpace = SRGBColorSpace
+  tex.wrapS = RepeatWrapping
+  tex.wrapT = RepeatWrapping
+  tex.repeat.set(6, 2)
+  tex.magFilter = LinearFilter
+  tex.minFilter = LinearMipmapLinearFilter
+  tex.generateMipmaps = true
+  tex.needsUpdate = true
+  return tex
+}
 
 export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfStripInstance {
   const config: F1AstroturfStripConfig = {
@@ -56,12 +100,13 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
 
   const bundle = acquireF1Materials()
   const extras: Material[] = []
+  const textures: DataTexture[] = []
   const materialSlots: Record<Slot, Material> = {
     mat: options.materials?.mat ?? (() => {
       const mat = new MeshStandardMaterial({
         name: 'f1-kit / astroturf',
-        color: shade(TOKEN.FIELD_500, 0.16),
-        roughness: 0.9,
+        color: shade(TOKEN.FIELD_500, -0.28),
+        roughness: 0.95,
         metalness: 0,
       })
       extras.push(mat)
@@ -70,14 +115,14 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
   }
   const bedMat = new MeshStandardMaterial({
     name: 'f1-kit / astroturf bed',
-    color: shade(TOKEN.FIELD_500, -0.72),
+    color: shade(TOKEN.FIELD_500, -0.84),
     roughness: 1,
     metalness: 0,
   })
   const pileDark = new MeshStandardMaterial({
     name: 'f1-kit / astroturf pile',
-    color: shade(TOKEN.FIELD_500, -0.55),
-    roughness: 0.96,
+    color: shade(TOKEN.FIELD_500, -0.48),
+    roughness: 0.97,
     metalness: 0,
   })
   extras.push(bedMat, pileDark)
@@ -95,6 +140,8 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
     for (const geometry of generated) geometry.dispose()
     generated.length = 0
     meshesBySlot.mat.length = 0
+    for (const texture of textures) texture.dispose()
+    textures.length = 0
   }
 
   const emit = (geometry: BufferGeometry, material: Material, name: string): void => {
@@ -114,29 +161,33 @@ export function createModel(options: F1AstroturfStripOptions = {}): F1AstroturfS
     bed.translate(0, THICK / 2, 0)
     emit(bed, bedMat, 'bed')
 
-    const light: BufferGeometry[] = []
-    const dark: BufferGeometry[] = []
     const innerL = length - RIM * 2
     const innerW = WIDTH - RIM * 2
-    const step = config.pileStep
+    const step = Math.min(config.pileStep, 0.08)
     const nx = Math.max(8, Math.round(innerL / step))
-    const nz = Math.max(8, Math.round(innerW / step))
-    for (let i = 0; i < nx; i++) {
-      for (let j = 0; j < nz; j++) {
-        const x = -innerL / 2 + (i + 0.5) * (innerL / nx)
-        const z = -innerW / 2 + (j + 0.5) * (innerW / nz)
-        const h = PILE + ((i * 3 + j * 5) % 5) * 0.005
-        const blade = bevelBox(0.026, h, 0.0042, 0.0008)
-        blade.rotateX(NAP)
-        blade.rotateY(((i * 7 + j * 3) % 9) * 0.1)
-        blade.translate(x, THICK + h / 2, z)
-        const mown = Math.floor((z + innerW / 2) / STRIPE) % 2 === 0
-        const swap = (i + j) % 9 === 0
-        ;((mown !== swap) ? light : dark).push(blade)
-      }
+    const nz = Math.max(6, Math.round(innerW / step))
+
+    const under = bevelBox(innerL, PILE * 0.72, innerW, 0.006)
+    under.translate(0, THICK + PILE * 0.36, 0)
+    emit(under, pileDark, 'pile-dark')
+
+    const pile = new PlaneGeometry(innerL, innerW, nx, nz)
+    pile.rotateX(-Math.PI / 2)
+    const pos = pile.getAttribute('position')
+    for (let i = 0; i < pos.count; i++) {
+      const x = pos.getX(i)
+      const z = pos.getZ(i)
+      const k = Math.abs((Math.floor((x + 40) * 19) * 13 + Math.floor((z + 8) * 23) * 7) % 11)
+      pos.setY(i, THICK + PILE * (0.88 + k * 0.014))
     }
-    emit(mergeParts(light, 'pile'), materialSlots.mat, 'pile')
-    emit(mergeParts(dark, 'pile-dark'), pileDark, 'pile-dark')
+    pile.computeVertexNormals()
+    const map = turfTexture()
+    textures.push(map)
+    map.repeat.set(innerL, innerW)
+    const pileMat = materialSlots.mat as MeshStandardMaterial
+    pileMat.map = map
+    pileMat.needsUpdate = true
+    emit(pile, pileMat, 'pile')
   }
   rebuild()
 
