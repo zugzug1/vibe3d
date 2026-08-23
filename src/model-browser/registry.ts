@@ -2475,6 +2475,18 @@ export const MODEL_CATALOG: readonly ModelCatalogEntry[] = [
       return adaptStaticPreview(createPreview({ aspect, time: 0.38 }), 0.7)
     },
   },
+  {
+    id: 'f1-team-motorhome',
+    label: 'F1 Team Motorhome',
+    category: 'Vehicles / Motorsport',
+    description: 'Cadillac / Schuler 15 × 17 m three-storey hospitality house.',
+    tags: ['prop', 'vehicles', 'motorsport', 'paddock'],
+    exportName: 'f1-team-motorhome.glb',
+    async create(aspect) {
+      const { createPreview } = await import('../../assets/f1-prototypes/f1-team-motorhome/model.ts')
+      return adaptStaticPreview(createPreview({ aspect }), 2.4)
+    },
+  },
 ]
 
 function createGaugePreview(

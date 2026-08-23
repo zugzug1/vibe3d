@@ -98,6 +98,7 @@ import { createModel as createSectorBoard } from '../f1-sector-board/model.ts'
 import { createModel as createNameboard } from '../f1-nameboard/model.ts'
 import { createModel as createServiceTruck } from '../f1-service-truck/model.ts'
 import { createModel as createChequeredFlag } from '../f1-chequered-flag/model.ts'
+import { createModel as createMotorhome } from '../f1-team-motorhome/model.ts'
 
 interface Live {
   readonly root: Group
@@ -226,10 +227,11 @@ export function createScene(): F1KitScene {
   root.add(apron)
   extras.push({ dispose: () => { apron.geometry.dispose() } })
 
+  const WALL_Z = GARAGE_SPAN / 2 + 18
   const paint = new Mesh(new PlaneGeometry(2.2, GARAGE_SPAN + 8), paintMat)
   paint.name = 'scene-pit-paint'
   paint.rotation.x = -Math.PI / 2
-  paint.position.set(-(RIBBON_HALF + 1.1), 0.003, 0)
+  paint.position.set(-(RIBBON_HALF + 1.1), 0.003, WALL_Z)
   paint.receiveShadow = true
   root.add(paint)
   extras.push({ dispose: () => { paint.geometry.dispose() } })
@@ -256,8 +258,8 @@ export function createScene(): F1KitScene {
   add(createAstroturf({ modules: 50, pileStep: 0.22 }), -TURF_X, 72, ALONG)
 
   // Pit (−X): garage, pit wall, per-bay gantries, tools on the door line.
-  add(createGarageBox({ count: BAYS, number: '11', legend: 'CHECO' }), GARAGE_X, 0, FACE_PIT)
-  add(createPitWall({ bays: BAYS, labels: ['11', '12', '13', '14', '15', '16'] }), WALL_X, 0, FACE_SPEC)
+  add(createGarageBox({ count: BAYS, number: '11', legend: 'CHECO', open: 1 }), GARAGE_X, 0, FACE_PIT)
+  add(createPitWall({ bays: BAYS, labels: ['11', '12', '13', '14', '15', '16'] }), WALL_X, WALL_Z, FACE_SPEC)
   for (let i = 0; i < BAYS; i++) {
     const z = -GARAGE_SPAN / 2 + (i + 0.5) * GARAGE_BAY_PITCH
     add(createPitGantry({ span: 5, height: 4.0, bays: 4 }), DOOR_X + 2.6, z)
@@ -269,8 +271,9 @@ export function createScene(): F1KitScene {
   add(createCabinet(), TOOL_X, GARAGE_BAY_PITCH - 1.2)
   add(createReel(), TOOL_X, GARAGE_BAY_PITCH + 1.4)
   add(createTyre(), TOOL_X + 0.7, -GARAGE_BAY_PITCH - 0.2)
-  add(createTyreGun(), TOOL_X + 0.55, -0.8)
-  add(createPitJack(), TOOL_X + 0.7, 0.9)
+  const openBayZ = GARAGE_SPAN / 2 - 0.5 * GARAGE_BAY_PITCH
+  add(createTyreGun(), DOOR_X - 1.0, openBayZ - 0.7)
+  add(createPitJack(), DOOR_X - 1.4, openBayZ)
   add(createExtinguisher(), TOOL_X + 0.45, GARAGE_BAY_PITCH + 0.2)
 
   // Spectator (+X): fence the full asphalt; two stand blocks with a dressed gap.
@@ -331,13 +334,12 @@ export function createScene(): F1KitScene {
   add(createTunnelPortal(), 0, END_Z + 16, Math.PI)
 
   // Paddock (behind the garage). Cab toward −Z so the still sees cab+box as one artic.
-  add(createRaceControl(), GARAGE_X - 20, 40, FACE_PIT)
+  add(createMotorhome(), GARAGE_X - 10, GARAGE_SPAN / 2 + 12, FACE_PIT)
+  add(createRaceControl(), GARAGE_X - 10, GARAGE_SPAN / 2 + 28, FACE_PIT)
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
-  // Two side-by-side pairs on the street, opposite the garage (2×2 group of four).
-  const teamX = WALL_X + PIT_WALL.depth / 2 + 0.2 + TRUCK.width / 2
-  const teamLane = TRUCK.width + 1.4
+  // 1×4 on the ribbon, cabs facing the garage.
   const teamPitch = TRUCK.length + 1.8
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
@@ -347,8 +349,6 @@ export function createScene(): F1KitScene {
   ] as const
   for (let i = 0; i < teamRow.length; i++) {
     const spec = teamRow[i]!
-    const col = i % 2
-    const row = Math.floor(i / 2)
     const teamTruck = createServiceTruck({
       kind: spec.kind,
       lamps: true,
@@ -361,21 +361,21 @@ export function createScene(): F1KitScene {
       accent: spec.accent,
     })
     teamTruck.setGround(ground)
-    add(teamTruck, teamX + col * teamLane, (row - 0.5) * teamPitch, FACE_PIT)
+    add(teamTruck, ROAD_X, (i - 1.5) * teamPitch, FACE_SPEC)
   }
-  add(createWeighbridge(), GARAGE_X - 20, 16, FACE_PIT)
-  add(createParcFerme(), GARAGE_X - 12, 2, FACE_PIT)
-  add(createMedicalPost(), GARAGE_X - 20, 8, FACE_PIT)
-  add(createGeneratorCabin(), GARAGE_X - 20, 0, FACE_PIT)
+  add(createWeighbridge(), GARAGE_X - 8, -28, FACE_PIT)
+  add(createParcFerme(), GARAGE_X, -28, FACE_PIT)
+  add(createMedicalPost(), GARAGE_X - 16, -32, FACE_PIT)
+  add(createGeneratorCabin(), GARAGE_X - 16, -28, FACE_PIT)
 
-  // Ceremony cluster — behind the service row, not on the straight.
-  add(createPodium(), GARAGE_X - 12, -32, Math.PI)
-  add(createTrophyTable(), GARAGE_X - 12, -35)
-  add(createTrophyCup(), GARAGE_X - 12, -34.6, 0, 0.75)
-  add(createChampagne(), GARAGE_X - 11.2, -34.6, 0, 0.75)
-  add(createIceBucket(), GARAGE_X - 12.8, -34.6, 0, 0.75)
-  add(createInterviewBackdrop(), GARAGE_X - 6, -32, Math.PI)
-  add(createCooldownBoard(), GARAGE_X - 8, -30, Math.PI)
+  // Ceremony cluster — −Z side of the garage, not behind it.
+  add(createPodium(), GARAGE_X, -36, Math.PI)
+  add(createTrophyTable(), GARAGE_X, -39)
+  add(createTrophyCup(), GARAGE_X, -38.6, 0, 0.75)
+  add(createChampagne(), GARAGE_X + 0.8, -38.6, 0, 0.75)
+  add(createIceBucket(), GARAGE_X - 0.8, -38.6, 0, 0.75)
+  add(createInterviewBackdrop(), GARAGE_X + 6, -36, Math.PI)
+  add(createCooldownBoard(), GARAGE_X + 4, -34, Math.PI)
 
   return {
     root,

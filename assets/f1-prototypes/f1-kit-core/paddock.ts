@@ -31,3 +31,12 @@ export const TRUCK = {
   tyreOd: 1.08,
   axles: 3,
 } as const
+
+/** Assembled Cadillac / Schuler 2026 hospitality house (Monaco debut). 15 × 17 m, three storeys. */
+export const MOTORHOME = {
+  width: 15,
+  depth: 17,
+  storeys: 3,
+  storey: 3.15,
+  terrace: 1.1,
+} as const

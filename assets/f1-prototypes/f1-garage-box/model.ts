@@ -36,6 +36,8 @@ export interface F1GarageBoxConfig {
   legend: string
   /** Built-in plate. Ignored after `setMaterial('fascia', …)`. */
   style: FasciaStyle
+  /** How many bays, from the first, have the shutter raised. */
+  open: number
 }
 
 export interface F1GarageBoxOptions extends Partial<F1GarageBoxConfig> {
@@ -53,7 +55,7 @@ export interface F1GarageBoxInstance {
   dispose(): void
 }
 
-const defaults: F1GarageBoxConfig = { count: 1, number: '11', legend: 'CHECO', style: 'stamp' }
+const defaults: F1GarageBoxConfig = { count: 1, number: '11', legend: 'CHECO', style: 'stamp', open: 0 }
 const W = GARAGE.width
 const D = GARAGE.depth
 const H = GARAGE.height
@@ -72,6 +74,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
     number: String(options.number ?? defaults.number).slice(0, 3),
     legend: String(options.legend ?? defaults.legend).slice(0, 8),
     style: options.style && isFasciaStyle(options.style) ? options.style : defaults.style,
+    open: Math.max(0, Math.round(options.open ?? defaults.open)),
   }
 
   const bundle = acquireF1Materials()
@@ -123,6 +126,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
   const rebuild = (): void => {
     releaseGenerated()
     const count = config.count
+    config.open = Math.min(config.open, count)
     const span = count * GARAGE_BAY_PITCH
     for (let i = 0; i < count; i++) {
       const x = -span / 2 + (i + 0.5) * GARAGE_BAY_PITCH
@@ -143,13 +147,15 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
       const doorW = W - WALL * 2 - 0.1
       const slatCount = 12
       const slatH = doorH / slatCount
-      const slats: BufferGeometry[] = []
-      for (let s = 0; s < slatCount; s++) {
-        const slat = bevelBox(doorW, slatH - 0.01, 0.05, 0.004)
-        slat.translate(x, 0.08 + (s + 0.5) * slatH, D / 2 - 0.04)
-        slats.push(slat)
+      if (i >= config.open) {
+        const slats: BufferGeometry[] = []
+        for (let s = 0; s < slatCount; s++) {
+          const slat = bevelBox(doorW, slatH - 0.01, 0.05, 0.004)
+          slat.translate(x, 0.08 + (s + 0.5) * slatH, D / 2 - 0.04)
+          slats.push(slat)
+        }
+        emit('shutter', mergeParts(slats, `shutter-${i}`), shutter, `shutter-${i}`)
       }
-      emit('shutter', mergeParts(slats, `shutter-${i}`), shutter, `shutter-${i}`)
 
       const frame = bevelBox(W - WALL * 2 - 0.08, FASCIA_H - 0.04, 0.05, 0.006)
       frame.translate(x, H - FASCIA_H / 2, D / 2 - 0.02)
@@ -189,6 +195,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
       if (patch.number !== undefined) config.number = String(patch.number).slice(0, 3)
       if (patch.legend !== undefined) config.legend = String(patch.legend).slice(0, 8)
       if (patch.style !== undefined && isFasciaStyle(patch.style)) config.style = patch.style
+      if (patch.open !== undefined) config.open = Math.max(0, Math.round(patch.open))
       rebuild()
     },
     setMaterial(slot, material) {

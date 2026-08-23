@@ -79,6 +79,7 @@ import { createModel as createSectorBoard } from './f1-sector-board/model.ts'
 import { createModel as createNameboard } from './f1-nameboard/model.ts'
 import { createModel as createServiceTruck, createPreview as createServiceTruckPreview, createWheelPreview } from './f1-service-truck/model.ts'
 import { createModel as createChequeredFlag } from './f1-chequered-flag/model.ts'
+import { createModel as createMotorhome } from './f1-team-motorhome/model.ts'
 import { createScene as createKitScene } from './f1-kit-scene/kit-scene.ts'
 
 // --- dispose instrumentation -------------------------------------------------------------------------
@@ -199,6 +200,7 @@ const factories = {
   'f1-nameboard': () => createNameboard(),
   'f1-service-truck': () => createServiceTruck(),
   'f1-chequered-flag': () => createChequeredFlag({ waving: true }),
+  'f1-team-motorhome': () => createMotorhome(),
 } as const
 
 describe.each(Object.keys(factories) as Array<keyof typeof factories>)('%s ownership', (id) => {
@@ -594,10 +596,10 @@ describe('procedural knobs', () => {
 
   test('garage fascia number and legend round-trip', () => {
     const model = createGarageBox({ count: 2, number: '4', legend: 'BOX' })
-    expect(model.getConfig()).toEqual({ count: 2, number: '4', legend: 'BOX', style: 'stamp' })
+    expect(model.getConfig()).toEqual({ count: 2, number: '4', legend: 'BOX', style: 'stamp', open: 0 })
     expect(model.parts.fascia.children.length).toBe(2)
     model.configure({ count: 1, number: '9', legend: 'PIT', style: 'fia' })
-    expect(model.getConfig()).toEqual({ count: 1, number: '9', legend: 'PIT', style: 'fia' })
+    expect(model.getConfig()).toEqual({ count: 1, number: '9', legend: 'PIT', style: 'fia', open: 0 })
     expect(model.parts.fascia.children.length).toBe(1)
     model.dispose()
   })

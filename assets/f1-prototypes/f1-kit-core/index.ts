@@ -92,6 +92,7 @@ export type { CircuitSignKind, StairKind, WallEnd, WallFit } from './track.ts'
 export {
   TRUCK,
   TRUCK_KINDS,
+  MOTORHOME,
   isTruckKind,
 } from './paddock.ts'
 export type { TruckKind } from './paddock.ts'
