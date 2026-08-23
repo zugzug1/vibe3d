@@ -243,6 +243,7 @@ export function F1PitInspectPage() {
             </button>
           </aside>
         ) : null}
+        <Link className="pit-inspect-explore" to="/scenes/f1-pit/explore">Explore pit</Link>
       </div>
     </div>
   )

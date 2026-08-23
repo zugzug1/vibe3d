@@ -15,6 +15,11 @@ const F1PitInspectPage = lazy(async () => {
   return { default: module.F1PitInspectPage }
 })
 
+const F1PitExplorePage = lazy(async () => {
+  const module = await import('./f1-pit-explore.tsx')
+  return { default: module.F1PitExplorePage }
+})
+
 const installOne = 'bunx vibe3d add @scifi-kit/pressure-gauge'
 
 function Home() {
@@ -238,6 +243,14 @@ export function App() {
   return (
     <Routes>
       <Route path="/" element={<Home />} />
+      <Route
+        path="/scenes/f1-pit/explore"
+        element={
+          <Suspense fallback={<div className="pit-inspect-page pit-inspect-page--loading" aria-busy="true" />}>
+            <F1PitExplorePage />
+          </Suspense>
+        }
+      />
       <Route
         path="/scenes/f1-pit"
         element={
