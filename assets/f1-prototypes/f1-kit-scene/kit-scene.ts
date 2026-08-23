@@ -335,8 +335,8 @@ export function createScene(): F1KitScene {
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
-  // Pit-side of the wall, opposite the garage — on the apron, not the racing line.
-  const teamX = WALL_X - PIT_WALL.depth / 2 - 0.4 - TRUCK.width / 2
+  // Flush to the painted/kerb edge, opposite the garage (Zandvoort pit still).
+  const teamX = WALL_X + PIT_WALL.depth / 2 + 0.2 + TRUCK.width / 2
   const teamPitch = TRUCK.length + 1.5
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
@@ -411,8 +411,8 @@ export function createPreview({ aspect, time }: { aspect: number; time?: number 
   const camera = new PerspectiveCamera(42, aspect > 0 ? aspect : 1, 0.5, 420)
   camera.name = 'f1-kit / scene camera'
   // Looking +Z down the pit: garages (−X) sit on the right of frame.
-  camera.position.set(-10, 12, -38)
-  const focus = new Vector3(-14, 1.2, 10)
+  camera.position.set(-10, 16, -38)
+  const focus = new Vector3(-14, 1.2, 12)
   camera.lookAt(focus)
   camera.updateProjectionMatrix()
   scene.add(camera)
