@@ -335,9 +335,10 @@ export function createScene(): F1KitScene {
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
   add(truck, GARAGE_X - 12, -22, FACE_PIT)
-  // Flush to the painted/kerb edge, opposite the garage (Zandvoort pit still).
+  // Two side-by-side pairs on the street, opposite the garage (2×2 group of four).
   const teamX = WALL_X + PIT_WALL.depth / 2 + 0.2 + TRUCK.width / 2
-  const teamPitch = TRUCK.length + 1.5
+  const teamLane = TRUCK.width + 1.4
+  const teamPitch = TRUCK.length + 1.8
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
     { kind: 'curtainside', paint: TOKEN.SHELL_200, legend: 'STEEL', number: '63', paper: TOKEN.SHELL_200, ink: TOKEN.GRAPHITE_800, accent: TOKEN.GRAPHITE_800 },
@@ -346,6 +347,8 @@ export function createScene(): F1KitScene {
   ] as const
   for (let i = 0; i < teamRow.length; i++) {
     const spec = teamRow[i]!
+    const col = i % 2
+    const row = Math.floor(i / 2)
     const teamTruck = createServiceTruck({
       kind: spec.kind,
       lamps: true,
@@ -358,7 +361,7 @@ export function createScene(): F1KitScene {
       accent: spec.accent,
     })
     teamTruck.setGround(ground)
-    add(teamTruck, teamX, (i - 1.5) * teamPitch, FACE_PIT)
+    add(teamTruck, teamX + col * teamLane, (row - 0.5) * teamPitch, FACE_PIT)
   }
   add(createWeighbridge(), GARAGE_X - 8, 8, FACE_PIT)
   add(createParcFerme(), GARAGE_X - 12, 2, FACE_PIT)
