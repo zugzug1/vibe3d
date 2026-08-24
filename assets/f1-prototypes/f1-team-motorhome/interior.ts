@@ -59,6 +59,9 @@ export interface InteriorPlace {
 
 const STOREY = MOTORHOME.storey
 const ATRIUM_W = 4.2
+/** Must match the void the shell carves from its slabs, or floors roof the atrium. */
+const ATRIUM_HALF = ATRIUM_W / 2 + 0.2
+const ATRIUM_D = 4.6
 
 function stampTexture(n: number, paint: (data: Uint8Array, n: number) => void): DataTexture {
   const data = new Uint8Array(n * n * 4)
@@ -160,8 +163,9 @@ export function dressInterior(
   extras: Material[],
   place: InteriorPlace,
 ): void {
-  const atriumHalf = ATRIUM_W / 2 + 0.15
-  const wellZ = d / 2 - 2.55
+  const atriumZ1 = d / 2 - 0.22
+  const atriumZ0 = atriumZ1 - ATRIUM_D
+  const wellZ = (atriumZ0 + atriumZ1) / 2
   const steel: BufferGeometry[] = []
   const wood: BufferGeometry[] = []
   const grey: BufferGeometry[] = []
@@ -174,18 +178,20 @@ export function dressInterior(
   g1Floor.translate(0, 0.1, 0)
   wood.push(g1Floor)
 
+  const rearDepth = atriumZ0 + (d / 2 - 0.25)
+  const rearMid = atriumZ0 - rearDepth / 2
+  const wingWidth = w / 2 - 0.25 - ATRIUM_HALF
+  const wingMid = ATRIUM_HALF + wingWidth / 2
   for (const s of [1, 2] as const) {
     const y = s * STOREY
-    const back = bevelBox(w - 0.5, 0.1, d - 3.4, 0.01)
-    back.translate(0, y, -1.2)
-    const left = bevelBox((w - ATRIUM_W) / 2 - 0.15, 0.1, 3.1, 0.01)
-    left.translate(-(w / 2 + atriumHalf) / 2 + 0.1, y, wellZ)
-    const right = bevelBox((w - ATRIUM_W) / 2 - 0.15, 0.1, 3.1, 0.01)
-    right.translate((w / 2 + atriumHalf) / 2 - 0.1, y, wellZ)
-    wood.push(back, left, right)
-    const ceil = bevelBox(w - 0.7, 0.06, d - 0.7, 0.008)
-    ceil.translate(0, y - 0.08, 0)
-    dark.push(ceil)
+    wood.push(bevelBox(w - 0.5, 0.1, rearDepth, 0.01).translate(0, y, rearMid))
+    dark.push(bevelBox(w - 0.7, 0.06, rearDepth - 0.2, 0.008).translate(0, y - 0.08, rearMid))
+    for (const sx of [-1, 1] as const) {
+      wood.push(bevelBox(wingWidth, 0.1, ATRIUM_D, 0.01).translate(sx * wingMid, y, wellZ))
+      dark.push(bevelBox(wingWidth - 0.2, 0.06, ATRIUM_D, 0.008).translate(
+        sx * wingMid, y - 0.08, wellZ,
+      ))
+    }
   }
 
   const chevTex = chevronTexture()
@@ -210,8 +216,11 @@ export function dressInterior(
     emit('shell', flank, sx < 0 ? 'chevron-left' : 'chevron-right', chevMat)
   }
 
+  // The fire bar stands proud of a recessed dark reveal. Sunk into the surround
+  // it read as a dark counter however hot the material was.
   dark.push(bevelBox(3.9, 0.58, 0.24, 0.016).translate(0, 0.42, -(d / 2 - 0.7)))
-  fire.push(bevelBox(3.35, 0.13, 0.08, 0.006).translate(0, 0.44, -(d / 2 - 0.56)))
+  dark.push(bevelBox(3.52, 0.3, 0.1, 0.008).translate(0, 0.44, -(d / 2 - 0.83)))
+  fire.push(bevelBox(3.35, 0.22, 0.12, 0.006).translate(0, 0.44, -(d / 2 - 0.94)))
   stone.push(bevelBox(4.05, 0.05, 0.34, 0.008).translate(0, 0.16, -(d / 2 - 0.66)))
 
   const scriptTex = scriptTexture()
@@ -239,13 +248,16 @@ export function dressInterior(
     grey.push(loungeChairAt(x, 0, z, yaw))
   }
 
+  // Dining sits inside the atrium void so the look-through lands on laid tables
+  // rather than on the far wall of an empty room.
   const tableTop = 0.12 + TROPHY_TABLE.height
-  place(createTrophyTable(), -2.4, 0.12, 3.4, 0.06)
-  place(createTrophyTable(), 2.2, 0.12, 2.6, -0.1)
-  place(createChampagne(), -1.95, tableTop, 3.55)
-  place(createChampagne(), 2.55, tableTop, 2.75)
-  place(createIceBucket(), -2.95, tableTop, 3.2)
-  place(createTrophyCup(), 1.85, tableTop, 2.45)
+  const diningZ = atriumZ0 + 1.45
+  place(createTrophyTable(), -1.15, 0.12, diningZ, 0.05)
+  place(createTrophyTable(), 1.15, 0.12, diningZ + 0.24, -0.07)
+  place(createChampagne(), -0.7, tableTop, diningZ + 0.12)
+  place(createChampagne(), 1.55, tableTop, diningZ + 0.36)
+  place(createIceBucket(), -1.7, tableTop, diningZ - 0.08)
+  place(createTrophyCup(), 0.85, tableTop, diningZ + 0.18)
 
   const y2 = STOREY
   for (const [x, z] of [
@@ -351,7 +363,8 @@ export function dressInterior(
     grey.push(loungeChairAt(x, y3, z, yaw))
   }
   dark.push(bevelBox(2.9, 0.5, 0.22, 0.014).translate(0, y3 + 0.38, -(d / 2 - 0.7)))
-  fire.push(bevelBox(2.45, 0.11, 0.07, 0.005).translate(0, y3 + 0.4, -(d / 2 - 0.56)))
+  dark.push(bevelBox(2.6, 0.26, 0.1, 0.008).translate(0, y3 + 0.4, -(d / 2 - 0.82)))
+  fire.push(bevelBox(2.45, 0.19, 0.11, 0.005).translate(0, y3 + 0.4, -(d / 2 - 0.93)))
   place(createChampagne(), 0.35, y3 + 0.78, 1.55)
 
   emit('shell', mergeParts(dark, 'interior-dark'), 'interior-dark', mats.black)
