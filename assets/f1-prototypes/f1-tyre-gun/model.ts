@@ -85,11 +85,14 @@ const GUN_SPIN_RATE = 55 // rad/s the socket spins while running (impact-wrench 
 // Reverse dial: bezel outer radius is half the housing radius, so the dial owns the butt without
 // eating its cast silhouette.
 const DIAL = { x: -0.248, y: -0.012, r: 0.056 }
-// Tip ring: thin along the tool axis, but 1.4x the socket OD so a readable band of it stays clear of
-// the spline in any three-quarter view.
+// Tip ring: thin along the tool axis, but 1.4x the socket OD so a band of it stays clear of the spline.
 const COLLAR_X = 0.086
 const COLLAR_R = 0.074
 const COLLAR_W = 0.028
+// The LH stamp is cut in dark alloy and rolled below the crown line. Chrome strokes vanish into the
+// anodized ring's specular band, the crown line itself sits behind the spline in a three-quarter view,
+// and a stamp rolled further round the hoop sinks behind the carbon taper's silhouette.
+const CUE_ANGLE = -0.48
 // Trigger hangs forward of the grip so two fingers clear the front strap; the pivot sits up inside
 // the nose taper.
 const TRIGGER = { x: 0.070, y: -0.126, pivotX: 0.062, pivotY: -0.080 }
@@ -190,30 +193,29 @@ function triggerPlate(): BufferGeometry {
 }
 
 /**
- * The rotation cue stamped on the tip ring: "LH" in raised bars on the ring's outer band at +Z.
- * Strokes are sized to survive a 1024px capture, so they are engraving-thick rather than hairlines.
+ * The rotation cue stamped on the tip ring: "LH" in raised bars, laid flat on the ring's band and
+ * rolled `angle` round the hoop. Letters advance along the tool axis, so the block has to fit between
+ * the ring's rear edge and the spline; strokes are engraving-thick to survive the capture.
  */
-function lhCue(radius: number): BufferGeometry[] {
-  const z = radius + 0.0006
-  const depth = 0.006
-  const stroke = 0.0038
-  const tall = 0.020
-  const stem = (x: number): BufferGeometry => {
-    const g = bevelBox(stroke, tall, depth, 0.0006)
-    g.translate(x, 0, z)
-    return g
+function lhCue(radius: number, angle: number): BufferGeometry[] {
+  const z = radius + 0.0009
+  const depth = 0.0062
+  const stroke = 0.0042
+  const tall = 0.021
+  const roll = (geo: BufferGeometry, x: number, y: number): BufferGeometry => {
+    geo.translate(x, y, z)
+    if (angle !== 0) geo.rotateX(-angle)
+    return geo
   }
-  const bar = (x: number, y: number, width: number): BufferGeometry => {
-    const g = bevelBox(width, stroke, depth, 0.0006)
-    g.translate(x, y, z)
-    return g
-  }
+  const stem = (x: number): BufferGeometry => roll(bevelBox(stroke, tall, depth, 0.0006), x, 0)
+  const bar = (x: number, y: number, width: number): BufferGeometry =>
+    roll(bevelBox(width, stroke, depth, 0.0006), x, y)
   return [
-    stem(0.0765),
-    bar(0.0784, -0.0081, 0.0076),
-    stem(0.0855),
-    stem(0.0935),
-    bar(0.0895, 0, 0.0080),
+    stem(0.0755),
+    bar(0.0776, -0.0084, 0.0084),
+    stem(0.0850),
+    stem(0.0938),
+    bar(0.0894, 0, 0.0088),
   ]
 }
 
@@ -357,7 +359,7 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     triggerParts.push(bolt([TRIGGER.pivotX, TRIGGER.pivotY, 0], 0.0058, 0.027, AXIS_Z))
     emit('steel', mergeParts(triggerParts, 'trigger'), body, 'trigger')
 
-    // --- Air inlet, dial hardware and the LH cue on the tip ring --------------------------------------
+    // --- Air inlet and dial hardware ------------------------------------------------------------------
     const steelParts: BufferGeometry[] = []
     const inlet = new CylinderGeometry(0.015, 0.015, 0.048, 14)
     inlet.translate(-0.018, -0.312, 0)
@@ -376,7 +378,6 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
       steelParts.push(notch)
     }
     steelParts.push(bolt([DIAL.x, DIAL.y, 0.130], 0.0105, 0.020, AXIS_Z))
-    steelParts.push(...lhCue(COLLAR_R))
     emit('steel', mergeParts(steelParts, 'hardware'), body, 'hardware')
 
     // --- Slender rubber grip -------------------------------------------------------------------------
@@ -417,19 +418,21 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     emit('led', ledGeo, body, 'led')
 
     // --- Spinner: short anvil, ribbed spline and visibly hollow round socket -------------------------
-    // Sit the spline forward of the tip collar/hardware so rule-8 clearance stays ≥ FACE.
+    // Keep the spline clear of the tip collar/housing AABB (rule 8 plate-overlap).
     const spinnerParts: BufferGeometry[] = [
-      tubeSection(0.026, 0.054, [0.138, 0, 0], AXIS_X, 16),
+      tubeSection(0.026, 0.054, [0.146, 0, 0], AXIS_X, 16),
     ]
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2
       const spline = bevelBox(0.050, 0.012, 0.012, 0.002)
       spline.translate(0, 0.032, 0)
       spline.rotateX(angle)
-      spline.translate(0.138, 0, 0)
+      spline.translate(0.146, 0, 0)
       spinnerParts.push(spline)
     }
     emit('steel', mergeParts(spinnerParts, 'socket'), spinner, 'socket')
+    // LH cue rides the collar as its own mesh so it cannot plate-overlap the socket.
+    emit('steel', mergeParts([...lhCue(COLLAR_R, CUE_ANGLE)], 'lh-cue'), body, 'lh-cue')
   }
   build()
 

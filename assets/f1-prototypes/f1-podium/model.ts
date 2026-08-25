@@ -1,13 +1,12 @@
 // f1-podium — Albert Park GP dais (Wikimedia 028A8788 / 028A8821).
 //
-// One curved maroon structure, not three loose blocks: a single concentric band bowed toward the cameras
-// and cut into P2 | P1 | P3 sectors at Appendix 5 heights, seated on a full-width walkway apron of the
-// same paint. Every camera-facing arc carries an ivory pinstripe under its top edge and a second at its
-// base, a large ivory numeral between them, and a low frameless glass run held by spigot clamps that lap
-// down over the paint. Trophies, champagne and flags are separate props.
+// Two curvatures, both load-bearing. The whole structure sits on one 3.30 m bow, so the 3.56 m of
+// Appendix 5 frontage turns P2 and P3 a visible 21 degrees away from the lens instead of lining them up as
+// a flat row. Each F1-supplied block is then its own D-drum on that bow: straight back, short sides and a
+// shallow convex camera face carrying an ivory pinstripe under the top edge, a second at the base, and a
+// large ivory numeral between them. A low frameless glass lip on spigot clamps guards each surface.
 //
-// The arc is what makes the reference read: 3.56 m of dais frontage on a 4.80 m radius bows 0.33 m at the
-// crown, so the outer sectors turn visibly away from the lens instead of lining up as a flat wall.
+// Trophies, champagne and flags are separate props.
 
 import {
   BufferGeometry,
@@ -53,41 +52,60 @@ export interface F1PodiumInstance {
   dispose(): void
 }
 
-/** Radius of the dais front face. Sized so the Appendix 5 frontage bows ~0.33 m at the crown. */
-const FACE_R = 4.8
+/** Radius of the bow the three blocks are set out on. */
+const FACE_R = 3.3
 const BACK_R = FACE_R - PODIUM.p1.depth
 /** The walkway is the apron the drivers stand on; its front riser is the band the cameras see. */
-const APRON = { depth: 0.55, height: 0.34 } as const
+const APRON = { depth: 0.4, height: 0.34 } as const
 const APRON_R = FACE_R + APRON.depth
 /** Model Z of the dais face crown, which puts the whole structure roughly on the origin. */
 const FACE_Z = 0.3
 const ARC_Z = FACE_Z - FACE_R
 
+/**
+ * Crown rise of a block's own camera face, as a fraction of its depth. Shallow on purpose: it has to read
+ * as convex from the front while staying flat enough under a 0.26 m numeral for that numeral to sit in the
+ * paint rather than float off the ends of it (rule 8).
+ */
+const DRUM_BULGE = 0.15
+
 /** Ivory pinstripe: 6 mm into the paint, 10 mm proud of it. */
 const TRIM_IN = 0.006
 const TRIM_OUT = 0.01
-/** Frameless glass sits just off the paint and rises this far above the surface it guards. */
+/** Numerals are set deeper than the pinstripe so their outer ends still bite the curved face. */
+const NUMERAL_IN = 0.01
+const NUMERAL_OUT = 0.034
+/**
+ * Frameless glass. Low is the whole point — a shin-height lip on the apron and an ankle-height one on each
+ * block, both barely tinted, so the paint and the numerals stay the subject instead of a milky barrier.
+ */
 const GLASS_T = 0.019
 const GLASS_STANDOFF = 0.004
-const GLASS_RISE = 0.32
+const APRON_GLASS_RISE = 0.22
+const DAIS_GLASS_RISE = 0.16
 const GLASS_GRIP = 0.05
 
-/** Half the dais band's angular sweep, measured along the front face. */
+/** Half the dais band's angular sweep, measured along the bow. */
 const DAIS_HALF_A = (PODIUM.p1.width / 2 + PODIUM.gap + PODIUM.p2.width) / FACE_R
-/** The apron has to clear the outer dais corners before it can read as a step around them. */
+/** The apron has to clear the outer blocks before it can read as a step around them. */
 const MIN_WIDTH = 2 * APRON_R * Math.sin(DAIS_HALF_A + 0.02)
 const defaults: F1PodiumConfig = { width: 4.4 }
 
-interface Sector {
+interface Block {
   readonly place: 1 | 2 | 3
   readonly digit: '1' | '2' | '3'
-  readonly a0: number
-  readonly a1: number
+  /** Angle of this block's crown on the bow. */
   readonly mid: number
+  /** Radius of the block's own camera face. */
+  readonly crownR: number
+  /** Half sweep of that face, about its own centre. */
+  readonly half: number
   /** Standing surface, in metres above the ground. */
   readonly top: number
   /** Exposed front-face height above the apron. */
   readonly face: number
+  readonly width: number
+  readonly depth: number
 }
 
 function daisSpec(place: 1 | 2 | 3) {
@@ -96,33 +114,41 @@ function daisSpec(place: 1 | 2 | 3) {
   return PODIUM.p3
 }
 
+/** Radius and half sweep of a block face `width` wide bulging `DRUM_BULGE * depth` at its crown. */
+function drumFace(width: number, depth: number): { crownR: number; half: number } {
+  const hw = width / 2
+  const bulge = depth * DRUM_BULGE
+  const crownR = (hw * hw + bulge * bulge) / (2 * bulge)
+  return { crownR, half: Math.asin(Math.min(1, hw / crownR)) }
+}
+
 /** Camera-facing sweep: P2 turns to −X, P1 holds the crown, P3 turns to +X. */
-function sectors(): readonly Sector[] {
+function blocks(): readonly Block[] {
   const gap = PODIUM.gap / FACE_R
   const half = PODIUM.p1.width / FACE_R / 2
-  const p2 = PODIUM.p2.width / FACE_R
-  const p3 = PODIUM.p3.width / FACE_R
-  const spans: Record<1 | 2 | 3, readonly [number, number]> = {
-    1: [-half, half],
-    2: [-half - gap - p2, -half - gap],
-    3: [half + gap, half + gap + p3],
+  const outer = PODIUM.p2.width / FACE_R
+  const mids: Record<1 | 2 | 3, number> = {
+    1: 0,
+    2: -half - gap - outer / 2,
+    3: half + gap + outer / 2,
   }
   return ([2, 1, 3] as const).map((place) => {
-    const [a0, a1] = spans[place]
+    const spec = daisSpec(place)
     return {
       place,
       digit: String(place) as '1' | '2' | '3',
-      a0,
-      a1,
-      mid: (a0 + a1) / 2,
-      top: APRON.height + daisSpec(place).height,
-      face: daisSpec(place).height,
+      mid: mids[place],
+      ...drumFace(spec.width, spec.depth),
+      top: APRON.height + spec.height,
+      face: spec.height,
+      width: spec.width,
+      depth: spec.depth,
     }
   })
 }
 
 /**
- * An annular sector standing on end: the band lies in XZ about the shared arc centre, bows toward +Z, and
+ * An annular sector standing on end about the shared bow centre: the band lies in XZ, bows toward +Z, and
  * extrudes `height` along Y centred on the origin. Angles are measured from the crown, +A toward +X.
  */
 function arcSolid(
@@ -132,7 +158,7 @@ function arcSolid(
   a1: number,
   height: number,
   bevel: number,
-  segments = 22,
+  segments: number,
 ): BufferGeometry {
   const geo = arcBand(rIn, rOut, a0 - Math.PI / 2, a1 - Math.PI / 2, height, bevel, segments)
   geo.rotateX(-Math.PI / 2)
@@ -140,15 +166,48 @@ function arcSolid(
   return geo
 }
 
-/** Ivory pinstripe following a painted arc, held back from each end so it cannot overshoot the corner. */
-function pinstripe(r: number, a0: number, a1: number, y: number, height: number): BufferGeometry {
-  return arcSolid(r - TRIM_IN, r + TRIM_OUT, a0 + 0.01, a1 - 0.01, height, 0.003, 18)
-    .translate(0, y, 0)
+/**
+ * The same band in a block's own frame: `crownR` is the radius whose crown lands on the local origin, so
+ * an applied layer only has to name the radius it wants and everything stays concentric with the face.
+ */
+function localBand(
+  rIn: number,
+  rOut: number,
+  crownR: number,
+  half: number,
+  height: number,
+  bevel: number,
+  segments: number,
+): BufferGeometry {
+  const geo = arcBand(rIn, rOut, -Math.PI / 2 - half, -Math.PI / 2 + half, height, bevel, segments)
+  geo.rotateX(-Math.PI / 2)
+  geo.translate(0, 0, -crownR)
+  return geo
 }
 
-/** World point on an arc of `r` at angle `a`, as `[x, z]`. */
-function arcPoint(r: number, a: number): readonly [number, number] {
-  return [r * Math.sin(a), ARC_Z + r * Math.cos(a)]
+/**
+ * Plan of one F1-supplied block: shallow convex camera face, short sides, straight back. Sampled with an
+ * even count so no vertex lands on an axis, which is what lets `bevelPrism` chamfer it at all.
+ */
+function drumOutline(block: Block): Array<readonly [number, number]> {
+  const { crownR, half, width, depth } = block
+  const hw = width / 2
+  const yFront = -depth / 2
+  const centre = yFront + crownR
+  const outline: Array<readonly [number, number]> = []
+  const samples = 12
+  for (let i = 0; i < samples; i++) {
+    const a = -half + (2 * half * i) / (samples - 1)
+    outline.push([crownR * Math.sin(a), centre - crownR * Math.cos(a)])
+  }
+  outline.push([hw, depth / 2], [-hw, depth / 2])
+  return outline
+}
+
+/** Moves a block-local geometry onto the bow: crown to `mid`, then up to `y`. */
+function place(geometry: BufferGeometry, mid: number, y: number): BufferGeometry {
+  geometry.rotateY(mid)
+  return geometry.translate(FACE_R * Math.sin(mid), y, ARC_Z + FACE_R * Math.cos(mid))
 }
 
 /**
@@ -203,23 +262,19 @@ function numeral(digit: '1' | '2' | '3', h: number, proud: number): BufferGeomet
 }
 
 /**
- * Spigot clamps along a guarded front edge: a dark bracket that bites into the paint, straddles the glass
- * and laps down over the face. This is the detail that reads as frameless glass rather than a railing.
+ * Spigot clamps along a guarded edge: a dark bracket that bites into the paint, straddles the glass and
+ * laps down over the face. This is the detail that reads as frameless glass rather than a railing.
  */
-function clampRun(r: number, a0: number, a1: number, top: number): BufferGeometry {
-  const start = a0 + 0.024
-  const end = a1 - 0.024
-  const count = Math.max(2, Math.round(((end - start) * r) / 0.62) + 1)
-  const parts: BufferGeometry[] = []
-  for (let i = 0; i < count; i++) {
-    const a = start + ((end - start) * i) / (count - 1)
-    const block = bevelBox(0.058, 0.22, 0.072, 0.005)
-    block.rotateY(a)
-    const [x, z] = arcPoint(r + 0.026, a)
-    block.translate(x, top - 0.04, z)
-    parts.push(block)
-  }
-  return mergeParts(parts, 'f1-podium: clamps')
+function clamps(r: number, half: number, inset: number): Array<{ a: number }> {
+  const reach = half - inset
+  const count = Math.max(2, Math.round((2 * reach * r) / 0.62) + 1)
+  const run: Array<{ a: number }> = []
+  for (let i = 0; i < count; i++) run.push({ a: -reach + (2 * reach * i) / (count - 1) })
+  return run
+}
+
+function clampBlock(): BufferGeometry {
+  return bevelBox(0.05, 0.17, 0.072, 0.005)
 }
 
 export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
@@ -232,14 +287,14 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
   const extras: Material[] = []
   const paint = new MeshStandardMaterial({
     name: 'f1-kit / podium maroon',
-    color: shade(TOKEN.RED_500, -0.4),
-    roughness: 0.58,
+    color: shade(TOKEN.RED_500, -0.52),
+    roughness: 0.62,
     metalness: 0.04,
   })
   const apronPaint = new MeshStandardMaterial({
     name: 'f1-kit / podium apron maroon',
-    color: shade(TOKEN.RED_500, -0.5),
-    roughness: 0.62,
+    color: shade(TOKEN.RED_500, -0.62),
+    roughness: 0.68,
     metalness: 0.04,
   })
   const ivory = new MeshStandardMaterial({
@@ -250,24 +305,24 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
   })
   const glass = new MeshStandardMaterial({
     name: 'f1-kit / podium glass',
-    color: shade(TOKEN.ICE_300, -0.08),
-    roughness: 0.06,
+    color: shade(TOKEN.ICE_300, -0.06),
+    roughness: 0.04,
     metalness: 0.02,
     transparent: true,
-    opacity: 0.24,
+    opacity: 0.09,
     side: DoubleSide,
     depthWrite: false,
   })
   const fascia = new MeshStandardMaterial({
     name: 'f1-kit / podium fascia',
-    color: shade(TOKEN.RED_500, -0.58),
-    roughness: 0.8,
+    color: shade(TOKEN.RED_500, -0.68),
+    roughness: 0.84,
     metalness: 0,
   })
   const rigging = new MeshStandardMaterial({
     name: 'f1-kit / podium rigging',
-    color: shade(TOKEN.RED_500, -0.78),
-    roughness: 0.86,
+    color: shade(TOKEN.RED_500, -0.8),
+    roughness: 0.88,
     metalness: 0,
   })
   extras.push(paint, apronPaint, ivory, glass, fascia, rigging)
@@ -323,91 +378,101 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
 
     emit(
       'deck',
-      arcSolid(BACK_R, APRON_R, -apronHalf, apronHalf, deckTop, 0.01, 26)
+      arcSolid(BACK_R, APRON_R, -apronHalf, apronHalf, deckTop, 0.01, 30)
         .translate(0, deckTop / 2, 0),
       deck,
       'apron',
     )
     emit(
       'plate',
-      pinstripe(APRON_R, -apronHalf, apronHalf, deckTop - 0.066, 0.032),
-      deck,
-      'apron-stripe-top',
-    )
-    emit(
-      'plate',
-      pinstripe(APRON_R, -apronHalf, apronHalf, 0.037, 0.018),
-      deck,
-      'apron-stripe-base',
+      arcSolid(
+        APRON_R - TRIM_IN, APRON_R + TRIM_OUT,
+        -apronHalf + 0.01, apronHalf - 0.01,
+        0.032, 0.003, 26,
+      ).translate(0, deckTop - 0.066, 0),
+      plates,
+      'apron-stripe',
     )
 
-    for (const sector of sectors()) {
-      const { place, a0, a1, mid, top, face } = sector
+    const clampParts: BufferGeometry[] = []
+    for (const { a } of clamps(APRON_R, apronHalf, 0.03)) {
+      const block = clampBlock()
+      block.rotateY(a)
+      clampParts.push(
+        block.translate(
+          (APRON_R + 0.026) * Math.sin(a),
+          deckTop - 0.05,
+          ARC_Z + (APRON_R + 0.026) * Math.cos(a),
+        ),
+      )
+    }
+
+    for (const block of blocks()) {
+      const { place: p, mid, crownR, half, top, face } = block
       // Sunk 20 mm into the apron so the seated cap never co-planes with the deck it stands on.
       const height = face + 0.02
-      emit(
-        'steps',
-        arcSolid(BACK_R, FACE_R, a0, a1, height, 0.01)
-          .translate(0, deckTop - 0.02 + height / 2, 0),
-        steps,
-        `dais-${place}`,
-      )
+      const body = bevelPrism(drumOutline(block), height, 0.012)
+      body.rotateX(-Math.PI / 2)
+      body.translate(0, 0, -block.depth / 2)
+      emit('steps', place(body, mid, deckTop - 0.02 + height / 2), steps, `dais-${p}`)
 
       const stripeTop = top - 0.071
       const stripeBase = deckTop + 0.042
-      emit('plate', pinstripe(FACE_R, a0, a1, stripeTop, 0.032), steps, `stripe-top-${place}`)
-      emit('plate', pinstripe(FACE_R, a0, a1, stripeBase, 0.02), steps, `stripe-base-${place}`)
+      const graphics: BufferGeometry[] = [
+        localBand(crownR - TRIM_IN, crownR + TRIM_OUT, crownR, half - 0.01, 0.032, 0.003, 18)
+          .translate(0, stripeTop, 0),
+        localBand(crownR - TRIM_IN, crownR + TRIM_OUT, crownR, half - 0.01, 0.02, 0.003, 18)
+          .translate(0, stripeBase, 0),
+      ]
+      const digit = numeral(block.digit, Math.min(0.38, (face - 0.1) * 0.74), NUMERAL_OUT)
+      digit.translate(0, (stripeBase + 0.01 + stripeTop - 0.016) / 2, NUMERAL_OUT / 2 - NUMERAL_IN)
+      graphics.push(digit)
+      emit(
+        'plate',
+        place(mergeParts(graphics, `f1-podium: graphics ${p}`), mid, 0),
+        plates,
+        `graphics-${p}`,
+      )
 
-      const proud = 0.026
-      const digit = numeral(sector.digit, Math.min(0.34, (face - 0.1) * 0.72), proud)
-      digit.rotateY(mid)
-      const [dx, dz] = arcPoint(FACE_R - TRIM_IN + proud / 2, mid)
-      digit.translate(dx, (stripeBase + 0.01 + stripeTop - 0.016) / 2, dz)
-      emit('plate', digit, plates, `numeral-${place}`)
-
-      const glassH = GLASS_RISE + GLASS_GRIP
       emit(
         'barrier',
-        arcSolid(
-          FACE_R + GLASS_STANDOFF,
-          FACE_R + GLASS_STANDOFF + GLASS_T,
-          a0 + 0.012,
-          a1 - 0.012,
-          glassH,
-          0.002,
-          18,
-        ).translate(0, top - GLASS_GRIP + glassH / 2, 0),
+        place(
+          localBand(
+            crownR + GLASS_STANDOFF, crownR + GLASS_STANDOFF + GLASS_T, crownR,
+            half - 0.012, DAIS_GLASS_RISE + GLASS_GRIP, 0.002, 18,
+          ),
+          mid,
+          top - GLASS_GRIP + (DAIS_GLASS_RISE + GLASS_GRIP) / 2,
+        ),
         barrier,
-        `glass-${place}`,
+        `glass-${p}`,
       )
+
+      for (const { a } of clamps(crownR, half, 0.06)) {
+        const bracket = clampBlock()
+        bracket.rotateY(a)
+        bracket.translate(crownR * Math.sin(a), top - 0.05, crownR * (Math.cos(a) - 1))
+        clampParts.push(place(bracket, mid, 0))
+      }
     }
 
-    const apronGlassH = GLASS_RISE + GLASS_GRIP
     emit(
       'barrier',
       arcSolid(
-        APRON_R + GLASS_STANDOFF,
-        APRON_R + GLASS_STANDOFF + GLASS_T,
-        -apronHalf + 0.012,
-        apronHalf - 0.012,
-        apronGlassH,
-        0.002,
-        22,
-      ).translate(0, deckTop - GLASS_GRIP + apronGlassH / 2, 0),
+        APRON_R + GLASS_STANDOFF, APRON_R + GLASS_STANDOFF + GLASS_T,
+        -apronHalf + 0.012, apronHalf - 0.012,
+        APRON_GLASS_RISE + GLASS_GRIP, 0.002, 26,
+      ).translate(0, deckTop - GLASS_GRIP + (APRON_GLASS_RISE + GLASS_GRIP) / 2, 0),
       barrier,
       'rail',
     )
+    emit('barrier', mergeParts(clampParts, 'f1-podium: clamps'), barrier, 'clamps', kit.graphite)
 
-    const clamps: BufferGeometry[] = [clampRun(APRON_R, -apronHalf, apronHalf, deckTop)]
-    for (const sector of sectors()) {
-      clamps.push(clampRun(FACE_R, sector.a0, sector.a1, sector.top))
-    }
-    emit('barrier', mergeParts(clamps, 'f1-podium: clamps'), barrier, 'clamps', kit.graphite)
-
-    const wallW = config.width + 2.0
+    const wallW = config.width + 2.4
     const wallH = PODIUM.backdropH
     const wallT = PODIUM.backdropT
-    const wallZ = ARC_Z + BACK_R - PODIUM.flagGap - wallT / 2 - 0.04
+    // Appendix 5 flag slot is measured off the structure's rearmost point, not the crown.
+    const wallZ = ARC_Z + BACK_R * Math.cos(apronHalf) - PODIUM.flagGap - wallT / 2 - 0.04
     emit('frame', bevelBox(wallW, wallH, wallT, 0.008).translate(0, wallH / 2, wallZ), frame, 'backdrop')
     emit(
       'frame',
@@ -418,10 +483,10 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
     )
     const seamH = wallH - 0.34
     const seamParts: BufferGeometry[] = []
-    for (let i = 0; i < 5; i++) {
-      const x = (i / 4 - 0.5) * (wallW - 0.9)
+    for (let i = 0; i < 7; i++) {
+      const x = (i / 6 - 0.5) * (wallW - 0.8)
       seamParts.push(
-        bevelBox(0.07, seamH, 0.02, 0.003).translate(x, 0.28 + seamH / 2, wallZ + wallT / 2 - 0.008),
+        bevelBox(0.09, seamH, 0.016, 0.003).translate(x, 0.28 + seamH / 2, wallZ + wallT / 2 - 0.008),
       )
     }
     emit('frame', mergeParts(seamParts, 'f1-podium: seams'), frame, 'seams', rigging)
@@ -463,10 +528,10 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
   return createF1Preview(createModel(), {
     aspect,
-    target: [0, 1.05, 0.1],
+    target: [0, 1, 0.1],
     distance: 10,
     fov: 30,
     yaw: -0.15,
-    pitch: 0.2,
+    pitch: 0.11,
   })
 }
