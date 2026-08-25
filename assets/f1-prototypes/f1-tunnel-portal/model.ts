@@ -14,6 +14,13 @@
 // that is what collapsed a modelled structure into one extruded block: the lit planes all clipped to the
 // same near-white. So the return lifts, the wings drop, the soffit drops furthest, and the spread has to
 // be wide because the light compresses whatever spread it is given.
+//
+// Three things carry that further, and all three are answers to the same complaint — that the elevation
+// read as a pale box. The piers now batter by nearly a metre across their height, so the front elevation
+// is a trapezoid rather than a rectangle and the base flares wider than the deck the way an abutment
+// footing actually does. The wings run longer and die lower, trading a tall stub end for a long diagonal.
+// And the parapet is a thick panelled curb-wall with real recessed casting joints instead of a thin
+// screen with proud pilasters, which is what had it reading as a fence standing on the deck.
 
 import { BufferGeometry, Group, Mesh, MeshStandardMaterial, type Material } from 'three/webgpu'
 
@@ -76,33 +83,72 @@ const DECK = 0.85
  * flattened the front into one wash.
  */
 const HEADWALL = 0.62
-/** Extra width a headwall pier carries over the bore wall behind it, so the mouth steps rather than butts. */
-const PIER_STEP = 0.26
+/**
+ * Extra width a headwall pier carries over the bore wall behind it, so the mouth steps rather than butts.
+ *
+ * It is generous because the batter below spends it: the pier's outer face has to draw in over its height
+ * without crossing inboard of the bore wall it fronts, so the step at deck level is the budget the taper
+ * is cut from. At the 0.26 this started from there was only 0.26 m of draw available before the wall
+ * behind broke back out through the pier face, which capped the taper at an angle too shallow to see.
+ */
+const PIER_STEP = 0.48
 /**
  * Batter on a pier's outer face: proud at the base, drawn in at the top. Together they rake the face by
  * half a metre over the pier's height, around 1:6 — steep for a wall, ordinary for an abutment.
  *
  * At the 0.1 / 0.06 this started from the taper was under three degrees, and three degrees across a
  * four-metre face is invisible: the piers read as plumb boxes and the headwall lost the leaning-back
- * stance that separates a structure retaining earth from a doorway cut in a wall. Because the pier is
- * extruded from an outline in XY, the batter is carried by its front face too, so the taper shows in
- * straight elevation rather than only in the raking side. The kick is held just under the deck's own
- * overhang so the base still lands inside the slab edge — the deck has to oversail the pier, not the
- * pier burst out through the deck.
+ * stance that separates a structure retaining earth from a doorway cut in a wall. The 0.3 / 0.2 that
+ * followed reached nine degrees and still read plumb, because what the eye measures is not the angle but
+ * how far the silhouette moves: half a metre across a seven-metre elevation is inside the width of the
+ * coping above it. Together these now rake the face by 0.9 m, about 1:3.7, and the front elevation
+ * finally closes to a trapezoid.
+ *
+ * Because the pier is extruded from an outline in XY, the batter is carried by its front face too, so the
+ * taper shows in straight elevation rather than only in the raking side.
+ *
+ * The kick is deliberately allowed past the deck edge now. Holding the base inside the slab was the wrong
+ * constraint: an abutment footing is normally wider than the deck it carries, and clamping the flare to
+ * the slab meant the widest line in the silhouette was the lid — which is most of what made the thing
+ * read as a box. What must stay true is the other end, where the drawn-in top has to remain outboard of
+ * the bore wall behind it or that wall breaks back out through the pier face.
  */
-const PIER_KICK = 0.3
-const PIER_DRAW = 0.2
+const PIER_KICK = 0.48
+const PIER_DRAW = 0.42
 
 /** FIA 3501 concrete-wall envelope, reused for the deck parapet rather than inventing a second height. */
 const PARAPET_H = WALL_END.concrete.height
-const PARAPET_T = WALL_END.concrete.depth
-const COPING_H = 0.13
+/**
+ * Parapet thickness. Deliberately thicker than the FIA trackside wall the height comes from: that wall is
+ * a free-standing barrier, this one is cast monolithic with a deck and has to look like it could take a
+ * vehicle impact without the deck edge letting go.
+ *
+ * At the wall's own 0.35 m the parapet read as a screen rather than as mass — and paired with the proud
+ * pilasters that used to divide it, the whole thing read as panel fencing standing on the slab. Thickness
+ * is what fixes that, because a parapet is legible as concrete from its cap depth and its returns, both
+ * of which scale with how thick it is.
+ */
+const PARAPET_T = WALL_END.concrete.depth + 0.17
+/**
+ * The parapet is not one slab. It is a continuous web with cast panels standing forward of it, separated
+ * by real recessed joints — a parapet is poured in bays against stop-ends, and those joints are the only
+ * concrete character that survives at track scale without inventing surface noise.
+ *
+ * This replaces pilasters that stood *proud* of the face. A proud vertical strip repeated along a thin
+ * wall is a fence post, and five of them turned the parapet into fence bays whatever value it was given.
+ * The same rhythm cut *into* the face reads as casting, because the joint is in shadow rather than in the
+ * light: the recess does the work the strip was failing to do.
+ *
+ * The web carries most of the thickness so the panels are a shallow layer over it. A joint 5 cm wide and
+ * 42 cm deep is a slot; the same joint over a thick web is 5 cm by 14 cm, which is a construction joint.
+ */
+const PARAPET_BACK = 0.38
+const PARAPET_JOINT = 0.05
+const PARAPET_BAYS = 5
+/** Cap over the parapet. Depth follows the wall it caps, so a thicker parapet gets a heavier coping. */
+const COPING_H = 0.19
 /** Coping oversail, across the wall only. A coping flush with its wall reads as a paint line, not a cap. */
-const COPING_OUT = 0.055
-/** Pilasters dividing the parapet into bays. Seven unbroken metres of it read as a blank lid. */
-const PILASTER_W = 0.22
-const PILASTER_OUT = 0.07
-const PILASTER_BAYS = 5
+const COPING_OUT = 0.085
 /**
  * String course capping the headwall, which the parapet then rises off flush. Two metres of blank
  * concrete above the opening needs one horizontal to sit on, and setting the parapet back behind that
@@ -124,8 +170,8 @@ const COURSE_OUT = 0.09
  * enough to survive the framing the model is judged in. It also sets the datum the piers stop at and the
  * lintel plates start from, so the whole front elevation reads off one line.
  */
-const SOFFIT_H = 0.16
-const SOFFIT_SET = 0.045
+const SOFFIT_H = 0.2
+const SOFFIT_SET = 0.075
 
 /** Dark liner panels inside the bore. They start at the mouth plane so the headwall reveal stays concrete. */
 const LINER = 0.08
@@ -150,10 +196,41 @@ const DRAIN_W = 0.22
  * the whole structure, and they then hid the piers and both hazard boards — a wing that matches the thing
  * it flanks has stopped being subordinate to it, and the portal has to stay the tallest element for the
  * parapet line to mean anything.
+ *
+ * The run is long and the far end is low, which is the pair that makes the rake read. A short wing dying
+ * at trackside-wall height ended in a metre-tall vertical face under a bright coping, and that end face
+ * is a hard stop: it closed the diagonal off before it had gone anywhere and left two stubby buttresses
+ * squaring up the silhouette. Taken out further and down to a low stub, the same wall becomes the longest
+ * diagonal in the model, which is what the flanking mass is for. The splay works with it — more plan
+ * flare throws the far end towards the camera, so the run reads as depth as well as slope.
  */
-const SPLAY = 0.38
+const SPLAY = 0.52
 const WING_T = 0.5
-const WING_RUN = 2.6
+const WING_RUN = 3.2
+/** Height the rake dies at, well under the trackside-wall datum the near end springs from. */
+const WING_FAR_H = 0.48
+/**
+ * The wing's own coping, thinner than the parapet's and held at wall value rather than trim value.
+ *
+ * Sharing the parapet coping's depth and its bright trim material was a mistake that undid the whole
+ * point of darkening the wings. The camera looks slightly down, so a coping's *top* face is presented
+ * nearly square to it — on a wall raking away across four metres that top face is the largest single
+ * surface either wing shows, and at trim value it turned each wing into a bright ramp with a sliver of
+ * dark wall behind it. Darkening the body cannot help while the brightest thing in the frame is bolted
+ * along its full length.
+ *
+ * So it stays a line rather than becoming a surface: thin enough to describe the slope, and only a step
+ * off the wall it caps instead of three. The parapet keeps the bright oversailing cap, which is the point
+ * — there is one line of trim across the top of the structure, and the wings are subordinate to it.
+ */
+const WING_COPE_H = 0.1
+const WING_COPE_OUT = 0.022
+/**
+ * How far the near end is buried inside the pier. It grows with the batter: the pier's outer face now
+ * draws in 0.42 m over its height, so a burial sized for a plumb pier lets the wing's top near corner
+ * break back out through the face.
+ */
+const WING_BURY = 0.55
 
 /**
  * Hazard signage is cut plates bolted to concrete, so it is authored as a run of discrete plates with a
@@ -252,7 +329,7 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
   // bright value, and they only register as cast trim because the mass behind them sits a step down.
   const concreteMat = new MeshStandardMaterial({
     name: 'f1-kit / portal concrete',
-    color: shade(TOKEN.SHELL_200, -0.32),
+    color: shade(TOKEN.SHELL_200, -0.5),
     roughness: 0.93,
     metalness: 0.0,
   })
@@ -263,26 +340,52 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
   // The spread is deliberately wider than the exposures alone would justify. Under this rig the lit
   // planes sit near the top of the range, so a half-step of albedo between two of them clips to the same
   // white and the break disappears — the separation has to be authored in albedo to survive in the frame.
+  //
+  // The ladder is also anchored at the top rather than in the middle. Trying to separate the fascia from
+  // the mass by lifting the fascia cannot work when the fascia is already clipping: there is no headroom
+  // left above it. So the trim takes the top of the range, the fascia sits just under it, and everything
+  // below drops — which is the only direction the range still has room in.
+  //
+  // The whole family then sits lower than the token it is mixed from. SHELL_200 is a cool near-white, and
+  // a structure built entirely out of the top of it reads as white panelling with grey shading on it
+  // rather than as grey concrete catching a bright key — the ladder was legible but the material was not.
+  // Dropping every rung together keeps the separation that was won and spends the headroom on looking
+  // like concrete instead.
   const proudMat = new MeshStandardMaterial({
     name: 'f1-kit / portal headwall',
-    color: shade(TOKEN.SHELL_200, -0.15),
+    color: shade(TOKEN.SHELL_200, -0.24),
     roughness: 0.9,
     metalness: 0.0,
   })
   const rakeMat = new MeshStandardMaterial({
     name: 'f1-kit / portal wing',
-    color: shade(TOKEN.SHELL_200, -0.58),
+    color: shade(TOKEN.SHELL_200, -0.72),
     roughness: 0.95,
     metalness: 0.0,
   })
   const soffitMat = new MeshStandardMaterial({
     name: 'f1-kit / portal soffit',
-    color: shade(TOKEN.SHELL_200, -0.74),
+    color: shade(TOKEN.SHELL_200, -0.88),
     roughness: 0.95,
     metalness: 0.0,
   })
+  /**
+   * Cast trim: copings and painted kerb lines, the brightest concrete in the model.
+   *
+   * This used to be the kit's `shell` material, which is the wrong family for it. `shell` is a coated
+   * panel product — roughness 0.55 and a little metalness — and the copings are the top of almost every
+   * mass here, so they take the key square on and returned a sheen off it. Cast concrete does not do
+   * that, and a whole structure trimmed in something that does reads as moulded white plastic no matter
+   * how well the values underneath it are graded. Same job, same brightness, matte.
+   */
+  const trimMat = new MeshStandardMaterial({
+    name: 'f1-kit / portal trim',
+    color: shade(TOKEN.SHELL_200, -0.08),
+    roughness: 0.88,
+    metalness: 0.0,
+  })
   /** Model-owned for their whole life; freed once, in `dispose`. */
-  const persistent: Material[] = [concreteMat, proudMat, rakeMat, soffitMat]
+  const persistent: Material[] = [concreteMat, proudMat, rakeMat, soffitMat, trimMat]
   let disposed = false
 
   const materialSlots: Record<Slot, Material> = {
@@ -325,7 +428,13 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     const pierOut = halfW + WALL + PIER_STEP
     /** Top of the deck slab: where the crossing road runs. */
     const deckTop = height + DECK
-    const deckHalf = pierOut + 0.32
+    /**
+     * Deck half-width. Pulled in tight over the piers: the slab and the parapet on top of it occupy the
+     * whole upper half of the elevation, so every centimetre of oversail here is spent widening the one
+     * rectangle that was making the structure read as a box. Tight enough that the battered pier bases
+     * now flare clearly outboard of it, which is the silhouette this wants — widest at the ground.
+     */
+    const deckHalf = pierOut + 0.18
     /** The headwall plane. The parapet is flush with it and every applied board measures from it. */
     const face = DEPTH / 2 + HEADWALL
     /** Soffit line: where the piers stop and the proud return takes over. */
@@ -390,19 +499,28 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     proud.push(bevelBox(deckHalf * 2 + COURSE_OUT * 2, COURSE_H, HEADWALL + COURSE_OUT, 0.014)
       .translate(0, deckTop - COURSE_H / 2, DEPTH / 2 + (HEADWALL + COURSE_OUT) / 2))
 
-    // --- parapets, bays and copings over the deck ---------------------------------------------------
-    for (const zc of [face - PARAPET_T / 2, -DEPTH / 2 + PARAPET_T / 2]) {
-      concrete.push(bevelBox(deckHalf * 2, PARAPET_H, PARAPET_T, 0.018)
-        .translate(0, deckTop + PARAPET_H / 2, zc))
+    // --- parapets over the deck: a thick curb-wall, panelled with real recessed joints --------------
+    // Each parapet is described by its outward face plane and which way the mass runs from it, so the
+    // front one can sit flush with the headwall and the back one flush with the rear of the deck.
+    const parapetY = deckTop + PARAPET_H / 2
+    const panelD = PARAPET_T - PARAPET_BACK
+    const bayW = (deckHalf * 2 - PARAPET_JOINT * (PARAPET_BAYS - 1)) / PARAPET_BAYS
+    for (const [plane, into] of [[face, -1], [-DEPTH / 2, 1]] as const) {
+      // Continuous web behind the panels, taken to soffit value. It is what the joints open onto, so a
+      // joint reads as a shadowed recess rather than as a slot cut through to the sky — and it is the
+      // face the crossing road sees, which is turned away from the key and belongs dark anyway.
+      soffit.push(bevelBox(deckHalf * 2, PARAPET_H, PARAPET_BACK, 0.014)
+        .translate(0, parapetY, plane + into * (PARAPET_T - PARAPET_BACK / 2)))
+      for (let i = 0; i < PARAPET_BAYS; i++) {
+        const px = -deckHalf + bayW / 2 + i * (bayW + PARAPET_JOINT)
+        concrete.push(bevelBox(bayW, PARAPET_H, panelD, 0.018)
+          .translate(px, parapetY, plane + into * (panelD / 2)))
+      }
       // Oversails across the wall, not past its ends: a coping that runs on into space past the last
-      // support reads as a loose plank rather than as a cast cap.
+      // support reads as a loose plank rather than as a cast cap. It runs unbroken over the joints,
+      // which is what keeps the bays reading as one wall rather than as a row of separate blocks.
       bright.push(bevelBox(deckHalf * 2, COPING_H, PARAPET_T + COPING_OUT * 2, 0.016)
-        .translate(0, deckTop + PARAPET_H + COPING_H / 2, zc))
-    }
-    for (let i = 0; i < PILASTER_BAYS; i++) {
-      const px = -deckHalf + 0.45 + i * ((deckHalf * 2 - 0.9) / (PILASTER_BAYS - 1))
-      concrete.push(bevelBox(PILASTER_W, PARAPET_H - 0.04, PILASTER_OUT, 0.008)
-        .translate(px, deckTop + (PARAPET_H - 0.04) / 2, face + PILASTER_OUT / 2 - FACE_CLEARANCE))
+        .translate(0, deckTop + PARAPET_H + COPING_H / 2, plane + into * (PARAPET_T / 2)))
     }
     // The crossing road itself. Without it the deck is an anonymous slab and the parapets have nothing
     // to guard, which is what left the whole mass reading as a box lid.
@@ -412,31 +530,31 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
       .translate(0, deckTop + 0.03, (overZ0 + overZ1) / 2))
 
     // --- wing walls: one raking lift per side, soffit line down to trackside-wall height -------------
-    const wingNear = height
-    const wingFar = PARAPET_H
+    const wingNear = height - 0.1
+    const wingFar = WING_FAR_H
     for (const sx of [-1, 1] as const) {
       // Both spins are proper rotations. Building one wing and mirroring it would invert its winding,
       // so the -X wing is rotated past half a turn instead.
       const spin = sx > 0 ? -SPLAY : Math.PI + SPLAY
-      // Buried into the pier at the near end so the joint is solid rather than a butted seam, and buried
-      // deeper than it used to be: the pier's outer face now draws in by 0.2 m over its height, so a
-      // shallow burial let the wing's near end break back out through the face towards the top.
-      const x0 = -0.34
+      // Buried into the pier at the near end so the joint is solid rather than a butted seam. The burial
+      // is sized against the batter, not against the wing: the pier face draws in over its height, so the
+      // corner most at risk of breaking back out is the near end's *top*, not its base.
+      const x0 = -WING_BURY
       const cx = (x0 + WING_RUN) / 2
       const cy = wingNear / 2
       const place = (geo: BufferGeometry): BufferGeometry =>
-        geo.translate(cx, cy, 0).rotateY(spin).translate(sx * (pierOut - 0.04), 0, face - 0.3)
+        geo.translate(cx, cy, 0).rotateY(spin).translate(sx * (pierOut - 0.04), 0, face - 0.24)
       rake.push(place(bevelPrism([
         [x0 - cx, -cy], [WING_RUN - cx, -cy],
-        [WING_RUN - cx, wingFar - COPING_H - cy], [x0 - cx, wingNear - COPING_H - cy],
+        [WING_RUN - cx, wingFar - WING_COPE_H - cy], [x0 - cx, wingNear - WING_COPE_H - cy],
       ], WING_T, 0.02)))
       // The coping is a band following the rake, not a horizontal cap: a level coping on a raking wall
-      // is the tell that the wall was extruded rather than built. Held at trim value, it is now the
-      // brightest thing on the wing and the only line that describes the slope of the rake.
-      bright.push(place(bevelPrism([
-        [x0 - cx, wingNear - COPING_H - cy], [WING_RUN - cx, wingFar - COPING_H - cy],
+      // is the tell that the wall was extruded rather than built. It is the only line that describes the
+      // slope, so it is held one step off the wing rather than at trim value — see WING_COPE_H.
+      concrete.push(place(bevelPrism([
+        [x0 - cx, wingNear - WING_COPE_H - cy], [WING_RUN - cx, wingFar - WING_COPE_H - cy],
         [WING_RUN - cx, wingFar - cy], [x0 - cx, wingNear - cy],
-      ], WING_T + COPING_OUT * 2, 0.016)))
+      ], WING_T + WING_COPE_OUT * 2, 0.014)))
     }
 
     // --- bore lining. Starts at the mouth plane, leaving HEADWALL of concrete reveal ahead of it. ---
@@ -528,7 +646,7 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     emit('shell', mergeParts(proud, 'f1-tunnel-portal: headwall'), shell, 'headwall', proudMat)
     emit('shell', mergeParts(rake, 'f1-tunnel-portal: wings'), shell, 'wings', rakeMat)
     emit('shell', mergeParts(soffit, 'f1-tunnel-portal: soffit'), shell, 'soffit', soffitMat)
-    emit('shell', mergeParts(bright, 'f1-tunnel-portal: trim'), shell, 'trim', kit.shell)
+    emit('shell', mergeParts(bright, 'f1-tunnel-portal: trim'), shell, 'trim', trimMat)
     emit('shell', mergeParts(surface, 'f1-tunnel-portal: carriageway'), shell, 'carriageway', kit.tread)
     emit('arch', mergeParts(bore, 'f1-tunnel-portal: throat'), arch, 'throat')
     emit('arch', mergeParts(plates, 'f1-tunnel-portal: boards'), arch, 'boards', kit.graphite)
