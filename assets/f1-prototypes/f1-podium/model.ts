@@ -6,6 +6,9 @@
 // shallow convex camera face carrying an ivory pinstripe under the top edge, a second at the base, and a
 // large ivory numeral between them. A low frameless glass lip on spigot clamps guards each surface.
 //
+// The backdrop is a flat branded field on a dark skirt, which is what the reference wall is; a consumer
+// prints it through `setMaterial('frame')` rather than getting invented panel joints here.
+//
 // Trophies, champagne and flags are separate props.
 
 import {
@@ -67,7 +70,7 @@ const ARC_Z = FACE_Z - FACE_R
  * as convex from the front while staying flat enough under a 0.26 m numeral for that numeral to sit in the
  * paint rather than float off the ends of it (rule 8).
  */
-const DRUM_BULGE = 0.15
+const DRUM_BULGE = 0.12
 
 /** Ivory pinstripe: 6 mm into the paint, 10 mm proud of it. */
 const TRIM_IN = 0.006
@@ -82,7 +85,7 @@ const NUMERAL_OUT = 0.034
 const GLASS_T = 0.019
 const GLASS_STANDOFF = 0.004
 const APRON_GLASS_RISE = 0.22
-const DAIS_GLASS_RISE = 0.16
+const DAIS_GLASS_RISE = 0.12
 const GLASS_GRIP = 0.05
 
 /** Half the dais band's angular sweep, measured along the bow. */
@@ -191,16 +194,14 @@ function localBand(
  */
 function drumOutline(block: Block): Array<readonly [number, number]> {
   const { crownR, half, width, depth } = block
-  const hw = width / 2
-  const yFront = -depth / 2
-  const centre = yFront + crownR
+  const centre = -depth / 2 + crownR
   const outline: Array<readonly [number, number]> = []
   const samples = 12
   for (let i = 0; i < samples; i++) {
     const a = -half + (2 * half * i) / (samples - 1)
     outline.push([crownR * Math.sin(a), centre - crownR * Math.cos(a)])
   }
-  outline.push([hw, depth / 2], [-hw, depth / 2])
+  outline.push([width / 2, depth / 2], [-width / 2, depth / 2])
   return outline
 }
 
@@ -261,18 +262,19 @@ function numeral(digit: '1' | '2' | '3', h: number, proud: number): BufferGeomet
   return mergeParts(parts, `f1-podium: numeral ${digit}`)
 }
 
-/**
- * Spigot clamps along a guarded edge: a dark bracket that bites into the paint, straddles the glass and
- * laps down over the face. This is the detail that reads as frameless glass rather than a railing.
- */
-function clamps(r: number, half: number, inset: number): Array<{ a: number }> {
+/** Even spigot spacing along a guarded arc of `r`, held `inset` back from each end. */
+function spigots(r: number, half: number, inset: number): number[] {
   const reach = half - inset
   const count = Math.max(2, Math.round((2 * reach * r) / 0.62) + 1)
-  const run: Array<{ a: number }> = []
-  for (let i = 0; i < count; i++) run.push({ a: -reach + (2 * reach * i) / (count - 1) })
+  const run: number[] = []
+  for (let i = 0; i < count; i++) run.push(-reach + (2 * reach * i) / (count - 1))
   return run
 }
 
+/**
+ * One spigot clamp: a dark bracket that bites into the paint, straddles the glass and laps down over the
+ * face. This is the detail that reads as frameless glass rather than a railing.
+ */
 function clampBlock(): BufferGeometry {
   return bevelBox(0.05, 0.17, 0.072, 0.005)
 }
@@ -287,14 +289,14 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
   const extras: Material[] = []
   const paint = new MeshStandardMaterial({
     name: 'f1-kit / podium maroon',
-    color: shade(TOKEN.RED_500, -0.52),
+    color: shade(TOKEN.RED_500, -0.54),
     roughness: 0.62,
     metalness: 0.04,
   })
   const apronPaint = new MeshStandardMaterial({
     name: 'f1-kit / podium apron maroon',
-    color: shade(TOKEN.RED_500, -0.62),
-    roughness: 0.68,
+    color: shade(TOKEN.RED_500, -0.64),
+    roughness: 0.7,
     metalness: 0.04,
   })
   const ivory = new MeshStandardMaterial({
@@ -309,20 +311,20 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
     roughness: 0.04,
     metalness: 0.02,
     transparent: true,
-    opacity: 0.09,
+    opacity: 0.07,
     side: DoubleSide,
     depthWrite: false,
   })
   const fascia = new MeshStandardMaterial({
     name: 'f1-kit / podium fascia',
-    color: shade(TOKEN.RED_500, -0.68),
-    roughness: 0.84,
+    color: shade(TOKEN.RED_500, -0.74),
+    roughness: 0.88,
     metalness: 0,
   })
   const rigging = new MeshStandardMaterial({
     name: 'f1-kit / podium rigging',
-    color: shade(TOKEN.RED_500, -0.8),
-    roughness: 0.88,
+    color: shade(TOKEN.RED_500, -0.86),
+    roughness: 0.9,
     metalness: 0,
   })
   extras.push(paint, apronPaint, ivory, glass, fascia, rigging)
@@ -395,11 +397,11 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
     )
 
     const clampParts: BufferGeometry[] = []
-    for (const { a } of clamps(APRON_R, apronHalf, 0.03)) {
-      const block = clampBlock()
-      block.rotateY(a)
+    for (const a of spigots(APRON_R, apronHalf, 0.03)) {
+      const bracket = clampBlock()
+      bracket.rotateY(a)
       clampParts.push(
-        block.translate(
+        bracket.translate(
           (APRON_R + 0.026) * Math.sin(a),
           deckTop - 0.05,
           ARC_Z + (APRON_R + 0.026) * Math.cos(a),
@@ -424,7 +426,7 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
         localBand(crownR - TRIM_IN, crownR + TRIM_OUT, crownR, half - 0.01, 0.02, 0.003, 18)
           .translate(0, stripeBase, 0),
       ]
-      const digit = numeral(block.digit, Math.min(0.38, (face - 0.1) * 0.74), NUMERAL_OUT)
+      const digit = numeral(block.digit, Math.min(0.38, (face - 0.1) * 0.8), NUMERAL_OUT)
       digit.translate(0, (stripeBase + 0.01 + stripeTop - 0.016) / 2, NUMERAL_OUT / 2 - NUMERAL_IN)
       graphics.push(digit)
       emit(
@@ -448,7 +450,7 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
         `glass-${p}`,
       )
 
-      for (const { a } of clamps(crownR, half, 0.06)) {
+      for (const a of spigots(crownR, half, 0.06)) {
         const bracket = clampBlock()
         bracket.rotateY(a)
         bracket.translate(crownR * Math.sin(a), top - 0.05, crownR * (Math.cos(a) - 1))
@@ -456,6 +458,7 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
       }
     }
 
+    // The apron lip is the structure's retaining barrier, so it keeps the `rail` anatomy name.
     emit(
       'barrier',
       arcSolid(
@@ -472,8 +475,13 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
     const wallH = PODIUM.backdropH
     const wallT = PODIUM.backdropT
     // Appendix 5 flag slot is measured off the structure's rearmost point, not the crown.
-    const wallZ = ARC_Z + BACK_R * Math.cos(apronHalf) - PODIUM.flagGap - wallT / 2 - 0.04
-    emit('frame', bevelBox(wallW, wallH, wallT, 0.008).translate(0, wallH / 2, wallZ), frame, 'backdrop')
+    const wallZ = ARC_Z + BACK_R * Math.cos(apronHalf) - PODIUM.flagGap - wallT / 2
+    emit(
+      'frame',
+      bevelBox(wallW, wallH, wallT, 0.008).translate(0, wallH / 2, wallZ),
+      frame,
+      'backdrop',
+    )
     emit(
       'frame',
       bevelBox(wallW + 0.06, 0.22, wallT + 0.05, 0.006).translate(0, 0.11, wallZ),
@@ -481,15 +489,6 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
       'skirt',
       rigging,
     )
-    const seamH = wallH - 0.34
-    const seamParts: BufferGeometry[] = []
-    for (let i = 0; i < 7; i++) {
-      const x = (i / 6 - 0.5) * (wallW - 0.8)
-      seamParts.push(
-        bevelBox(0.09, seamH, 0.016, 0.003).translate(x, 0.28 + seamH / 2, wallZ + wallT / 2 - 0.008),
-      )
-    }
-    emit('frame', mergeParts(seamParts, 'f1-podium: seams'), frame, 'seams', rigging)
     emit(
       'frame',
       bevelBox(wallW, 0.87, wallT * 0.7, 0.006).translate(0, wallH + 0.415, wallZ),
@@ -524,14 +523,17 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
   }
 }
 
-/** Near-frontal long lens at dais-top height: the reference framing, with the fascia filling the top. */
+/**
+ * The reference framing: near-frontal long lens just above the winner's surface, cropped so the apron
+ * reaches both frame edges and the backdrop fills everything above the structure.
+ */
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
   return createF1Preview(createModel(), {
     aspect,
-    target: [0, 1, 0.1],
-    distance: 10,
+    target: [0, 1.15, 0.1],
+    distance: 8.2,
     fov: 30,
     yaw: -0.15,
-    pitch: 0.11,
+    pitch: 0.12,
   })
 }
