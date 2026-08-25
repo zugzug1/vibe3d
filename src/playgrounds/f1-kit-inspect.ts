@@ -57,6 +57,11 @@ const MARK = new Set([
   'f1-kerb',
   'f1-gravel-trap',
   'f1-astroturf-strip',
+  'f1-tunnel-portal',
+  'f1-foam-monitor',
+  'f1-nameboard',
+  'hot-wheels-loop',
+  'hot-wheels-banked-turned',
 ])
 
 function collectTargets(root: Group): InspectTarget[] {

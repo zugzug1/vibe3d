@@ -5,8 +5,8 @@
 // covered here by construction rather than by inspection.
 
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { BufferGeometry, InstancedMesh, Material, Mesh, MeshStandardMaterial, Box3, PlaneGeometry, Vector3 } from 'three/webgpu'
-import { SPECTATOR_BRIDGE, STAIRS, TOKEN } from './f1-kit-core/index.ts'
+import { BufferGeometry, InstancedMesh, Material, Mesh, MeshStandardMaterial, Box3, Object3D, PlaneGeometry, Vector3 } from 'three/webgpu'
+import { GARAGE, SPECTATOR_BRIDGE, STAIRS, TOKEN } from './f1-kit-core/index.ts'
 
 import { createModel as createTyre } from './f1-tyre/model.ts'
 import { createModel as createStack } from './f1-tyre-stack/model.ts'
@@ -594,6 +594,91 @@ describe('procedural knobs', () => {
   })
 
 
+  test('pit wall brand colors and benches configure', () => {
+    const model = createPitWall({
+      bays: 2,
+      labels: ['16', '55'],
+      legend: 'FER',
+      primary: 0xe10600,
+      accent: 0xffe014,
+      benches: true,
+    })
+    expect(model.getConfig().primary).toBe(0xe10600)
+    expect(model.getConfig().legend).toBe('FER')
+    expect(model.root.getObjectByName('bench-seats')).toBeTruthy()
+    model.configure({ primary: 0x1e5aff, accent: 0xffd200, legend: 'RBR', labels: ['1', '11'], benches: false })
+    expect(model.getConfig()).toMatchObject({ primary: 0x1e5aff, accent: 0xffd200, legend: 'RBR', benches: false })
+    expect(model.root.getObjectByName('bench-seats')).toBeFalsy()
+    // The monitor bank is fitted to the shell, not to the seating, so it survives the stools going away.
+    expect(model.root.getObjectByName('screens')).toBeTruthy()
+    model.dispose()
+  })
+
+  test('pit wall seats and monitors are counts for the run, not for the bay pitch', () => {
+    // Vertices in a merged batch scale exactly with the number of repeats in it, so the built geometry
+    // is what proves the count — `getConfig` only proves the bookkeeping.
+    const vertsOf = (root: Object3D, name: string): number => {
+      const mesh = root.getObjectByName(name) as Mesh | undefined
+      expect(mesh).toBeTruthy()
+      return (mesh!.geometry as BufferGeometry).getAttribute('position').count
+    }
+
+    const model = createPitWall({ bays: 2 })
+    expect(model.getConfig()).toMatchObject({ seats: 6, tvs: 3 })
+
+    // Same span, half the crew: the stool batch has to halve with it rather than follow the two bays.
+    const half = createPitWall({ bays: 2, seats: 3, tvs: 1 })
+    expect(vertsOf(model.root, 'bench-seats')).toBe(2 * vertsOf(half.root, 'bench-seats'))
+    expect(vertsOf(model.root, 'screens')).toBe(3 * vertsOf(half.root, 'screens'))
+
+    // Twice the building, same crew: neither row may grow.
+    const long = createPitWall({ bays: 4 })
+    expect(vertsOf(long.root, 'bench-seats')).toBe(vertsOf(model.root, 'bench-seats'))
+    expect(vertsOf(long.root, 'screens')).toBe(vertsOf(model.root, 'screens'))
+
+    // ...but it does spread over the longer run.
+    model.root.updateMatrixWorld(true)
+    long.root.updateMatrixWorld(true)
+    const rowWidth = (root: Object3D): number =>
+      new Box3().setFromObject(root.getObjectByName('bench-seats')!).getSize(new Vector3()).x
+    expect(rowWidth(long.root)).toBeGreaterThan(rowWidth(model.root) * 1.8)
+    expect(rowWidth(long.root)).toBeLessThan(4 * GARAGE.pitch)
+
+    half.dispose()
+    long.dispose()
+    model.dispose()
+  })
+
+  test('pit wall monitor count follows the seat count until it is set', () => {
+    const model = createPitWall({ bays: 2 })
+    expect(model.getConfig()).toMatchObject({ seats: 6, tvs: 3 })
+
+    model.configure({ seats: 8 })
+    expect(model.getConfig()).toMatchObject({ seats: 8, tvs: 4 })
+
+    // An odd crew still gets a screen for the spare engineer.
+    model.configure({ seats: 5 })
+    expect(model.getConfig()).toMatchObject({ seats: 5, tvs: 3 })
+
+    // Once set, `tvs` is a decision and stops tracking.
+    model.configure({ tvs: 2 })
+    expect(model.getConfig()).toMatchObject({ seats: 5, tvs: 2 })
+    model.configure({ seats: 12 })
+    expect(model.getConfig()).toMatchObject({ seats: 12, tvs: 2 })
+
+    // Counts are whole and never zero.
+    model.configure({ seats: 0.4, tvs: 2.6 })
+    expect(model.getConfig()).toMatchObject({ seats: 1, tvs: 3 })
+
+    const explicit = createPitWall({ bays: 2, seats: 6, tvs: 6 })
+    expect(explicit.getConfig().tvs).toBe(6)
+    explicit.configure({ seats: 2 })
+    expect(explicit.getConfig().tvs).toBe(6)
+
+    explicit.dispose()
+    model.dispose()
+  })
+
   test('garage fascia number and legend round-trip', () => {
     const model = createGarageBox({ count: 2, number: '4', legend: 'BOX' })
     expect(model.getConfig()).toEqual({ count: 2, number: '4', legend: 'BOX', style: 'stamp', open: 0 })
@@ -678,8 +763,10 @@ describe('procedural knobs', () => {
     expect(CIRCUIT_SIGN_KINDS).toContain('DRS')
     expect(GARAGE_BAY_PITCH).toBe(7)
     expect(GARAGE.pitch).toBe(7)
-    expect(GARAGE.depth).toBe(17)
-    expect(GARAGE.height).toBe(5)
+    expect(GARAGE.depth).toBe(20)
+    expect(GARAGE.height).toBe(4.5)
+    expect(GARAGE.door).toBe(3.3)
+    expect(GARAGE.head).toBe(3)
     expect(SAUSAGE_KERB).toEqual({ width: 0.80, crown: 0.12, pitch: 0.80 })
     expect(ASTROTURF.width).toBe(2)
     expect(GRID_BOX).toEqual({ width: 2.7, length: 8 })
@@ -751,25 +838,52 @@ describe('FIA 1:1 datums', () => {
     model.dispose()
   })
 
-  test('garage bay is 7 m pitch, ~17 m deep, ~5 m high', () => {
+  test('garage bay is a 7 m pitch, 20 m deep, 4.5 m Yas-class box', () => {
     const model = createGarageBox()
     model.root.updateMatrixWorld(true)
-    const { size } = sizeOf(model.root)
-    expect(size.z).toBeGreaterThan(16.5)
-    expect(size.z).toBeLessThan(18)
-    expect(size.y).toBeGreaterThan(4.8)
-    expect(size.y).toBeLessThan(5.5)
+    const { box, size } = sizeOf(model.root)
+    // 20 m apron face to back wall, plus the apron pour and the coping drip in front of it.
+    expect(size.z).toBeGreaterThan(GARAGE.depth)
+    expect(size.z).toBeLessThan(GARAGE.depth + 1.5)
+    // Roof deck at 4.5 m; only the coping and the low roof plant are allowed above it.
+    expect(box.max.y).toBeGreaterThan(GARAGE.height)
+    expect(box.max.y).toBeLessThan(GARAGE.height + 0.6)
+    // A bay fills its pitch, so a run grows by exactly one module per extra bay and shares its piers.
+    const run = createGarageBox({ count: 3 })
+    run.root.updateMatrixWorld(true)
+    expect((sizeOf(run.root).size.x - size.x) / 2).toBeCloseTo(GARAGE.pitch, 3)
+    run.dispose()
+    model.dispose()
+  })
+
+  test('garage shutter clears the 3.3 x 3.0 m Yas door', () => {
+    const model = createGarageBox()
+    model.root.updateMatrixWorld(true)
+    const curtain = model.root.getObjectByName('shutter-0')
+    expect(curtain).toBeDefined()
+    const { box, size } = sizeOf(curtain!)
+    // Laths run inside the guide tracks, so the curtain is the clear width less its side clearance.
+    expect(size.x).toBeLessThanOrEqual(GARAGE.door)
+    expect(size.x).toBeGreaterThan(GARAGE.door - 0.2)
+    expect(box.max.y).toBeCloseTo(GARAGE.head, 1)
+    // The head must stay under the fascia beam soffit, barrel and all.
+    expect(GARAGE.head).toBeLessThan(GARAGE.height - GARAGE.fascia)
     model.dispose()
   })
 
   test('pit wall is 1.0 m deep and 2.2 m overall', () => {
-    const model = createPitWall()
-    model.root.updateMatrixWorld(true)
-    const { box, size } = sizeOf(model.root)
+    const shell = createPitWall({ benches: false })
+    shell.root.updateMatrixWorld(true)
+    const { box, size } = sizeOf(shell.root)
     expect(size.z).toBeGreaterThan(0.95)
     expect(size.z).toBeLessThan(1.2)
     expect(box.max.y).toBeCloseTo(2.2, 1)
-    model.dispose()
+    shell.dispose()
+    // Benches sit proud of the 1.00 m envelope on the pit-lane working face.
+    const seated = createPitWall({ benches: true })
+    seated.root.updateMatrixWorld(true)
+    expect(sizeOf(seated.root).size.z).toBeGreaterThan(1.2)
+    seated.dispose()
   })
 
   test('FIA panel face is at least 0.9 m square', () => {

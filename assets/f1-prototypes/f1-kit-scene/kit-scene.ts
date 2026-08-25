@@ -3,7 +3,7 @@
  *
  * Overhead (looking down, +Z is the far end of the road):
  *
- *   END   tunnel · stairs/bridge · armco/jersey/tecpro (runoff lives here)
+ *   END   stairs/bridge · armco/jersey/tecpro (runoff lives here)
  *   MID   ribbon + kerb/turf/gravel/fence the full length · sector gantry
  *   START grid / SF / lights · grandstands | verge | ribbon | pit wall | pit | garages
  *
@@ -99,6 +99,8 @@ import { createModel as createNameboard } from '../f1-nameboard/model.ts'
 import { createModel as createServiceTruck } from '../f1-service-truck/model.ts'
 import { createModel as createChequeredFlag } from '../f1-chequered-flag/model.ts'
 import { createModel as createMotorhome } from '../f1-team-motorhome/model.ts'
+import { createModel as createHotWheelsLoop } from '../hot-wheels-loop/model.ts'
+import { createModel as createHotWheelsBanked } from '../hot-wheels-banked-turned/model.ts'
 
 interface Live {
   readonly root: Group
@@ -130,7 +132,7 @@ const END_Z = 108
 const SPAN = 22
 const STAND_X = 22
 const STAND_PITCH = 10
-const DOOR_X = -(RIBBON_HALF + 1.2 + 8)
+const DOOR_X = -(RIBBON_HALF + 1.2 + 14)
 const APRON_W = Math.abs(DOOR_X) - ROAD_W / 2
 const APRON_X = -(ROAD_W / 2 + APRON_W / 2)
 const GARAGE_X = DOOR_X - GARAGE.depth / 2
@@ -144,8 +146,18 @@ const CROWD_X = 18
 /** Marshalling strip: between spec kerb and catch fence, in front of the stands. */
 const EDGE_X = RIBBON_HALF + 2.35
 const DRAIN_X = -(RIBBON_HALF - 0.9)
-const BAYS = 6
-const GARAGE_SPAN = BAYS * GARAGE_BAY_PITCH
+/** Two boxes per team garage — one boom + one pit-wall bay pair each. */
+const TEAM_BAYS = 2
+const TEAMS = [
+  { numbers: ['1', '11'], legend: 'RBR', open: 1, primary: 0x1e5aff, accent: 0xffd200, platePaper: 0x050a2e, plateInk: 0xf5f7ff },
+  { numbers: ['16', '55'], legend: 'FER', open: 0, primary: 0xe10600, accent: 0xffe014, platePaper: 0x1a0508, plateInk: 0xfff6e8 },
+  { numbers: ['4', '81'], legend: 'MCL', open: 0, primary: 0xff8000, accent: 0x47c7fc, platePaper: 0x14110c, plateInk: 0xfff8f0 },
+  { numbers: ['10', '43'], legend: 'CAD', open: 0, primary: 0x1a1a1a, accent: 0xf7c948, platePaper: 0x0a0a0a, plateInk: 0xf7c948 },
+] as const
+/** Clear break between team facades so the pair reads as one garage. */
+const TEAM_GAP = 1.5
+const TEAM_SPAN = TEAM_BAYS * GARAGE_BAY_PITCH
+const GARAGE_SPAN = TEAMS.length * TEAM_SPAN + (TEAMS.length - 1) * TEAM_GAP
 /** Stand block 1 occupies z −15…15; block 2 occupies z 39…69. Furniture goes in the gap. */
 const GAP_Z = 27
 /** Three overlapping runs cover the 220 m ribbon (same trick as the catch fence). */
@@ -227,11 +239,10 @@ export function createScene(): F1KitScene {
   root.add(apron)
   extras.push({ dispose: () => { apron.geometry.dispose() } })
 
-  const WALL_Z = GARAGE_SPAN / 2 + 18
   const paint = new Mesh(new PlaneGeometry(2.2, GARAGE_SPAN + 8), paintMat)
   paint.name = 'scene-pit-paint'
   paint.rotation.x = -Math.PI / 2
-  paint.position.set(-(RIBBON_HALF + 1.1), 0.003, WALL_Z)
+  paint.position.set(-(RIBBON_HALF + 1.1), 0.003, 0)
   paint.receiveShadow = true
   root.add(paint)
   extras.push({ dispose: () => { paint.geometry.dispose() } })
@@ -257,24 +268,57 @@ export function createScene(): F1KitScene {
   add(createAstroturf({ modules: 40, pileStep: 0.22 }), -TURF_X, -52, ALONG)
   add(createAstroturf({ modules: 50, pileStep: 0.22 }), -TURF_X, 72, ALONG)
 
-  // Pit (−X): garage, pit wall, per-bay gantries, tools on the door line.
-  add(createGarageBox({ count: BAYS, number: '11', legend: 'CHECO', open: 1 }), GARAGE_X, 0, FACE_PIT)
-  add(createPitWall({ bays: BAYS, labels: ['11', '12', '13', '14', '15', '16'] }), WALL_X, WALL_Z, FACE_SPEC)
-  for (let i = 0; i < BAYS; i++) {
-    const z = -GARAGE_SPAN / 2 + (i + 0.5) * GARAGE_BAY_PITCH
-    add(createPitGantry({ span: 5, height: 4.0, bays: 4 }), DOOR_X + 2.6, z)
+  // Pit (−X): 4 team double-garages (2 bays + 2 booms + branded pit wall each).
+  let cursorZ = -GARAGE_SPAN / 2
+  let openBayZ = 0
+  let firstTeamZ = 0
+  for (const [ti, team] of TEAMS.entries()) {
+    const centerZ = cursorZ + TEAM_SPAN / 2
+    if (ti === 0) firstTeamZ = centerZ
+    const labels = [...team.numbers]
+    add(
+      createGarageBox({
+        count: TEAM_BAYS,
+        number: team.numbers[0],
+        legend: team.legend,
+        open: team.open,
+      }),
+      GARAGE_X,
+      centerZ,
+      FACE_PIT,
+    )
+    add(
+      createPitWall({
+        bays: TEAM_BAYS,
+        labels,
+        legend: team.legend,
+        primary: team.primary,
+        accent: team.accent,
+        platePaper: team.platePaper,
+        plateInk: team.plateInk,
+        benches: true,
+      }),
+      WALL_X,
+      centerZ,
+      FACE_SPEC,
+    )
+    for (let j = 0; j < TEAM_BAYS; j++) {
+      const z = cursorZ + (j + 0.5) * GARAGE_BAY_PITCH
+      add(createPitGantry({ span: 5, height: 4.0, bays: 4 }), DOOR_X + 0.4, z)
+      if (j < team.open) openBayZ = z
+    }
+    cursorZ += TEAM_SPAN + TEAM_GAP
   }
-  add(createLollipop(), TOOL_X - 1.6, -GARAGE_BAY_PITCH + 1.4)
-  add(createPitBoard(), TOOL_X - 1.4, -GARAGE_BAY_PITCH + 2.6)
-  add(createStack(), TOOL_X, -GARAGE_BAY_PITCH - 1.6)
-  add(createGunRack(), TOOL_X, 0)
-  add(createCabinet(), TOOL_X, GARAGE_BAY_PITCH - 1.2)
-  add(createReel(), TOOL_X, GARAGE_BAY_PITCH + 1.4)
-  add(createTyre(), TOOL_X + 0.7, -GARAGE_BAY_PITCH - 0.2)
-  const openBayZ = GARAGE_SPAN / 2 - 0.5 * GARAGE_BAY_PITCH
+  add(createLollipop(), TOOL_X - 1.6, firstTeamZ - GARAGE_BAY_PITCH + 1.4)
+  add(createPitBoard(), TOOL_X - 1.4, firstTeamZ - GARAGE_BAY_PITCH + 2.6)
+  add(createStack(), TOOL_X, firstTeamZ - GARAGE_BAY_PITCH - 1.6)
+  add(createGunRack(), TOOL_X, firstTeamZ)
+  add(createCabinet(), TOOL_X, firstTeamZ + GARAGE_BAY_PITCH - 1.2)
+  add(createReel(), TOOL_X, firstTeamZ + GARAGE_BAY_PITCH + 1.4)
+  add(createTyre(), TOOL_X + 0.7, firstTeamZ - GARAGE_BAY_PITCH - 0.2)
   add(createTyreGun(), DOOR_X - 1.0, openBayZ - 0.7)
   add(createPitJack(), DOOR_X - 1.4, openBayZ)
-  add(createExtinguisher(), TOOL_X + 0.45, GARAGE_BAY_PITCH + 0.2)
+  add(createExtinguisher(), TOOL_X + 0.45, firstTeamZ + GARAGE_BAY_PITCH + 0.2)
 
   // Spectator (+X): fence the full asphalt; two stand blocks with a dressed gap.
   add(createCatchFence({ length: 200, height: 5 }), CATCH_X, ROAD_Z, ALONG)
@@ -317,7 +361,14 @@ export function createScene(): F1KitScene {
   // END of the track — stairs next to the bridge, runoff barriers in the verge.
   add(createSpectatorBridge({ span: SPAN }), 0, END_Z)
   add(createStairs({ kind: 'flight', steps: 16, width: 1.4 }), SPAN / 2 + 2, END_Z + 2)
-  add(createPitWall({ bays: 3, labels: ['11', '22', '33'] }), WALL_X, END_Z, FACE_PIT)
+  add(createPitWall({
+    bays: 2,
+    labels: ['16', '55'],
+    legend: 'FER',
+    primary: 0xe10600,
+    accent: 0xffe014,
+    benches: true,
+  }), WALL_X, END_Z, FACE_PIT)
   add(createNameboard(), WALL_X + 0.2, END_Z - GARAGE_BAY_PITCH, FACE_PIT)
   add(createArmco({ bays: 14 }), RIBBON_HALF + 0.55, END_Z - 14, ALONG)
   add(createCrashCushion({ fits: 'armco' }), RIBBON_HALF + 0.55, END_Z - 28, ALONG)
@@ -331,14 +382,21 @@ export function createScene(): F1KitScene {
   add(createFoamMonitor(), RIBBON_HALF + 1.4, END_Z - 14, 0.2)
   add(createCone(), -(RIBBON_HALF + 0.45), -22)
   add(createBollard(), -(RIBBON_HALF + 0.35), -26)
-  add(createTunnelPortal(), 0, END_Z + 16, Math.PI)
+  // Paddock — team building / race-control tower behind the garage row.
+  const teamBuildingX = GARAGE_X - 12
+  const teamBuildingZ = GARAGE_SPAN / 2 + 14
+  const towerZ = teamBuildingZ + 16
+  // Left of the team building (toward −Z): ceremony, medical, marshal, tunnel.
+  const leftWingX = teamBuildingX - 2
+  const leftWingZ = teamBuildingZ - 22
+  add(createMotorhome(), teamBuildingX, teamBuildingZ, FACE_PIT)
+  add(createRaceControl(), teamBuildingX, towerZ, FACE_PIT)
 
-  // Paddock (behind the garage). Cab toward −Z so the still sees cab+box as one artic.
-  add(createMotorhome(), GARAGE_X - 10, GARAGE_SPAN / 2 + 12, FACE_PIT)
-  add(createRaceControl(), GARAGE_X - 10, GARAGE_SPAN / 2 + 28, FACE_PIT)
+  // Service truck behind the garages (on-track fleet stays on the ribbon).
   const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
   truck.setGround(ground)
-  add(truck, GARAGE_X - 12, -22, FACE_PIT)
+  add(truck, GARAGE_X - 14, 0, FACE_PIT)
+
   // 1×4 on the ribbon, cabs facing the garage.
   const teamPitch = TRUCK.length + 1.8
   const teamRow = [
@@ -365,17 +423,26 @@ export function createScene(): F1KitScene {
   }
   add(createWeighbridge(), GARAGE_X - 8, -28, FACE_PIT)
   add(createParcFerme(), GARAGE_X, -28, FACE_PIT)
-  add(createMedicalPost(), GARAGE_X - 16, -32, FACE_PIT)
-  add(createGeneratorCabin(), GARAGE_X - 16, -28, FACE_PIT)
+  add(createGeneratorCabin(), leftWingX - 6, leftWingZ + 8, FACE_PIT)
 
-  // Ceremony cluster — −Z side of the garage, not behind it.
-  add(createPodium(), GARAGE_X, -36, Math.PI)
-  add(createTrophyTable(), GARAGE_X, -39)
-  add(createTrophyCup(), GARAGE_X, -38.6, 0, 0.75)
-  add(createChampagne(), GARAGE_X + 0.8, -38.6, 0, 0.75)
-  add(createIceBucket(), GARAGE_X - 0.8, -38.6, 0, 0.75)
-  add(createInterviewBackdrop(), GARAGE_X + 6, -36, Math.PI)
-  add(createCooldownBoard(), GARAGE_X + 4, -34, Math.PI)
+  // Ceremony + tents + through-tunnel on the left wing of the team building.
+  const tableX = leftWingX
+  const tableZ = leftWingZ - 4
+  const tableTopY = 0.75 + 0.03
+  add(createPodium(), leftWingX, leftWingZ + 2, Math.PI)
+  add(createTrophyTable(), tableX, tableZ)
+  add(createTrophyCup(), tableX, tableZ, 0, tableTopY)
+  add(createChampagne(), tableX + 0.55, tableZ, 0, tableTopY)
+  add(createIceBucket(), tableX - 0.55, tableZ, 0, tableTopY)
+  add(createInterviewBackdrop(), leftWingX + 6, leftWingZ + 2, Math.PI)
+  add(createCooldownBoard(), leftWingX + 4, leftWingZ + 4, Math.PI)
+  add(createMedicalPost(), leftWingX - 8, leftWingZ - 2, FACE_PIT)
+  add(createMarshalPost({ number: '22', flag: 'green' }), leftWingX - 8, leftWingZ - 10, FACE_PIT)
+  add(createTunnelPortal(), leftWingX - 14, leftWingZ - 6, FACE_PIT)
+
+  // Exhibition Hot Wheels pieces in the empty paddock behind the team building.
+  add(createHotWheelsLoop({ radius: 8, straightLength: 10 }), teamBuildingX - 28, teamBuildingZ + 6, FACE_PIT)
+  add(createHotWheelsBanked({ radius: 6, straightLength: 12 }), teamBuildingX - 28, teamBuildingZ - 18, FACE_PIT)
 
   return {
     root,
@@ -441,9 +508,9 @@ function kitBeautyPreview(
 
 export function createPreview({ aspect, time }: { aspect: number; time?: number }) {
   return kitBeautyPreview('f1-kit / scene camera', (camera) => {
-    // Looking +Z down the pit: garages (−X) sit on the right of frame.
-    camera.position.set(-10, 16, -38)
-    return new Vector3(-14, 1.2, 12)
+    // Eye-level on the apron between garages and pit wall — branded faces + benches in a row.
+    camera.position.set(-11, 3.2, -42)
+    return new Vector3(-11, 1.4, 8)
   }, { aspect, time })
 }
 

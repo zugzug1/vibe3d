@@ -1,4 +1,4 @@
-# @f1-kit/registry
+# @racing-kit/registry
 
 ## 0.0.19
 

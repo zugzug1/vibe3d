@@ -93,13 +93,9 @@ export function ModelPreview({ model }: ModelPreviewProps) {
       controls = new OrbitControls(preview.camera, canvas)
       controls.enableDamping = true
       controls.dampingFactor = 0.075
-      if (terrain) {
-        preview.root.updateMatrixWorld(true)
-        new Box3().setFromObject(preview.root).getCenter(controls.target)
-        controls.maxDistance = 300
-      } else {
-        controls.target.set(0, Math.max(0.75, preview.camera.position.y * 0.28), 0)
-      }
+      preview.root.updateMatrixWorld(true)
+      new Box3().setFromObject(preview.root).getCenter(controls.target)
+      if (terrain) controls.maxDistance = 300
       controls.update()
       resize()
       renderer.setAnimationLoop((time) => {

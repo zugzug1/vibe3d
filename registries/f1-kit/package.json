@@ -1,14 +1,14 @@
 {
-  "name": "@f1-kit/registry",
+  "name": "@racing-kit/registry",
   "version": "0.0.1",
-  "description": "A procedural Formula-1 pit-lane prop library for Vibe3D and Three.js.",
+  "description": "Racing Kit — procedural Formula 1 pit-lane props for Vibe3D and Three.js.",
   "type": "module",
   "license": "MIT",
   "publishConfig": {
     "access": "public",
     "registry": "https://registry.npmjs.org/"
   },
-  "keywords": ["vibe3d", "vibe3d-registry", "threejs", "3d-models", "f1", "motorsport"],
+  "keywords": ["vibe3d", "vibe3d-registry", "threejs", "3d-models", "f1", "racing", "motorsport"],
   "vibe3d": {
     "registry": "./dist/registry.json"
   },

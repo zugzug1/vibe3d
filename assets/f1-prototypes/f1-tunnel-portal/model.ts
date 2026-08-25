@@ -4,6 +4,13 @@
 // forward to retain the embankment, hazard-striped boards on both piers and over the opening, and a
 // kerbed carriageway with a slot drain running out of the throat.
 //
+// It is built 1:1 off `TUNNEL_PORTAL`: a single-lane service underpass at a Grade 1 circuit, 4.0 m clear
+// by 4.5 m clear through an 8 m bore. That is one 3.5 m service lane with margins under the DAUB / EU
+// clearance band, not a dual-carriageway highway tunnel, and it is why the opening is now slightly taller
+// than it is wide. `width` and `height` stay config, so the same source builds any clear opening — but
+// every proportion that has to track the opening (pier batter, wing rake, parapet bay rhythm, rib pitch)
+// is derived from it rather than frozen at the default, so a wider or taller portal is still this portal.
+//
 // What this replaces was a thin four-sided U: 0.5 m walls with no proud headwall, no wings and no ground
 // furniture, which from any angle read as an open-fronted box rather than as a structure holding earth
 // back. The mass here is front-loaded — the reveal at the mouth, the splay in plan and the parapet line
@@ -16,7 +23,7 @@
 // be wide because the light compresses whatever spread it is given.
 //
 // Three things carry that further, and all three are answers to the same complaint — that the elevation
-// read as a pale box. The piers now batter by nearly a metre across their height, so the front elevation
+// read as a pale box. The piers batter by better than a metre across their height, so the front elevation
 // is a trapezoid rather than a rectangle and the base flares wider than the deck the way an abutment
 // footing actually does. The wings run longer and die lower, trading a tall stub end for a long diagonal.
 // And the parapet is a thick panelled curb-wall with real recessed casting joints instead of a thin
@@ -27,6 +34,7 @@ import { BufferGeometry, Group, Mesh, MeshStandardMaterial, type Material } from
 import {
   FACE_CLEARANCE,
   TOKEN,
+  TUNNEL_PORTAL,
   WALL_END,
   acquireF1Materials,
   bevelBox,
@@ -59,21 +67,25 @@ export interface F1TunnelPortalInstance {
   dispose(): void
 }
 
-/** `width` and `height` are the *clear* opening — headroom and carriageway, not the outside envelope. */
-const defaults: F1TunnelPortalConfig = { width: 5, height: 3.2 }
+/**
+ * `width` and `height` are the *clear* opening — headroom and carriageway, not the outside envelope —
+ * and they come straight off the kit datum so the portal cannot drift from the rest of the circuit.
+ */
+const defaults: F1TunnelPortalConfig = { width: TUNNEL_PORTAL.width, height: TUNNEL_PORTAL.height }
 
 /**
- * Bore length along Z. Long enough that the far end falls away from the key light: at the 3.4 m this
- * started from, the closing wall stayed lit and the opening read as a recess rather than as a bore.
+ * Bore length along Z. Long enough that the far end falls away from the key light: at the 4.4 m this
+ * came from, the closing wall still caught enough of it that the opening read as a recess rather than
+ * as a bore, and 8 m of throat is also what a road wide enough to need a parapet actually spans.
  */
-const DEPTH = 4.4
+const DEPTH = TUNNEL_PORTAL.depth
 /** Structural side-wall thickness flanking the bore. */
-const WALL = 0.55
+const WALL = TUNNEL_PORTAL.wall
 /**
  * Slab over the opening. A road runs on top of this, so it is a deck carrying live load rather than a
  * lintel band — and its depth is the largest single reason the portal reads as engineered concrete.
  */
-const DECK = 0.85
+const DECK = TUNNEL_PORTAL.deck
 /**
  * How far the headwall stands proud of the bore mouth. This is the reveal: the band of concrete the
  * jambs show before the bore goes dark, and the difference between a portal and a hole.
@@ -84,37 +96,37 @@ const DECK = 0.85
  */
 const HEADWALL = 0.62
 /**
- * Extra width a headwall pier carries over the bore wall behind it, so the mouth steps rather than butts.
+ * Batter on a pier's outer face, as a slope rather than as a pair of offsets: total face rake per unit
+ * of pier height, then how much of that rake is spent flaring the base versus drawing the top in.
  *
- * It is generous because the batter below spends it: the pier's outer face has to draw in over its height
- * without crossing inboard of the bore wall it fronts, so the step at deck level is the budget the taper
- * is cut from. At the 0.26 this started from there was only 0.26 m of draw available before the wall
- * behind broke back out through the pier face, which capped the taper at an angle too shallow to see.
- */
-const PIER_STEP = 0.48
-/**
- * Batter on a pier's outer face: proud at the base, drawn in at the top. Together they rake the face by
- * half a metre over the pier's height, around 1:6 — steep for a wall, ordinary for an abutment.
+ * It has to be a slope because the clear height is config. At the fixed 0.48 / 0.42 offsets this came
+ * from, the rake was tuned against one 3.4 m pier and went shallow the moment the opening grew — and
+ * what the eye measures is not the angle but how far the silhouette moves against the height it moves
+ * across. 1:4.1 holds that constant: steep for a wall, ordinary for an abutment, and enough that the
+ * front elevation closes to a trapezoid at any opening the config asks for.
  *
- * At the 0.1 / 0.06 this started from the taper was under three degrees, and three degrees across a
- * four-metre face is invisible: the piers read as plumb boxes and the headwall lost the leaning-back
- * stance that separates a structure retaining earth from a doorway cut in a wall. The 0.3 / 0.2 that
- * followed reached nine degrees and still read plumb, because what the eye measures is not the angle but
- * how far the silhouette moves: half a metre across a seven-metre elevation is inside the width of the
- * coping above it. Together these now rake the face by 0.9 m, about 1:3.7, and the front elevation
- * finally closes to a trapezoid.
+ * Earlier passes at 1:12 and then 1:9 both still read plumb, because half a metre of draw across a
+ * seven-metre elevation is inside the width of the coping above it.
  *
  * Because the pier is extruded from an outline in XY, the batter is carried by its front face too, so the
  * taper shows in straight elevation rather than only in the raking side.
  *
- * The kick is deliberately allowed past the deck edge now. Holding the base inside the slab was the wrong
+ * The kick is deliberately allowed past the deck edge. Holding the base inside the slab was the wrong
  * constraint: an abutment footing is normally wider than the deck it carries, and clamping the flare to
  * the slab meant the widest line in the silhouette was the lid — which is most of what made the thing
- * read as a box. What must stay true is the other end, where the drawn-in top has to remain outboard of
- * the bore wall behind it or that wall breaks back out through the pier face.
+ * read as a box.
  */
-const PIER_KICK = 0.48
-const PIER_DRAW = 0.42
+const PIER_BATTER = 1 / 4.1
+const PIER_KICK_SHARE = 0.55
+/**
+ * What is left of the headwall pier's step over the bore wall once the battered top has drawn in.
+ *
+ * The step itself is derived, not authored: the pier's outer face has to draw in over its height without
+ * crossing inboard of the bore wall it fronts, so the step at deck level is the budget the taper is cut
+ * from and it must be the draw plus a margin. Authoring the step instead capped the taper at whatever
+ * angle happened to fit, which is how the piers ended up reading plumb.
+ */
+const PIER_STEP_MARGIN = 0.14
 
 /** FIA 3501 concrete-wall envelope, reused for the deck parapet rather than inventing a second height. */
 const PARAPET_H = WALL_END.concrete.height
@@ -144,7 +156,16 @@ const PARAPET_T = WALL_END.concrete.depth + 0.17
  */
 const PARAPET_BACK = 0.38
 const PARAPET_JOINT = 0.05
-const PARAPET_BAYS = 5
+/**
+ * Bay length, not bay count. A stop-end is placed at a pour length the site can actually cast, so the
+ * number of bays has to follow the deck rather than the deck being divided into a fixed five — otherwise
+ * a narrow portal gets slot-width panels and a wide one gets bays no formwork would be built for.
+ *
+ * The count derived from it is forced odd, which is what keeps it from locking to the even run of hazard
+ * plates over the opening below (rule 3): two odd rhythms will not read as one grid, two matching ones
+ * will. At the default opening this lands on the five bays the elevation was tuned with.
+ */
+const PARAPET_BAY_PITCH = 1.45
 /** Cap over the parapet. Depth follows the wall it caps, so a thicker parapet gets a heavier coping. */
 const COPING_H = 0.19
 /** Coping oversail, across the wall only. A coping flush with its wall reads as a paint line, not a cap. */
@@ -175,20 +196,36 @@ const SOFFIT_SET = 0.075
 
 /** Dark liner panels inside the bore. They start at the mouth plane so the headwall reveal stays concrete. */
 const LINER = 0.08
-/** Lit ribs standing proud of the liner. Parallax down the bore is what sells its length. */
+/**
+ * Lit ribs standing proud of the liner, and how they are spaced down the bore. Parallax is what sells the
+ * length, so they run at a pitch rather than at two authored stations — but the pitch is coarse.
+ *
+ * A rib is two bright verticals, one per jamb, and a raking view of an 8 m throat throws the far ones
+ * well inboard of the near ones. At a 2 m pitch that is eight verticals fanned across one opening, and
+ * the mouth stops reading as a bore and starts reading as a portcullis. Three metres apart the same ribs
+ * stay legible as stations passing away from the camera, which is the read that was wanted.
+ */
 const RIB = 0.09
 const RIB_W = 0.24
+const RIB_PITCH = 3.0
+/** How far inside the mouth the first rib sits, and how much clear bore is left before the closing wall. */
+const RIB_LEAD = 1.4
+const RIB_TAIL = 0.5
 const KERB_H = 0.16
 const KERB_W = 0.28
 /** Carriageway surface, held proud of the ground plane so the apron reads as a laid slab. */
 const ROAD = 0.02
-/** Carriageway run in front of the mouth. */
-const APRON = 1.6
+/** Carriageway run in front of the mouth. Long enough that the road still passes the wing wall ends. */
+const APRON = 2.0
 const DRAIN_W = 0.22
 
 /**
- * Wing walls: splay in plan, thickness and run. They rake from the soffit line down to the kit's
- * trackside-wall height, so both ends of the rake land on a datum the rest of the model already uses.
+ * Wing walls: splay in plan, thickness, and the slope the rake runs at. They fall from just under the
+ * soffit line to a low stub, so the near end springs off a datum the rest of the model already uses.
+ *
+ * The rake is authored as a slope and the run derived from it, for the same reason the pier batter is:
+ * a fixed 3.2 m run tuned against a 3.2 m opening turns into a near-vertical sail the moment the clear
+ * height goes to 4.5 m, and a wing that steep has stopped being a diagonal at all.
  *
  * They rake continuously rather than stepping: discrete lifts with a coping each turned the pair into a
  * bar chart flanking the portal, because the tall vertical face at every step reads as its own pylon.
@@ -206,7 +243,7 @@ const DRAIN_W = 0.22
  */
 const SPLAY = 0.52
 const WING_T = 0.5
-const WING_RUN = 3.2
+const WING_RAKE = 0.88
 /** Height the rake dies at, well under the trackside-wall datum the near end springs from. */
 const WING_FAR_H = 0.48
 /**
@@ -226,11 +263,13 @@ const WING_FAR_H = 0.48
 const WING_COPE_H = 0.1
 const WING_COPE_OUT = 0.022
 /**
- * How far the near end is buried inside the pier. It grows with the batter: the pier's outer face now
- * draws in 0.42 m over its height, so a burial sized for a plumb pier lets the wing's top near corner
- * break back out through the face.
+ * Margin on how far the near end is buried inside the pier, over the pier's own draw.
+ *
+ * The burial is sized against the batter, not against the wing, so it is derived: the pier face draws in
+ * over its height, and the corner most at risk of breaking back out through it is the near end's *top*.
+ * Covering the full draw plus this margin is safe at any clear height the config asks for.
  */
-const WING_BURY = 0.55
+const WING_BURY_MARGIN = 0.14
 
 /**
  * Hazard signage is cut plates bolted to concrete, so it is authored as a run of discrete plates with a
@@ -248,11 +287,16 @@ const PLATE_PITCH = 0.24
 const PIER_PLATES = 2
 /** Plate width on a pier, held clear of the battered outer face at the height the top plate reaches. */
 const PIER_PLATE_W = 0.6
-/** Stacked run of plates up a pier, kept low enough that the top plate stays on the drawn-in face. */
+/**
+ * Stacked run of plates up a pier, kept low enough that the top plate stays on the drawn-in face.
+ *
+ * It does not grow with the opening. Hazard boards are read from a vehicle, so they belong at vehicle
+ * height in world units whatever the portal above them is doing (rule 7).
+ */
 const PIER_PLATE_RUN = 1.9
 /**
- * Four across the opening, against the parapet's five bays above: two odd rhythms will not lock into one
- * grid the way two matching ones do (rule 3).
+ * Four across the opening, against the parapet's odd bay count above: two odd rhythms will not lock into
+ * one grid the way two matching ones do (rule 3).
  */
 const LINTEL_PLATES = 4
 /** Breathing room between the lintel plates and the two horizontals that bracket them. */
@@ -424,8 +468,19 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     releaseGenerated()
     const { width, height } = config
     const halfW = width / 2
+    /** Soffit line: where the piers stop and the proud return takes over. */
+    const soffitTop = height + SOFFIT_H
+    /**
+     * The pier batter, resolved against this opening. The rake is a slope, so the taller the clear
+     * opening the further the face travels — and the step over the bore wall is whatever the top's draw
+     * needs plus a margin, never less, or the wall behind breaks back out through the pier face.
+     */
+    const pierRake = soffitTop * PIER_BATTER
+    const pierKick = pierRake * PIER_KICK_SHARE
+    const pierDraw = pierRake - pierKick
+    const pierStep = pierDraw + PIER_STEP_MARGIN
     /** Outer face of a headwall pier at deck level. */
-    const pierOut = halfW + WALL + PIER_STEP
+    const pierOut = halfW + WALL + pierStep
     /** Top of the deck slab: where the crossing road runs. */
     const deckTop = height + DECK
     /**
@@ -437,8 +492,6 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     const deckHalf = pierOut + 0.18
     /** The headwall plane. The parapet is flush with it and every applied board measures from it. */
     const face = DEPTH / 2 + HEADWALL
-    /** Soffit line: where the piers stop and the proud return takes over. */
-    const soffitTop = height + SOFFIT_H
 
     const concrete: BufferGeometry[] = []  // portal mass: walls, deck, parapets, kerbs, ribs
     const proud: BufferGeometry[] = []     // the return standing forward of the mouth: piers and course
@@ -485,8 +538,8 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
       const cx = (halfW + pierOut) / 2
       const cy = soffitTop / 2
       const inner: Pt = [halfW - cx, -cy]
-      const outer: Pt = [pierOut + PIER_KICK - cx, -cy]
-      const outerTop: Pt = [pierOut - PIER_DRAW - cx, cy]
+      const outer: Pt = [pierOut + pierKick - cx, -cy]
+      const outerTop: Pt = [pierOut - pierDraw - cx, cy]
       const innerTop: Pt = [halfW - cx, cy]
       // Reversed for the -X pier so the outline stays counter-clockwise: mirroring the point list
       // would invert the winding and flip every face normal (rule 5).
@@ -504,14 +557,16 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     // front one can sit flush with the headwall and the back one flush with the rear of the deck.
     const parapetY = deckTop + PARAPET_H / 2
     const panelD = PARAPET_T - PARAPET_BACK
-    const bayW = (deckHalf * 2 - PARAPET_JOINT * (PARAPET_BAYS - 1)) / PARAPET_BAYS
+    // Odd, so it cannot fall into step with the even run of hazard plates on the elevation below.
+    const parapetBays = Math.max(3, 2 * Math.round(((deckHalf * 2) / PARAPET_BAY_PITCH - 1) / 2) + 1)
+    const bayW = (deckHalf * 2 - PARAPET_JOINT * (parapetBays - 1)) / parapetBays
     for (const [plane, into] of [[face, -1], [-DEPTH / 2, 1]] as const) {
       // Continuous web behind the panels, taken to soffit value. It is what the joints open onto, so a
       // joint reads as a shadowed recess rather than as a slot cut through to the sky — and it is the
       // face the crossing road sees, which is turned away from the key and belongs dark anyway.
       soffit.push(bevelBox(deckHalf * 2, PARAPET_H, PARAPET_BACK, 0.014)
         .translate(0, parapetY, plane + into * (PARAPET_T - PARAPET_BACK / 2)))
-      for (let i = 0; i < PARAPET_BAYS; i++) {
+      for (let i = 0; i < parapetBays; i++) {
         const px = -deckHalf + bayW / 2 + i * (bayW + PARAPET_JOINT)
         concrete.push(bevelBox(bayW, PARAPET_H, panelD, 0.018)
           .translate(px, parapetY, plane + into * (panelD / 2)))
@@ -529,31 +584,32 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     surface.push(bevelBox(deckHalf * 2 - 0.1, 0.06, overZ1 - overZ0, 0.008)
       .translate(0, deckTop + 0.03, (overZ0 + overZ1) / 2))
 
-    // --- wing walls: one raking lift per side, soffit line down to trackside-wall height -------------
+    // --- wing walls: one raking lift per side, soffit line down to a low stub -----------------------
     const wingNear = height - 0.1
     const wingFar = WING_FAR_H
+    const wingRun = (wingNear - wingFar) / WING_RAKE
+    // The burial covers the pier's full draw, measured along the wing rather than along X: the wing is
+    // splayed, so a burial of `b` only reaches `b * cos(SPLAY)` inboard of the pier face.
+    const wingBury = pierDraw / Math.cos(SPLAY) + WING_BURY_MARGIN
     for (const sx of [-1, 1] as const) {
       // Both spins are proper rotations. Building one wing and mirroring it would invert its winding,
       // so the -X wing is rotated past half a turn instead.
       const spin = sx > 0 ? -SPLAY : Math.PI + SPLAY
-      // Buried into the pier at the near end so the joint is solid rather than a butted seam. The burial
-      // is sized against the batter, not against the wing: the pier face draws in over its height, so the
-      // corner most at risk of breaking back out is the near end's *top*, not its base.
-      const x0 = -WING_BURY
-      const cx = (x0 + WING_RUN) / 2
+      const x0 = -wingBury
+      const cx = (x0 + wingRun) / 2
       const cy = wingNear / 2
       const place = (geo: BufferGeometry): BufferGeometry =>
         geo.translate(cx, cy, 0).rotateY(spin).translate(sx * (pierOut - 0.04), 0, face - 0.24)
       rake.push(place(bevelPrism([
-        [x0 - cx, -cy], [WING_RUN - cx, -cy],
-        [WING_RUN - cx, wingFar - WING_COPE_H - cy], [x0 - cx, wingNear - WING_COPE_H - cy],
+        [x0 - cx, -cy], [wingRun - cx, -cy],
+        [wingRun - cx, wingFar - WING_COPE_H - cy], [x0 - cx, wingNear - WING_COPE_H - cy],
       ], WING_T, 0.02)))
       // The coping is a band following the rake, not a horizontal cap: a level coping on a raking wall
       // is the tell that the wall was extruded rather than built. It is the only line that describes the
       // slope, so it is held one step off the wing rather than at trim value — see WING_COPE_H.
       concrete.push(place(bevelPrism([
-        [x0 - cx, wingNear - WING_COPE_H - cy], [WING_RUN - cx, wingFar - WING_COPE_H - cy],
-        [WING_RUN - cx, wingFar - cy], [x0 - cx, wingNear - cy],
+        [x0 - cx, wingNear - WING_COPE_H - cy], [wingRun - cx, wingFar - WING_COPE_H - cy],
+        [wingRun - cx, wingFar - cy], [x0 - cx, wingNear - cy],
       ], WING_T + WING_COPE_OUT * 2, 0.014)))
     }
 
@@ -567,8 +623,10 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     bore.push(bevelBox(halfW * 2 - 0.02, height - 0.02, 0.12, 0.01)
       .translate(0, height / 2, -DEPTH / 2 + 0.06))
 
-    // Ribs inside the bore, catching the key light against the dark lining.
-    for (const zRib of [-0.35, -DEPTH / 2 + 1.0]) {
+    // Ribs inside the bore, catching the key light against the dark lining. Run at a pitch from just
+    // inside the mouth so the count follows the bore length rather than being authored per depth.
+    const ribBack = -DEPTH / 2 + RIB_TAIL
+    for (let zRib = DEPTH / 2 - RIB_LEAD; zRib >= ribBack; zRib -= RIB_PITCH) {
       for (const sx of [-1, 1] as const) {
         concrete.push(bevelBox(RIB, height - LINER, RIB_W, 0.008)
           .translate(sx * (halfW - LINER - RIB / 2), (height - LINER) / 2, zRib))
@@ -626,7 +684,7 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
     const pierPlate = (pierRun - PLATE_GAP * (PIER_PLATES - 1)) / PIER_PLATES
     for (const sx of [-1, 1] as const) {
       for (let i = 0; i < PIER_PLATES; i++) {
-        board(sx * (halfW + (WALL + PIER_STEP) / 2), 0.3 + i * (pierPlate + PLATE_GAP) + pierPlate / 2,
+        board(sx * (halfW + (WALL + pierStep) / 2), 0.3 + i * (pierPlate + PLATE_GAP) + pierPlate / 2,
           PIER_PLATE_W, pierPlate, sx > 0 ? 1 : -1)
       }
     }
@@ -683,10 +741,14 @@ export function createModel(options: F1TunnelPortalOptions = {}): F1TunnelPortal
 }
 
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
-  return createF1Preview(createModel({ width: 4.6, height: 3.1 }), {
+  // Shot at the locked default so the beauty frame is the 1:1 asset, not a trimmed variant. The camera
+  // pulls back and the target lifts from the old 3.2 m opening: the structure now stands 6.59 m to the
+  // top of the coping over an 8 m bore, and the framing has to hold the parapet line, the throat and
+  // both wing stubs at once.
+  return createF1Preview(createModel(), {
     aspect,
-    target: [0, 1.85, 0.3],
-    distance: 22,
+    target: [0, 2.6, 0.4],
+    distance: 27,
     fov: 33,
     yaw: 0.44,
     pitch: 0.17,

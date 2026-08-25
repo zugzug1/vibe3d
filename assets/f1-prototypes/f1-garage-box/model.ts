@@ -1,4 +1,4 @@
-// f1-garage-box — one F1 pit garage bay (7 m pitch, 17 m deep, 3.3 m aperture). The bay is a thick
+// f1-garage-box — one F1 pit garage bay (7 m pitch, 20 m deep, 3.3 × 3.0 m door). The bay is a thick
 // structure, not a printed elevation: chunky front piers, a fascia beam that cantilevers 0.7 m over the
 // pit lane on a dark soffit, a coiled-shutter barrel behind the reveal, guide tracks, a coped roof edge,
 // and a cast plinth that steps down over a threshold nosing onto a drained apron.
@@ -78,11 +78,21 @@ const FASCIA_H = GARAGE.fascia
 /** Facade datum. In front of this is cantilever, behind it is reveal. */
 const FRONT = D / 2
 
-/** Half-pier each side of the aperture, so a pair of bays share one 1.5 m column. */
-const PIER = 0.75
+/** Clear shutter aperture width — the locked Yas-class door, and the datum the facade is set out from. */
+const OPEN_W = GARAGE.door
+/**
+ * Half-pier each side of the aperture. A bay fills its whole pitch, so this falls out of the door
+ * rather than being chosen: 3.3 m of opening in a 7 m module leaves a 3.7 m column shared by
+ * neighbours.
+ */
+const PIER = (BAY - OPEN_W) / 2
+/** Reveal joint splitting each pier face, which at 1.85 m is too wide for one sheet. */
+const PANEL_JOINT = 0.06
 /** Front columns are thickened; the party wall behind them stays thin. */
 const PIER_D = 1.1
-const PARTY_T = 0.16
+const PARTY_T = GARAGE.wall
+/** The party wall is cast into the column it meets, rather than stopping dead on a coincident face. */
+const WALL_BITE = 0.03
 /** Piers stand this far proud of the facade; the fascia beam much further. */
 const PROUD = 0.1
 /** The plane every applied front detail is measured from. */
@@ -107,14 +117,13 @@ const APRON_INNER = 0.42
 const CHANNEL = 0.14
 const APRON_OUTER = APRON - APRON_INNER - CHANNEL
 
-const OPEN_W = BAY - PIER * 2
 const SOFFIT_T = 0.08
 /** Radius of the rolled curtain. The housing is that barrel, so it shades as a cylinder, not a box. */
 const HEAD_R = 0.28
-/** Barrel crown, tucked up under the beam soffit. */
-const HEAD_TOP = H - FASCIA_H - 0.03
-/** Curtain head — the underside of the barrel, which is what really sets the aperture. */
-const HEAD_Y = HEAD_TOP - HEAD_R * 2
+/** Curtain head — the clear aperture height, and the datum the head assembly hangs from. */
+const HEAD_Y = GARAGE.head
+/** Barrel crown, tucked up into the soffit slot under the beam. */
+const HEAD_TOP = HEAD_Y + HEAD_R * 2
 /** Pushed out to the column line: a barrel hidden in the reveal is just more cavity. */
 const HEAD_Z = FRONT - 0.26
 const TRACK_W = 0.15
@@ -127,8 +136,9 @@ const LATH_GAP = 0.014
 const FACE_Z = FRONT + HEADER_D
 /** Where the hung soffit starts. In front of it the underside is lit lining, behind it a black slot. */
 const SOFFIT_BACK = FACE_Z - 1.1
-const PLATE_W = 2.4
-const PLATE_H = 0.78
+/** Stamp plate, at the 400 × 130 texture's aspect. A 0.9 m fascia only clears 0.52 m between bands. */
+const PLATE_W = 1.48
+const PLATE_H = 0.48
 
 /**
  * Value bands, as offsets along each slot's own colour ramp.
@@ -261,7 +271,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
     config.open = Math.min(config.open, count)
     const span = count * BAY
     const pierZ = FRONT + PROUD - PIER_D / 2
-    const partyLen = FRONT + pierZ - PIER_D / 2
+    const partyLen = FRONT + pierZ - PIER_D / 2 + WALL_BITE
     const barrelY = HEAD_Y + HEAD_R
 
     for (let i = 0; i < count; i++) {
@@ -306,15 +316,19 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
       const faceBase = SLAB + 0.12
       const faceH = H - FASCIA_H - 0.1 - faceBase
       for (const [side, margin] of [[-1, 0.05], [1, 0.07]] as const) {
-        const plate = bevelBox(PIER - margin * 2, faceH, 0.035, 0.008)
-        plate.translate(x + side * (BAY / 2 - PIER / 2), faceBase + faceH / 2,
-          PIER_FACE + 0.035 / 2 - FACE_CLEARANCE)
-        reliefs.push(plate)
+        const faceW = PIER - margin * 2
+        const panelW = (faceW - PANEL_JOINT) / 2
+        for (const half of [-1, 1] as const) {
+          const plate = bevelBox(panelW, faceH, 0.035, 0.008)
+          plate.translate(x + side * (BAY / 2 - PIER / 2) + half * (panelW + PANEL_JOINT) / 2,
+            faceBase + faceH / 2, PIER_FACE + 0.035 / 2 - FACE_CLEARANCE)
+          reliefs.push(plate)
+        }
       }
       // Pilasters on the outer face of the party wall. Buried by the neighbour mid-run; at the end of a
-      // run they are what stops a 17 m flank reading as one blank sheet — so they carry the face value.
+      // run they are what stops a 20 m flank reading as one blank sheet — so they carry the face value.
       for (const side of [-1, 1] as const) {
-        for (const rz of [-6.2, -1.4, 3.4]) {
+        for (const rz of [-8.3, -4.8, -1.2, 2.5, 6.1]) {
           const rib = bevelBox(0.09, H - 0.28, 0.55, 0.014)
           rib.translate(x + side * (BAY / 2 + 0.035), (H - 0.28) / 2, rz)
           reliefs.push(rib)
@@ -415,10 +429,10 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
 
       // Low roof plant, offset per bay so a long run does not repeat perfectly.
       const duct = bevelBox(BAY - 0.7, 0.3, 0.42, 0.02)
-      duct.translate(x, H + 0.15, -2.2)
+      duct.translate(x, H + 0.15, -4.1)
       trim.push(duct)
       const plant = bevelBox(1.5, 0.38, 1.15, 0.024)
-      plant.translate(x + (i % 2 === 0 ? -0.5 : 0.7), H + 0.19, i % 2 === 0 ? 1.6 : 2.9)
+      plant.translate(x + (i % 2 === 0 ? -0.5 : 0.7), H + 0.19, i % 2 === 0 ? 2.2 : 5.1)
       trim.push(plant)
 
       if (raised) {
@@ -450,7 +464,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
         bearing.translate(x + side * (OPEN_W / 2 - 0.02), barrelY, HEAD_Z)
         gear.push(bearing)
       }
-      for (const ox of [-2.24, -0.78, 0.66, 2.18]) {
+      for (const ox of [-1.28, -0.42, 0.46, 1.24]) {
         gear.push(tubeSection(HEAD_R + 0.022, 0.07, [x + ox, barrelY, HEAD_Z], AXIS_X, 24))
       }
       // Drive end: a gearbox hanging below the barrel line, with its shaft running back to the wall.
@@ -556,11 +570,11 @@ export function createPreview({ aspect }: { aspect: number; time?: number }) {
     createModel({ count: 3, number: '11', legend: 'CHECO', style: 'stamp', open: 1 }),
     {
       aspect,
-      target: [0, 2.3, 0.5],
-      distance: 50,
-      fov: 32,
+      target: [0, 2.0, 1.5],
+      distance: 44,
+      fov: 38,
       yaw: -0.62,
-      pitch: 0.15,
+      pitch: 0.12,
     },
   )
 }

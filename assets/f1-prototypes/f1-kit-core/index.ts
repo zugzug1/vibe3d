@@ -82,6 +82,7 @@ export {
   STAIRS,
   STAIR_KINDS,
   START_FINISH,
+  TUNNEL_PORTAL,
   WALL_END,
   WALL_FITS,
   isCircuitSignKind,

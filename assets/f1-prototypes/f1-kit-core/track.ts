@@ -44,16 +44,30 @@ export const GRID_BOX = { width: 2.7, length: 8.0 } as const
 export const FIA_LIGHT_PANEL = { width: 0.97, height: 0.97, depth: 0.18 } as const
 
 /**
- * One F1 garage bay. Pitch is the typical 4–7 m unit (Donington Tilke 6.8 m).
- * Depth / door height follow Donington 17.375 m and Silverstone truck-racing doors.
+ * One F1 garage bay, Yas Marina class — the locked 1:1 standard for this kit.
+ *
+ * `pitch` is the façade module a run tiles on, and a bay fills all of it, so `door` is what sizes the
+ * piers rather than the other way round: a 3.3 m Yas aperture in a 7.0 m module leaves a 1.85 m
+ * half-pier each side, i.e. one 3.7 m column shared by neighbours.
+ *
+ * `head` is the clear aperture height at the curtain head, and it is what forces `fascia` down from
+ * the old 1.2 m: under a 4.5 m roof deck, 3.0 m of door plus the 0.56 m shutter barrel above it leave
+ * only ~0.9 m for the signage band.
  */
 export const GARAGE = {
   pitch: 7.0,
-  width: 6.6,
-  depth: 17.0,
-  height: 5.0,
-  fascia: 1.2,
-  wall: 0.18,
+  /** Interior clear width between the party walls (`pitch − 2 × wall`). */
+  width: 6.68,
+  /** Apron face to back wall. Yas main pits measure 20.5 m; rounded for kit math. */
+  depth: 20.0,
+  /** Roof deck. Only the coping and the roof plant sit above it. */
+  height: 4.5,
+  /** Clear shutter aperture width. */
+  door: 3.3,
+  /** Clear shutter aperture height, at the curtain head. */
+  head: 3.0,
+  fascia: 0.9,
+  wall: 0.16,
 } as const
 
 /** FIA signalling envelope (WEC A7.6 grammar): ≤ 2.20 m high, 1.00 m deep. */
@@ -66,6 +80,25 @@ export const PIT_WALL = {
 
 /** Deck must clear this kit's 5 m catch fence. */
 export const SPECTATOR_BRIDGE = { deckHeight: 5.5, width: 2.4 } as const
+
+/**
+ * Single-lane service / spectator underpass at a Grade 1 circuit. Not a dual-carriageway highway
+ * tunnel — that is a different typology (AASHTO 7.2–9 m curb to curb, 4.9 m vertical) and would be a
+ * `lanes` config rather than a wider default.
+ *
+ * `width` / `height` are the **clear opening**, which is what `f1-tunnel-portal` exposes as config:
+ * one 3.5 m service lane plus 0.25 m margins, under the DAUB / EU underpass clearance band of
+ * 4.5–4.7 m so a service truck passes. `depth` is the bore run along Z, long enough that the far end
+ * falls out of the key light and reads as a throat instead of a recess. `deck` is a live-load bridge
+ * slab carrying the crossing road, not a lintel band.
+ */
+export const TUNNEL_PORTAL = {
+  width: 4.0,
+  height: 4.5,
+  depth: 8.0,
+  deck: 0.90,
+  wall: 0.55,
+} as const
 
 /**
  * Circuit access stairs (FIA / EN 1090 galvanized flight).

@@ -81,7 +81,12 @@ export function F1PitInspectPage() {
       if (!controls) return
       current = target
       setSelected(target)
-      setMarkersVisible(false)
+      // Keep markers up so you can click another prop without returning to overview.
+      setMarkersVisible(true)
+      for (const marker of markerObjects) {
+        const active = marker.userData.targetId === target.id
+        marker.element.classList.toggle('is-active', active)
+      }
       setParams((prev) => {
         const next = new URLSearchParams(prev)
         next.set('focus', target.id)
@@ -103,6 +108,8 @@ export function F1PitInspectPage() {
       if (!controls) return
       current = null
       setSelected(null)
+      for (const marker of markerObjects) marker.element.classList.remove('is-active')
+      setMarkersVisible(true)
       setParams((prev) => {
         const next = new URLSearchParams(prev)
         next.delete('focus')
@@ -159,6 +166,7 @@ export function F1PitInspectPage() {
           focusTarget(target)
         })
         const marker = new CSS2DObject(button)
+        marker.userData.targetId = target.id
         targetAnchor(target.object, marker.position)
         playground.scene.add(marker)
         markerObjects.push(marker)
@@ -227,7 +235,7 @@ export function F1PitInspectPage() {
         <div className="pit-inspect-title">
           <p className="eyebrow">F1 Kit · Scene</p>
           <h1>Pit straight</h1>
-          <p>Orbit and zoom the assembled kit. Click a marker to inspect one prop.</p>
+          <p>Orbit and zoom the assembled kit. Click markers to inspect props — pick another without leaving overview.</p>
         </div>
         {selected ? (
           <aside className="pit-inspect-card">

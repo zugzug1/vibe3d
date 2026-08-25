@@ -1,4 +1,4 @@
-# F1 Kit
+# Racing Kit
 
 71 procedural Formula 1 props for real-time Three.js (`three/webgpu`): a pit
 box, circuit furniture to instance along a racing line, and a pit building
@@ -13,8 +13,8 @@ Appendix 5 / Grade 1 object used there. Invented marketplace filler is not
 kept as a catalog stub — the folder is deleted.
 
 ```sh
-bunx vibe3d add @f1-kit
-bunx vibe3d add @f1-kit/f1-garage-box
+bunx vibe3d add @racing-kit
+bunx vibe3d add @racing-kit/f1-garage-box
 ```
 
 `tyre-stack` and `gun-rack` compose `f1-tyre` and `f1-tyre-gun`. Garage boxes

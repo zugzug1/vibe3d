@@ -2,7 +2,7 @@ import { ArrowRight, Box, Braces, PackageOpen, Palette, Terminal } from 'lucide-
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBlock, DocsLayout, Header, PageIntro } from './components.tsx'
-import { catalog, findModel } from './catalog.ts'
+import { catalog, findModel, racingCatalog, scifiCatalog } from './catalog.ts'
 import { ModelInstallation, ModelUsage } from './model-documentation.tsx'
 
 const ModelPreview = lazy(async () => {
@@ -194,18 +194,31 @@ bunx vibe-model --force`}</CodeBlock>
 function ModelIndex() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
+  const kit = params.get('kit')
   const needle = query.toLowerCase()
-  const filtered = catalog.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
+  const pool = kit === 'racing' ? racingCatalog : kit === 'scifi' ? scifiCatalog : catalog
+  const filtered = pool.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
+  const eyebrow = kit === 'racing' ? 'Racing Kit' : kit === 'scifi' ? 'Sci-Fi Kit' : 'Source kits · MIT licensed'
+  const title = kit === 'racing'
+    ? 'Racing Kit models.'
+    : kit === 'scifi'
+      ? 'Sci-Fi Kit models.'
+      : 'Models ready to become yours.'
   return (
     <div className="catalog-page">
-      <PageIntro eyebrow="Source kits · MIT licensed" title="Models ready to become yours.">
+      <PageIntro eyebrow={eyebrow} title={title}>
         <p>Preview every prop in the browser. Install one file tree or bring in a complete kit.</p>
       </PageIntro>
       <label className="catalog-search">
         <Terminal />
         <input
           value={query}
-          onChange={(event) => setParams(event.target.value ? { q: event.target.value } : {})}
+          onChange={(event) => {
+            const next = new URLSearchParams(params)
+            if (event.target.value) next.set('q', event.target.value)
+            else next.delete('q')
+            setParams(next)
+          }}
           placeholder="Search models"
         />
       </label>
@@ -231,8 +244,14 @@ function ModelPage() {
   return <article className="model-page"><div className="model-breadcrumb"><Link to="/models">Models</Link><span>/</span><span>{model.name}</span></div><header className="model-heading"><p className="eyebrow">{model.category}</p><h1>{model.name}</h1><p className="lead">{model.description}</p></header><section id="preview" className="reference-section preview-section"><h2>Preview</h2><Suspense fallback={<div className="model-preview" aria-hidden="true" />}><ModelPreview model={model} /></Suspense></section><ModelInstallation model={model} /><ModelUsage model={model} /></article>
 }
 
-function KitPage() {
-  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Sci-Fi Kit"><p>{catalog.length} procedural props and modular structures, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @scifi-kit'}</CodeBlock><div className="kit-stats"><div><b>{catalog.length}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models">Browse every model <ArrowRight /></Link></div>
+function SciFiKitPage() {
+  const count = scifiCatalog.length
+  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Sci-Fi Kit"><p>{count} procedural props and modular structures, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @scifi-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=scifi">Browse Sci-Fi models <ArrowRight /></Link></div>
+}
+
+function RacingKitPage() {
+  const count = racingCatalog.length
+  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Racing Kit"><p>{count} Formula 1 pit-lane and circuit props, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @racing-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=racing">Browse Racing models <ArrowRight /></Link></div>
 }
 
 function DocumentationShell() {
@@ -271,7 +290,8 @@ export function App() {
         <Route path="/docs/terrain-authoring" element={<DocPage page="terrainAuthoring" />} />
         <Route path="/models" element={<ModelIndex />} />
         <Route path="/models/:modelId" element={<ModelPage />} />
-        <Route path="/kits/scifi-kit" element={<KitPage />} />
+        <Route path="/kits/scifi-kit" element={<SciFiKitPage />} />
+        <Route path="/kits/racing-kit" element={<RacingKitPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

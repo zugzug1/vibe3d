@@ -518,11 +518,14 @@ export function sponsorWallTexture(options: {
   readonly height?: number
   readonly columns?: number
   readonly rows?: number
+  /** Optional brand papers (RGB 0–255). Cycles with the default set when short. */
+  readonly papers?: ReadonlyArray<readonly [number, number, number]>
 } = {}): DataTexture {
   const w = options.width ?? 1024
   const h = options.height ?? 512
   const cols = Math.max(2, options.columns ?? 6)
   const rows = Math.max(2, options.rows ?? 4)
+  const papers = options.papers && options.papers.length > 0 ? options.papers : SPONSOR_PAPER
   const data = new Uint8Array(w * h * 4)
   fillGlyphRect(data, w, 0, 0, w, h, [16, 18, 22])
   const cellW = Math.floor(w / cols)
@@ -531,7 +534,7 @@ export function sponsorWallTexture(options: {
   for (let row = 0; row < rows; row++) {
     for (let col = 0; col < cols; col++) {
       const i = row * cols + col
-      const paper = SPONSOR_PAPER[i % SPONSOR_PAPER.length]!
+      const paper = papers[i % papers.length]!
       const word = SPONSOR_MARKS[i % SPONSOR_MARKS.length]!
       const x0 = col * cellW + pad
       const y0 = row * cellH + pad
