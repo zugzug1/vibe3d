@@ -2,7 +2,7 @@ import { ArrowRight, Box, Braces, PackageOpen, Palette, Terminal } from 'lucide-
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBlock, DocsLayout, Header, PageIntro } from './components.tsx'
-import { catalog, findModel, racingCatalog, scifiCatalog } from './catalog.ts'
+import { catalog, findModel, f1Catalog, scifiCatalog } from './catalog.ts'
 import { ModelInstallation, ModelUsage } from './model-documentation.tsx'
 
 const ModelPreview = lazy(async () => {
@@ -196,11 +196,11 @@ function ModelIndex() {
   const query = params.get('q') ?? ''
   const kit = params.get('kit')
   const needle = query.toLowerCase()
-  const pool = kit === 'racing' ? racingCatalog : kit === 'scifi' ? scifiCatalog : catalog
+  const pool = kit === 'f1' ? f1Catalog : kit === 'scifi' ? scifiCatalog : catalog
   const filtered = pool.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
-  const eyebrow = kit === 'racing' ? 'Racing Kit' : kit === 'scifi' ? 'Sci-Fi Kit' : 'Source kits · MIT licensed'
-  const title = kit === 'racing'
-    ? 'Racing Kit models.'
+  const eyebrow = kit === 'f1' ? 'F1 Kit' : kit === 'scifi' ? 'Sci-Fi Kit' : 'Source kits · MIT licensed'
+  const title = kit === 'f1'
+    ? 'F1 Kit models.'
     : kit === 'scifi'
       ? 'Sci-Fi Kit models.'
       : 'Models ready to become yours.'
@@ -249,9 +249,9 @@ function SciFiKitPage() {
   return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Sci-Fi Kit"><p>{count} procedural props and modular structures, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @scifi-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=scifi">Browse Sci-Fi models <ArrowRight /></Link></div>
 }
 
-function RacingKitPage() {
-  const count = racingCatalog.length
-  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Racing Kit"><p>{count} Formula 1 pit-lane and circuit props, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @racing-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=racing">Browse Racing models <ArrowRight /></Link></div>
+function F1KitPage() {
+  const count = f1Catalog.length
+  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="F1 Kit"><p>{count} Formula 1 pit-lane and circuit props, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @f1-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=f1">Browse F1 models <ArrowRight /></Link></div>
 }
 
 function DocumentationShell() {
@@ -291,7 +291,8 @@ export function App() {
         <Route path="/models" element={<ModelIndex />} />
         <Route path="/models/:modelId" element={<ModelPage />} />
         <Route path="/kits/scifi-kit" element={<SciFiKitPage />} />
-        <Route path="/kits/racing-kit" element={<RacingKitPage />} />
+        <Route path="/kits/f1-kit" element={<F1KitPage />} />
+        <Route path="/kits/racing-kit" element={<Navigate to="/kits/f1-kit" replace />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>

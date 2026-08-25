@@ -310,6 +310,17 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
   text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
+  /* Labels stay off until hover/focus/active — arrows remain clickable. */
+  opacity: 0;
+  transform: translateY(2px);
+  transition: opacity .12s ease, transform .12s ease;
+  pointer-events: none;
+}
+.pit-inspect-marker:hover .pit-inspect-marker__label,
+.pit-inspect-marker:focus-visible .pit-inspect-marker__label,
+.pit-inspect-marker.is-active .pit-inspect-marker__label {
+  opacity: 1;
+  transform: translateY(0);
 }
 .pit-inspect-marker:hover .pit-inspect-marker__arrow,
 .pit-inspect-marker:focus-visible .pit-inspect-marker__arrow { border-top-color: #f5fdff; }

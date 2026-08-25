@@ -11,3 +11,5 @@ coverage/
 .release-pack/
 models.lock.json
 *.tsbuildinfo
+test-results/
+docs/assets/f1-kit-previews/

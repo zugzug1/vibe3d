@@ -25,12 +25,20 @@ interface InspectSession {
   returnOverview: () => void
 }
 
+interface SelectedProp {
+  id: string
+  label: string
+  description: string
+}
+
 export function F1PitInspectPage() {
   const hostRef = useRef<HTMLDivElement>(null)
   const sessionRef = useRef<InspectSession | null>(null)
   const [params, setParams] = useSearchParams()
-  const [selected, setSelected] = useState<InspectTarget | null>(null)
+  const [selected, setSelected] = useState<SelectedProp | null>(null)
   const initialFocus = useRef(params.get('focus'))
+  const setParamsRef = useRef(setParams)
+  setParamsRef.current = setParams
 
   useEffect(() => {
     const host = hostRef.current
@@ -44,6 +52,9 @@ export function F1PitInspectPage() {
     let controls: OrbitControls | undefined
     let previous = 0
     const markerObjects: CSS2DObject[] = []
+    const lastCam = new Vector3()
+    const lastTarget = new Vector3()
+    let labelsDirty = true
 
     const playground = createF1KitInspectPlayground({
       aspect: Math.max(host.clientWidth, 1) / Math.max(host.clientHeight, 1),
@@ -63,6 +74,7 @@ export function F1PitInspectPage() {
         marker.visible = visible
         marker.element.style.pointerEvents = visible ? 'auto' : 'none'
       }
+      labelsDirty = true
     }
 
     const beginTween = (toCam: Vector3, toTarget: Vector3, duration = 0.75): void => {
@@ -75,19 +87,20 @@ export function F1PitInspectPage() {
       tweenT = 0
       tweening = true
       controls.enabled = false
+      labelsDirty = true
     }
 
     const focusTarget = (target: InspectTarget): void => {
       if (!controls) return
       current = target
-      setSelected(target)
+      setSelected({ id: target.id, label: target.label, description: target.description })
       // Keep markers up so you can click another prop without returning to overview.
       setMarkersVisible(true)
       for (const marker of markerObjects) {
         const active = marker.userData.targetId === target.id
         marker.element.classList.toggle('is-active', active)
       }
-      setParams((prev) => {
+      setParamsRef.current((prev) => {
         const next = new URLSearchParams(prev)
         next.set('focus', target.id)
         return next
@@ -110,7 +123,7 @@ export function F1PitInspectPage() {
       setSelected(null)
       for (const marker of markerObjects) marker.element.classList.remove('is-active')
       setMarkersVisible(true)
-      setParams((prev) => {
+      setParamsRef.current((prev) => {
         const next = new URLSearchParams(prev)
         next.delete('focus')
         return next
@@ -124,10 +137,11 @@ export function F1PitInspectPage() {
       if (!renderer) return
       const width = Math.max(host.clientWidth, 1)
       const height = Math.max(host.clientHeight, 1)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5))
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25))
       renderer.setSize(width, height, false)
       playground.resize(width / height)
       labelRenderer?.setSize(width, height)
+      labelsDirty = true
     }
     const observer = new ResizeObserver(resize)
     observer.observe(host)
@@ -178,6 +192,8 @@ export function F1PitInspectPage() {
         if (match) focusTarget(match)
       }
 
+      lastCam.copy(playground.camera.position)
+      lastTarget.copy(controls.target)
       resize()
       renderer.setAnimationLoop((time) => {
         if (!renderer || !controls) return
@@ -190,6 +206,7 @@ export function F1PitInspectPage() {
           playground.camera.position.lerpVectors(tweenFromCam, tweenToCam, k)
           controls.target.lerpVectors(tweenFromTarget, tweenToTarget, k)
           controls.update()
+          labelsDirty = true
           if (tweenT >= 1) {
             tweening = false
             controls.enabled = true
@@ -203,9 +220,22 @@ export function F1PitInspectPage() {
           controls.update()
         }
 
+        if (
+          labelsDirty
+          || lastCam.distanceToSquared(playground.camera.position) > 1e-6
+          || lastTarget.distanceToSquared(controls.target) > 1e-6
+        ) {
+          labelsDirty = true
+          lastCam.copy(playground.camera.position)
+          lastTarget.copy(controls.target)
+        }
+
         playground.update(time * 0.001)
         renderer.render(playground.scene, playground.camera)
-        labelRenderer?.render(playground.scene, playground.camera)
+        if (labelsDirty) {
+          labelRenderer?.render(playground.scene, playground.camera)
+          labelsDirty = false
+        }
       })
     })().catch((error: unknown) => {
       console.error('Unable to open F1 pit inspect', error)
@@ -225,7 +255,7 @@ export function F1PitInspectPage() {
       playground.dispose()
       renderer?.dispose()
     }
-  }, [setParams])
+  }, [])
 
   return (
     <div className="pit-inspect-page" ref={hostRef}>

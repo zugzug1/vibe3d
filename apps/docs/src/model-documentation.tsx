@@ -8,12 +8,12 @@ function symbolName(id: string): string {
   return id.split('-').map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`).join('')
 }
 
-function kitSlug(model: CatalogModel): 'scifi-kit' | 'racing-kit' {
-  return model.kind === 'f1' ? 'racing-kit' : 'scifi-kit'
+function kitSlug(model: CatalogModel): 'scifi-kit' | 'f1-kit' {
+  return model.kind === 'f1' ? 'f1-kit' : 'scifi-kit'
 }
 
-function registryScope(model: CatalogModel): '@scifi-kit' | '@racing-kit' {
-  return model.kind === 'f1' ? '@racing-kit' : '@scifi-kit'
+function registryScope(model: CatalogModel): '@scifi-kit' | '@f1-kit' {
+  return model.kind === 'f1' ? '@f1-kit' : '@scifi-kit'
 }
 
 function installedImport(model: CatalogModel): string {
@@ -46,13 +46,13 @@ export function ModelInstallation({ model }: { model: CatalogModel }) {
       )
       .replaceAll(
         '../f1-kit-core/',
-        `@/models/racing-kit/f1-kit-core/`,
+        `@/models/f1-kit/f1-kit-core/`,
       )))
   }, [method, model, source])
 
   const dependencies = sourceDependencies(source)
   const terrain = model.kind === 'terrain'
-  const racing = model.kind === 'f1'
+  const isF1 = model.kind === 'f1'
   return <section id="installation" className="reference-section">
     <h2>Installation</h2>
     <div className="install-tabs" role="tablist" aria-label="Installation method">
@@ -71,8 +71,8 @@ export function ModelInstallation({ model }: { model: CatalogModel }) {
         <li>Install dependencies with <code>{terrain ? 'bun add three @vibe3djs/terrain' : 'bun add three'}</code>.</li>
         <li>{terrain
           ? <>Copy the entire <code>assets/terrain/{model.id}</code> directory, including its topology and bake artifacts.</>
-          : racing
-            ? <>Copy shared Racing Kit support (<code>f1-kit-core</code>) into <code>src/models/racing-kit/f1-kit-core</code>.</>
+          : isF1
+            ? <>Copy shared F1 Kit support (<code>f1-kit-core</code>) into <code>src/models/f1-kit/f1-kit-core</code>.</>
             : <>Copy the shared Sci-Fi Kit runtime into <code>src/lib/vibe3d/scifi-kit</code>.</>}</li>
         <li>Create <code>src/models/{kit}/{model.id}/model.ts</code> with the source below.</li>
         {dependencies.length > 0 && <li>Copy the required model folders: {dependencies.map((dependency) => <code key={dependency}>{dependency}</code>)}</li>}
@@ -87,7 +87,7 @@ export function ModelUsage({ model }: { model: CatalogModel }) {
   const modulePath = installedImport(model)
   const isConfigurableWall = model.id === 'modular-wall'
   const terrain = model.kind === 'terrain'
-  const racing = model.kind === 'f1'
+  const isF1 = model.kind === 'f1'
   const usage = terrain
     ? `import { createModel } from "${modulePath}"\n\nconst terrain = await createModel({ path: "compiled" })\nscene.add(terrain.root)\n\n// Keep camera-dependent LODs and material state current.\nterrain.update(deltaSeconds)`
     : isConfigurableWall
@@ -106,8 +106,8 @@ export function ModelUsage({ model }: { model: CatalogModel }) {
 
   const tree = terrain
     ? `src/models/scifi-kit/${model.id}/\n├── model.ts\n├── topology.ts\n└── *.{vtopo,vbake}`
-    : racing
-      ? `src/\n└── models/racing-kit/\n    ├── f1-kit-core/\n    └── ${model.id}/\n        └── model.ts`
+    : isF1
+      ? `src/\n└── models/f1-kit/\n    ├── f1-kit-core/\n    └── ${model.id}/\n        └── model.ts`
       : `src/\n├── lib/vibe3d/scifi-kit/\n└── models/scifi-kit/${model.id}/\n    └── model.ts`
 
   return <>

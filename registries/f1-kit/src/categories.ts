@@ -1,4 +1,4 @@
-/** Catalog / registry category for Racing Kit (`f1-*`) models. */
+/** Catalog / registry category for F1 Kit (`f1-*`) models. */
 
 export function categoryFromId(id: string): string {
   if (id.includes('hot-wheels')) return 'Exhibition Track'

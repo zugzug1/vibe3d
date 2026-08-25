@@ -1,4 +1,4 @@
-import { categoryFromId as racingCategoryFromId } from '../../../registries/f1-kit/src/categories.ts'
+import { categoryFromId as f1CategoryFromId } from '../../../registries/f1-kit/src/categories.ts'
 
 export interface CatalogModel {
   id: string
@@ -115,7 +115,7 @@ const title = (id: string) => words(id).map((word) => word[0]?.toUpperCase() + w
 
 function categoryFor(id: string, kind: CatalogModel['kind']): string {
   if (kind === 'terrain') return 'Terrain'
-  if (kind === 'f1' || id.startsWith('f1-')) return racingCategoryFromId(id)
+  if (kind === 'f1' || id.startsWith('f1-')) return f1CategoryFromId(id)
   if (cargoLogisticsIds.has(id)) return 'Cargo & Logistics'
   if (/wall|room|shell|roof|ceiling|floor|facade|column|door|window/.test(id)) return 'Architecture'
   if (/pipe|vent|duct|drain|gauge|generator|tank|pump/.test(id)) return 'Infrastructure'
@@ -145,19 +145,17 @@ export const catalog = Object.entries(modules)
   .sort((a, b) => a.name.localeCompare(b.name))
 
 export const scifiCatalog = catalog.filter((model) => model.kind !== 'f1')
-export const racingCatalog = catalog.filter((model) => model.kind === 'f1')
+export const f1Catalog = catalog.filter((model) => model.kind === 'f1')
 
-/** Assembled Racing Kit pit — not a single model.ts; opens the inspect playground. */
-export const racingPitScene = {
+/** Assembled F1 Kit pit — not a single model.ts; opens the inspect playground. */
+export const f1PitScene = {
   id: 'f1-kit-scene',
   name: 'Pit Straight',
   category: 'Scenes',
-  description: 'Orbit the assembled Racing Kit. Click markers to inspect one prop at a time, then return to the overview.',
+  description: 'Orbit the assembled F1 Kit. Click markers to inspect one prop at a time, then return to the overview.',
   href: '/scenes/f1-pit',
 } as const
 
-/** @deprecated Use racingPitScene */
-export const f1PitScene = racingPitScene
 
 export function findModel(id: string | undefined): CatalogModel | undefined {
   return catalog.find((model) => model.id === id)

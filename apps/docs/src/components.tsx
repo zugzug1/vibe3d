@@ -1,7 +1,7 @@
 import { Check, ChevronRight, Clipboard, Menu, Search, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { racingCatalog, racingPitScene, scifiCatalog, type CatalogModel } from './catalog.ts'
+import { f1Catalog, f1PitScene, scifiCatalog, type CatalogModel } from './catalog.ts'
 
 const navigation: ReadonlyArray<{
   label: string
@@ -55,7 +55,7 @@ function KitTree({
   title: string
   overviewPath: string
   allModelsPath: string
-  kitSlug: 'scifi' | 'racing'
+  kitSlug: 'scifi' | 'f1'
   models: readonly CatalogModel[]
   activeModel: CatalogModel | undefined
   open: boolean
@@ -102,7 +102,7 @@ export function Header() {
           <NavLink to="/models">Models</NavLink>
           <NavLink to="/docs/terrain">Terrain</NavLink>
           <NavLink to="/kits/scifi-kit">Sci-Fi Kit</NavLink>
-          <NavLink to="/kits/racing-kit">Racing Kit</NavLink>
+          <NavLink to="/kits/f1-kit">F1 Kit</NavLink>
         </nav>
         <div className="header-actions">
           <Link className="search-link" to="/models"><Search size={15} /> Search models</Link>
@@ -116,7 +116,7 @@ export function Header() {
         {navigation.flatMap((group) => group.items).map(([label, path]) => <NavLink key={path} to={path} onClick={() => setOpen(false)}>{label}</NavLink>)}
         <NavLink to="/models" onClick={() => setOpen(false)}>Model library</NavLink>
         <NavLink to="/kits/scifi-kit" onClick={() => setOpen(false)}>Sci-Fi Kit</NavLink>
-        <NavLink to="/kits/racing-kit" onClick={() => setOpen(false)}>Racing Kit</NavLink>
+        <NavLink to="/kits/f1-kit" onClick={() => setOpen(false)}>F1 Kit</NavLink>
       </nav>}
     </header>
   )
@@ -127,9 +127,9 @@ export function DocsLayout({ children }: { children: ReactNode }) {
   const isArticle = pathname.startsWith('/docs')
   const isModelDetail = pathname.startsWith('/models/')
   const isWide = pathname === '/models'
-  const activeModel = [...scifiCatalog, ...racingCatalog].find((model) => pathname === `/models/${model.id}`)
-  const racingOpen = activeModel?.kind === 'f1' || pathname.startsWith('/kits/racing-kit') || pathname.startsWith('/scenes/f1-pit')
-  const scifiOpen = !racingOpen
+  const activeModel = [...scifiCatalog, ...f1Catalog].find((model) => pathname === `/models/${model.id}`)
+  const f1Open = activeModel?.kind === 'f1' || pathname.startsWith('/kits/f1-kit') || pathname.startsWith('/scenes/f1-pit')
+  const scifiOpen = !f1Open
   return (
     <div className={`docs-shell${isArticle || isModelDetail ? ' docs-shell--article' : ''}${isWide ? ' docs-shell--wide' : ''}`}>
       <aside className="docs-sidebar">
@@ -151,14 +151,14 @@ export function DocsLayout({ children }: { children: ReactNode }) {
               open={scifiOpen}
             />
             <KitTree
-              title="Racing Kit"
-              overviewPath="/kits/racing-kit"
-              allModelsPath="/models?kit=racing"
-              kitSlug="racing"
-              models={racingCatalog}
+              title="F1 Kit"
+              overviewPath="/kits/f1-kit"
+              allModelsPath="/models?kit=f1"
+              kitSlug="f1"
+              models={f1Catalog}
               activeModel={activeModel?.kind === 'f1' ? activeModel : undefined}
-              open={racingOpen}
-              extra={<NavLink to={racingPitScene.href}>{racingPitScene.name}</NavLink>}
+              open={f1Open}
+              extra={<NavLink to={f1PitScene.href}>{f1PitScene.name}</NavLink>}
             />
           </nav>
         </section>

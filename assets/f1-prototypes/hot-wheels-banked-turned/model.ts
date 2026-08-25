@@ -1,31 +1,104 @@
 // hot-wheels-banked-turned — a Hot Wheels-typology 180 degree banked U-turn, rebuilt at 1:1
-// car-plausible scale for exhibition use rather than at toy scale.
+// car-plausible scale for exhibition use rather than at toy scale, and finished as fabricated metal.
 //
 // Scale contract. `trackWidth` is the clear lane between the inside faces of the two side walls and
 // defaults to 4 m, which is a single car lane plus working clearance. `radius` is the CENTRE-LINE
 // radius of the 180 degree turn and defaults to 8 m — an exhibition-plausible hairpin rather than the
 // 0.2 m of the moulded toy, and chosen so the band-to-hole ratio matches the reference part.
-// `straightLength` is the length of each orange run-in measured from its seam.
-// Every other dimension (wall thickness, floor thickness, chamfer, skirt thickness) is a world-unit
-// moulding size, per modeling rule 7, and is not re-scaled as a percentage of the host.
+// `straightLength` is the length of each run-in measured from its seam.
+// Every other dimension (wall thickness, floor thickness, chamfer, skirt thickness, line width) is a
+// world-unit size, per modeling rule 7, and is not re-scaled as a percentage of the host.
 //
 // Angle contract. `bankAngle` is in DEGREES. It is the PEAK bank reached across the middle of the curve;
 // the bank ramps from flat at each seam through a smoothstep and holds flat-topped across the apex, so
-// the orange straights and the red curve always meet coplanar.
+// the straights and the banked curve always meet coplanar.
 //
 // Construction. One U-channel cross-section is lofted along a straight-arc-straight centre line. At each
 // station the section is rotated about its INNER bottom corner by the local bank, which keeps the inside
-// edge of the turn pinned to the ground and lifts the outer rail — the way the moulded part sits on a
-// floor. The red curve additionally carries a swept outer skirt dropped from the raised outer edge down
-// to the ground, which is what gives the piece its solid quarter-pipe silhouette in the reference photo.
+// edge of the turn pinned to the ground and lifts the outer rail — the way the part sits on a floor. The
+// banked curve additionally carries a swept outer skirt dropped from the raised outer edge down to the
+// ground, which is what gives the piece its solid quarter-pipe silhouette.
+//
+// The section is lofted as SEPARATE batches, not one, so the running surface, the barriers and the
+// optional edge lines can carry different values: an inner wall prism, the lane slab between the walls,
+// an outer wall prism, and two thin films sitting on the lane. The wall and deck faces they share are
+// coincident, so the union is the same solid the single-piece channel described.
+//
+// ---------------------------------------------------------------------------------------------------
+// Colour and material
+// ---------------------------------------------------------------------------------------------------
+// The defaults are BRUSHED EXHIBITION STEEL — a cool metallic grey deck over darker graphite barriers,
+// with slightly darker steel joint hardware. Colour is procedural through five knobs, each a plain hex:
+//
+//   curveColor      running surface of the BANKED CURVE      default 0x8f979d  (brushed steel)
+//   straightColor   running surface of the STRAIGHT run-ins  default 0x969ea3  (brushed steel, lighter)
+//   wallColor       both barrier walls and the outer skirt   default 0x454d53  (dark graphite)
+//   connectorColor  seam splice plates, bolts, post caps     default 0x7a8288  (darker steel hardware)
+//   markingColor    optional edge lines, off by default      default 0xbcc3c6  (muted, see `markings`)
+//
+// On a metal these hexes tint the REFLECTION, not a diffuse albedo, so they behave differently from a
+// painted part: pushing one darker mostly deepens its highlights rather than greying the whole face.
+// Cool hexes stay cool; a warm hex reads as bronze or brass almost immediately.
+//
+// The practical consequence, and the reason `wallColor` sits as far below the deck hexes as it does:
+// metal slots lift toward their specular whatever hex you give them, so two slots a step apart on
+// paper render as one flat mass. Separating the deck from the barriers needs a much wider spread here
+// than the same part would need in paint. Keep that spread if you retint.
+//
+// Set them at construction:
+//
+//   createModel({ curveColor: 0x7a8287, wallColor: 0x333a3f })   // darker graphite throughout
+//
+// Change them later — `configure` recolours in place and never rebuilds geometry for a colour-only
+// patch, so it is cheap enough to drive from a UI:
+//
+//   const turn = createModel()
+//   turn.configure({ curveColor: 0xa8b0b6, straightColor: 0xa8b0b6 })   // one uniform steel tone
+//   turn.configure({ wallColor: 0x2f3438, connectorColor: 0xc2c9cd })   // near-black rail, bright bolts
+//   turn.configure({ curveColor: 0xb9a27e, straightColor: 0xb9a27e })   // warm hex reads as bronze
+//   turn.configure({ markings: true, markingColor: 0xd6dbdd })          // add muted edge lines
+//
+// Finish is NOT driven by the colour knobs. It lives in the `finish` record below, one entry per slot,
+// so the whole part stays in family. The deck runs metalness 0.72 at roughness 0.5, the barriers a touch
+// softer, and the hardware is the most reflective thing on the piece. Two constraints shaped those
+// numbers and are worth knowing before you change them:
+//
+//   1. The kit capture rig carries NO environment map. A metal's diffuse response falls to zero as
+//      metalness approaches 1, so at 0.9+ this part renders as a black hole cut out of the background
+//      with a few specular streaks across it. 0.72 keeps enough diffuse for the bank to hold its form
+//      while still reading unmistakably as metal. If you light this under an IBL, push it higher.
+//   2. A literal brush grain cannot resolve at the kit's capture distance — a realistic 8 mm mill line
+//      lands well under one pixel and averages back to flat grey. The finish is therefore carried by a
+//      ROUGHNESS map, not a colour map, at the coarser scale that does resolve: broad mill patches with
+//      a directional bias along the sweep. Because it is a roughness map it never touches albedo, which
+//      is what keeps the five colour knobs above exact.
+//
+// For anything a hex and that finish cannot express — a photographic texture, an anisotropy map, a TSL
+// node material — hand over a whole material instead. `setMaterial` and the `materials` option both mark
+// the slot as consumer-owned, after which this model never recolours or disposes it (modeling rule 16),
+// so `wallColor` and friends are silently ignored for that slot from then on:
+//
+//   turn.setMaterial('curve', myBrushedSteelMaterial)
+//   createModel({ materials: { wall: myPaintedMaterial } })   // e.g. to break out of metal entirely
+//
+// Slot names are `curve`, `straight`, `wall`, `marking`, `connector`. `turn.materials` is the live map.
+//
+// `markings` builds two thin painted edge lines on the lane and defaults to FALSE: bare fabricated metal
+// is the intended read, and the lines are kept only as an opt-in for consumers who want a surfaced lane.
 
 import {
   BufferGeometry,
   CylinderGeometry,
+  DataTexture,
   Group,
+  LinearFilter,
+  LinearMipmapLinearFilter,
   Mesh,
   MeshPhysicalMaterial,
   Quaternion,
+  RepeatWrapping,
+  RGBAFormat,
+  UnsignedByteType,
   Vector3,
   type Material,
 } from 'three/webgpu'
@@ -33,7 +106,7 @@ import { LoftGeometry } from 'three/examples/jsm/geometries/LoftGeometry.js'
 
 import { bevelBox, createF1Preview, creased, mergeParts } from '../f1-kit-core/index.ts'
 
-type Slot = 'curve' | 'straight' | 'connector'
+type Slot = 'curve' | 'straight' | 'wall' | 'marking' | 'connector'
 
 export interface HotWheelsBankedTurnedConfig {
   /** Centre-line radius of the 180 degree turn, in metres. */
@@ -42,15 +115,21 @@ export interface HotWheelsBankedTurnedConfig {
   trackWidth: number
   /** PEAK bank of the curve at its apex, in DEGREES. 0 is flat; the seams are always flat. */
   bankAngle: number
-  /** Length of each orange straight run-in measured from its seam, in metres. */
+  /** Length of each straight run-in measured from its seam, in metres. */
   straightLength: number
   /** Height of the side walls above the ground plane, in metres. */
   wallHeight: number
-  /** Banked curve shell colour, hex. */
+  /** Build the optional painted edge lines. `false` — the default — leaves bare metal. */
+  markings: boolean
+  /** Running surface of the banked curve, hex. Brushed steel by default. */
   curveColor: number
-  /** Straight run-in colour, hex. */
+  /** Running surface of the straight run-ins, hex. Brushed steel by default. */
   straightColor: number
-  /** Connector tab and pin colour, hex. */
+  /** Barrier walls and outer skirt, hex. Graphite by default. */
+  wallColor: number
+  /** Optional painted edge lines, hex. Muted off-white by default. */
+  markingColor: number
+  /** Seam splice plates, bolts and post caps, hex. Darker steel by default. */
   connectorColor: number
 }
 
@@ -76,12 +155,15 @@ const defaults: HotWheelsBankedTurnedConfig = {
   bankAngle: 52,
   straightLength: 24,
   wallHeight: 1.05,
-  curveColor: 0xea3502,
-  straightColor: 0xf05a00,
-  connectorColor: 0x2f74d8,
+  markings: false,
+  curveColor: 0x8f979d,
+  straightColor: 0x969ea3,
+  wallColor: 0x454d53,
+  markingColor: 0xbcc3c6,
+  connectorColor: 0x7a8288,
 }
 
-/** Moulding sizes in metres — physical dimensions, not fractions of the lane. */
+/** Fabrication sizes in metres — physical dimensions, not fractions of the lane. */
 const WALL_THICKNESS = 0.26
 const FLOOR_THICKNESS = 0.18
 const RAIL_CHAMFER = 0.06
@@ -93,14 +175,52 @@ const MIN_SKIRT_HEIGHT = 0.05
 const ARC_SEGMENTS = 72
 /** Fraction of the arc spent ramping into, and out of, the flat-topped peak bank. */
 const BANK_RAMP = 0.3
-/** Dielectric reflectance of moulded ABS, well below the 0.5 default. */
-const SPECULAR_INTENSITY = 0.3
-const SPECULAR_TINT = 0xffd9c2
-/** Height fraction of the outer skirt at which the moulding step runs, and how far it stands proud. */
+/**
+ * Dielectric reflectance tint. This only affects the non-metallic fraction of each surface and the
+ * painted lines; the metal's own reflection is tinted by its colour knob instead. Neutral-cool, to match
+ * the rig's daylight key.
+ */
+const SPECULAR_TINT = 0xf2f5f7
+/** Height fraction of the outer skirt at which the fabrication step runs, and how far it stands proud. */
 const SKIRT_STEP_AT = 0.5
 const SKIRT_STEP_DEPTH = 0.14
+/** Barrier post caps on the rail tops. */
 const PIN_RADIUS = 0.13
 const PIN_HEIGHT = 0.09
+/** Bolt heads through the seam splice plates — smaller than a post cap, per rule 7 a real fastener size. */
+const BOLT_RADIUS = 0.06
+const BOLT_HEIGHT = 0.045
+/**
+ * Optional painted edge line. 0.02 m is the smallest step that still clears the deck reliably at this
+ * kit's scale (rule 8) while staying a shadow-free sliver in silhouette. The width is a real marking
+ * width, not a fraction of the lane.
+ */
+const MARKING_THICKNESS = 0.02
+const MARKING_WIDTH = 0.15
+/** Gap between the barrier face and the near edge of the line. */
+const MARKING_INSET = 0.12
+/**
+ * World size of one mill-finish tile, in metres. Sized to what actually resolves at the kit's capture
+ * distance: broad patches of a rolled surface, not individual brush lines, which fall under a pixel.
+ */
+const FINISH_METRES = 1.2
+
+/**
+ * Per-slot finish. Kept beside the defaults so a consumer replacing one material can match the rest of
+ * the part; see the header's Finish note for why the metalness values stop where they do.
+ */
+const finish: Record<
+  Slot,
+  { roughness: number; metalness: number; specularIntensity: number; mill: boolean }
+> = {
+  curve: { roughness: 0.5, metalness: 0.72, specularIntensity: 0.5, mill: true },
+  straight: { roughness: 0.46, metalness: 0.72, specularIntensity: 0.5, mill: true },
+  wall: { roughness: 0.55, metalness: 0.68, specularIntensity: 0.5, mill: true },
+  // Paint over metal: mostly dielectric, so the lines stay legible against the steel around them.
+  marking: { roughness: 0.5, metalness: 0.15, specularIntensity: 0.4, mill: false },
+  // Machined hardware is the most reflective thing on the piece, which is what picks the bolts out.
+  connector: { roughness: 0.34, metalness: 0.82, specularIntensity: 0.55, mill: true },
+}
 
 interface Station {
   /** Centre-line point on the ground plane. */
@@ -118,6 +238,74 @@ function bankProfile(t: number): number {
   if (t < BANK_RAMP) return smoothstep(t / BANK_RAMP)
   if (t > 1 - BANK_RAMP) return smoothstep((1 - t) / BANK_RAMP)
   return 1
+}
+
+const fract = (x: number): number => x - Math.floor(x)
+
+const hash2 = (x: number, y: number): number => fract(Math.sin(x * 127.1 + y * 311.7) * 43758.5453)
+
+/**
+ * Value noise on a wrapping integer lattice of `period` cells per tile.
+ *
+ * The lattice indices are taken modulo `period`, so the field is exactly periodic and the texture tiles
+ * without a seam. Products of sines were tried first and rejected: separable sinusoids put an even
+ * diamond grid across every surface, which reads as woven fabric rather than as a fabricated finish.
+ */
+function valueNoise(u: number, v: number, period: number, seed: number): number {
+  const x = u * period
+  const y = v * period
+  const xi = Math.floor(x)
+  const yi = Math.floor(y)
+  const sx = smoothstep(x - xi)
+  const sy = smoothstep(y - yi)
+  const corner = (i: number, j: number): number =>
+    hash2((((xi + i) % period) + period) % period + seed, (((yi + j) % period) + period) % period + seed * 7)
+  const a = corner(0, 0) + (corner(1, 0) - corner(0, 0)) * sx
+  const b = corner(0, 1) + (corner(1, 1) - corner(0, 1)) * sx
+  return a + (b - a) * sy
+}
+
+/**
+ * Seamless mill-finish ROUGHNESS map for the metal slots.
+ *
+ * This is a roughness map and deliberately not a colour map: on a metal the visible finish is almost
+ * entirely a roughness effect, and keeping albedo untouched is what makes the documented colour knobs
+ * exact rather than approximate. `material.roughness` is set to the top of each slot's intended range
+ * and this map, which only ever multiplies downward, polishes parts of the surface back toward the
+ * bottom of it.
+ *
+ * The mill direction runs ALONG the sweep, so the field varies across the section — `v` in the UVs
+ * written by `scaleUV` — and holds much steadier along it. Left as data, with no colour space applied.
+ */
+function millFinishMap(size = 256): DataTexture {
+  const n = Math.max(64, size)
+  const data = new Uint8Array(n * n * 4)
+  for (let y = 0; y < n; y++) {
+    const v = y / n
+    // Coprime periods, so the two scales never line up into a repeating motif.
+    const streak = valueNoise(0.5, v, 23, 5) - 0.5
+    const patch = valueNoise(0.5, v, 6, 2) - 0.5
+    for (let x = 0; x < n; x++) {
+      // A slow wander along the sweep keeps the streaks from looking like perfect rails.
+      const drift = valueNoise(x / n, v, 4, 9) - 0.5
+      const k = Math.min(1, Math.max(0.62, 0.87 + 0.13 * streak + 0.16 * patch + 0.07 * drift))
+      const i = (y * n + x) * 4
+      const g = Math.round(255 * k)
+      data[i] = g
+      data[i + 1] = g
+      data[i + 2] = g
+      data[i + 3] = 255
+    }
+  }
+  const texture = new DataTexture(data, n, n, RGBAFormat, UnsignedByteType)
+  texture.name = 'hot-wheels-banked-turned / mill finish'
+  texture.wrapS = RepeatWrapping
+  texture.wrapT = RepeatWrapping
+  texture.magFilter = LinearFilter
+  texture.minFilter = LinearMipmapLinearFilter
+  texture.generateMipmaps = true
+  texture.needsUpdate = true
+  return texture
 }
 
 /**
@@ -143,53 +331,118 @@ function bankedUp(st: Station): Vector3 {
     .setY(Math.cos(st.bank))
 }
 
+type Section = ReadonlyArray<readonly [number, number]>
+
 /**
- * The moulded U-channel section, as `[u, v]` pairs.
+ * The channel cross-section, split into the material batches described in the header.
  *
- * Wound counterclockwise as seen from the end of the loft looking back, which is what `LoftGeometry`
- * needs for outward normals: up the inner wall's outer face, over its chamfered top, down the inside,
- * across the lane, then back up and over the outer wall.
+ * Each returned section is a closed `[u, v]` polygon traversed up its inboard edge, across its top and
+ * back down its outboard edge — the same handedness the single-piece channel used, which is the winding
+ * `LoftGeometry` needs for outward normals. Their shared faces are coincident and hidden inside the
+ * solid, which costs a few interior triangles and buys an honest value break at the barrier feet.
  */
-function channelSection(
+function channelSections(
   halfWidth: number,
   wallHeight: number,
-): ReadonlyArray<readonly [number, number]> {
+): { innerWall: Section; deck: Section; outerWall: Section; markings: readonly Section[] } {
   const hw = halfWidth
   const wt = WALL_THICKNESS
   const ch = Math.min(RAIL_CHAMFER, wt * 0.45)
   const top = wallHeight
   const lane = FLOOR_THICKNESS
-  return [
-    [-hw, 0],
-    [-hw, top - ch],
-    [-hw + ch, top],
-    [-hw + wt - ch, top],
-    [-hw + wt, top - ch],
-    [-hw + wt, lane],
-    [hw - wt, lane],
-    [hw - wt, top - ch],
-    [hw - wt + ch, top],
-    [hw - ch, top],
-    [hw, top - ch],
-    [hw, 0],
+  const paint = lane + MARKING_THICKNESS
+  const laneInner = -hw + wt
+  const laneOuter = hw - wt
+  // Clamp so a narrow `trackWidth` cannot push the two lines through each other.
+  const width = Math.min(MARKING_WIDTH, Math.max(0.02, (laneOuter - laneInner) / 2 - MARKING_INSET))
+  const line = (from: number): Section => [
+    [from, lane],
+    [from, paint],
+    [from + width, paint],
+    [from + width, lane],
   ]
+  return {
+    innerWall: [
+      [-hw, 0],
+      [-hw, top - ch],
+      [-hw + ch, top],
+      [-hw + wt - ch, top],
+      [-hw + wt, top - ch],
+      [-hw + wt, 0],
+    ],
+    deck: [
+      [laneInner, 0],
+      [laneInner, lane],
+      [laneOuter, lane],
+      [laneOuter, 0],
+    ],
+    outerWall: [
+      [hw - wt, 0],
+      [hw - wt, top - ch],
+      [hw - wt + ch, top],
+      [hw - ch, top],
+      [hw, top - ch],
+      [hw, 0],
+    ],
+    markings: [line(laneInner + MARKING_INSET), line(laneOuter - MARKING_INSET - width)],
+  }
+}
+
+/**
+ * Rescale `LoftGeometry`'s UVs from normalised arc length into metres over `FINISH_METRES`.
+ *
+ * `LoftGeometry` emits `u` as fraction of path length and `v` as fraction of section perimeter, so both
+ * axes stretch with the part. Multiplying by the real lengths gives one isotropic, world-scaled tiling
+ * for every batch, which is what stops the finish reading coarse on the short seam plates and smeared
+ * along the twenty-four metre straights. Rule 7 again: the mill scale is a physical dimension.
+ */
+function scaleUV(geometry: BufferGeometry, alongMetres: number, aroundMetres: number): void {
+  const uv = geometry.getAttribute('uv')
+  const su = alongMetres / FINISH_METRES
+  const sv = aroundMetres / FINISH_METRES
+  for (let i = 0; i < uv.count; i++) uv.setXY(i, uv.getX(i) * su, uv.getY(i) * sv)
+  uv.needsUpdate = true
+}
+
+function sectionPerimeter(section: Section): number {
+  let total = 0
+  for (let i = 0; i < section.length; i++) {
+    const a = section[i]!
+    const b = section[(i + 1) % section.length]!
+    total += Math.hypot(b[0] - a[0], b[1] - a[1])
+  }
+  return total
+}
+
+function ringPerimeter(ring: readonly Vector3[]): number {
+  let total = 0
+  for (let i = 0; i < ring.length; i++) total += ring[i]!.distanceTo(ring[(i + 1) % ring.length]!)
+  return total
+}
+
+function pathLength(stations: readonly Station[]): number {
+  let total = 0
+  for (let i = 1; i < stations.length; i++) total += stations[i]!.p.distanceTo(stations[i - 1]!.p)
+  return total
 }
 
 function channelLoft(
   stations: readonly Station[],
-  section: ReadonlyArray<readonly [number, number]>,
+  section: Section,
   halfWidth: number,
 ): BufferGeometry {
   const rings = stations.map((st) => section.map(([u, v]) => place(st, u, v, halfWidth)))
-  return creased(new LoftGeometry(rings, { closed: true, capStart: true, capEnd: true }), 35)
+  const geometry = new LoftGeometry(rings, { closed: true, capStart: true, capEnd: true })
+  scaleUV(geometry, pathLength(stations), sectionPerimeter(section))
+  return creased(geometry, 35)
 }
 
 /**
  * The outer skirt: a swept wall dropped from the raised outer bottom edge to the floor, kicked out at
- * its base so it reads as a moulded flare rather than a card standing on edge. The kick is scaled by
+ * its base so it reads as a formed flare rather than a card standing on edge. The kick is scaled by
  * skirt height so the near-flat seam ends do not grow a horizontal shelf.
  *
- * The outer face carries a moulding step half way down, which is the one landmark the reference skirt
+ * The outer face carries a fabrication step half way down, which is the one landmark the reference skirt
  * has that a plain swept wall does not: it breaks the largest surface on the part with a shadow line
  * and gives the bank a sense of scale. Its depth is scaled by skirt height alongside the base kick, so
  * it fades out rather than pinching where the piece flattens into each seam.
@@ -221,11 +474,14 @@ function skirtLoft(stations: readonly Station[], halfWidth: number): BufferGeome
       outerTop.clone().add(inward),
     ])
   }
-  return creased(new LoftGeometry(rings, { closed: true, capStart: true, capEnd: true }), 35)
+  const geometry = new LoftGeometry(rings, { closed: true, capStart: true, capEnd: true })
+  // The apex ring is the tallest, so its perimeter is the honest scale for the swept face.
+  scaleUV(geometry, pathLength(stations), ringPerimeter(rings[Math.floor(rings.length / 2)]!))
+  return creased(geometry, 35)
 }
 
-function pin(at: Vector3, up: Vector3): BufferGeometry {
-  const geo = new CylinderGeometry(PIN_RADIUS, PIN_RADIUS * 0.94, PIN_HEIGHT, 14)
+function stud(at: Vector3, up: Vector3, radius: number, height: number): BufferGeometry {
+  const geo = new CylinderGeometry(radius, radius * 0.94, height, 14)
   geo.applyQuaternion(new Quaternion().setFromUnitVectors(new Vector3(0, 1, 0), up.clone().normalize()))
   geo.translate(at.x, at.y, at.z)
   return geo
@@ -240,26 +496,37 @@ export function createModel(
     bankAngle: Math.min(75, Math.max(0, options.bankAngle ?? defaults.bankAngle)),
     straightLength: Math.max(2, options.straightLength ?? defaults.straightLength),
     wallHeight: Math.max(FLOOR_THICKNESS + 0.12, options.wallHeight ?? defaults.wallHeight),
+    markings: options.markings ?? defaults.markings,
     curveColor: options.curveColor ?? defaults.curveColor,
     straightColor: options.straightColor ?? defaults.straightColor,
+    wallColor: options.wallColor ?? defaults.wallColor,
+    markingColor: options.markingColor ?? defaults.markingColor,
     connectorColor: options.connectorColor ?? defaults.connectorColor,
   }
 
   const owned: MeshPhysicalMaterial[] = []
-  // Injection-moulded ABS reflects far less than a MeshStandardMaterial dielectric assumes. At the
-  // default reflectance the kit's key light washed the apex of the bank out to pale grey and took the
-  // red's chroma with it; raising roughness only traded that for a dull part. Dropping
-  // `specularIntensity` instead removes the broad highlight and leaves the diffuse albedo untouched,
-  // so the curve can stay glossy enough for the tight plastic streak the reference photo shows.
-  const makeSlot = (slot: Slot, color: number, roughness: number): Material => {
+  const ownedTextures: DataTexture[] = []
+  // Built lazily: a consumer that supplies every metal material never pays for the map.
+  let mill: DataTexture | null = null
+  const millMap = (): DataTexture => {
+    if (!mill) {
+      mill = millFinishMap()
+      ownedTextures.push(mill)
+    }
+    return mill
+  }
+
+  const makeSlot = (slot: Slot, color: number): Material => {
     const supplied = options.materials?.[slot]
     if (supplied) return supplied
+    const spec = finish[slot]
     const material = new MeshPhysicalMaterial({
       name: `hot-wheels-banked-turned / ${slot}`,
       color,
-      roughness,
-      metalness: 0.0,
-      specularIntensity: SPECULAR_INTENSITY,
+      roughness: spec.roughness,
+      roughnessMap: spec.mill ? millMap() : null,
+      metalness: spec.metalness,
+      specularIntensity: spec.specularIntensity,
       specularColor: SPECULAR_TINT,
     })
     owned.push(material)
@@ -267,13 +534,17 @@ export function createModel(
   }
 
   const materialSlots: Record<Slot, Material> = {
-    curve: makeSlot('curve', config.curveColor, 0.42),
-    straight: makeSlot('straight', config.straightColor, 0.5),
-    connector: makeSlot('connector', config.connectorColor, 0.5),
+    curve: makeSlot('curve', config.curveColor),
+    straight: makeSlot('straight', config.straightColor),
+    wall: makeSlot('wall', config.wallColor),
+    marking: makeSlot('marking', config.markingColor),
+    connector: makeSlot('connector', config.connectorColor),
   }
   const ownsSlot: Record<Slot, boolean> = {
     curve: !options.materials?.curve,
     straight: !options.materials?.straight,
+    wall: !options.materials?.wall,
+    marking: !options.materials?.marking,
     connector: !options.materials?.connector,
   }
 
@@ -288,7 +559,13 @@ export function createModel(
   root.add(curve, straights, connectors)
 
   const generated: BufferGeometry[] = []
-  const meshesBySlot: Record<Slot, Mesh[]> = { curve: [], straight: [], connector: [] }
+  const meshesBySlot: Record<Slot, Mesh[]> = {
+    curve: [],
+    straight: [],
+    wall: [],
+    marking: [],
+    connector: [],
+  }
 
   const releaseGenerated = (): void => {
     curve.clear()
@@ -317,7 +594,7 @@ export function createModel(
     const wallHeight = config.wallHeight
     const peak = (config.bankAngle * Math.PI) / 180
     const L = config.straightLength
-    const section = channelSection(halfWidth, wallHeight)
+    const { innerWall, deck, outerWall, markings } = channelSections(halfWidth, wallHeight)
 
     // The turn sits on -X: the run-in travels -X along z = +R, the arc sweeps the left half, and the
     // run-out travels +X along z = -R. `lat` is Y x tangent throughout, which is the outward radial on
@@ -344,38 +621,118 @@ export function createModel(
       { p: new Vector3(L, 0, -R), lat: new Vector3(0, 0, -1), bank: 0 },
     ]
 
-    const curveParts: BufferGeometry[] = [channelLoft(arc, section, halfWidth)]
-    const skirt = skirtLoft(arc, halfWidth)
-    if (skirt) curveParts.push(skirt)
-    emit('curve', mergeParts(curveParts, 'hot-wheels-banked-turned: curve'), curve, 'banked-curve')
-
+    // Running surfaces carry the deck slots; both barriers and the skirt batch into the wall slot.
+    emit('curve', channelLoft(arc, deck, halfWidth), curve, 'banked-deck')
     emit(
       'straight',
       mergeParts(
-        [channelLoft(runIn, section, halfWidth), channelLoft(runOut, section, halfWidth)],
-        'hot-wheels-banked-turned: straights',
+        [channelLoft(runIn, deck, halfWidth), channelLoft(runOut, deck, halfWidth)],
+        'hot-wheels-banked-turned: straight decks',
       ),
       straights,
-      'run-ins',
+      'run-in-decks',
     )
 
-    // Both seams are flat by construction, so the connector tabs are axis-aligned boxes, not lofts.
+    const curveWalls: BufferGeometry[] = [
+      channelLoft(arc, innerWall, halfWidth),
+      channelLoft(arc, outerWall, halfWidth),
+    ]
+    const skirt = skirtLoft(arc, halfWidth)
+    if (skirt) curveWalls.push(skirt)
+    emit(
+      'wall',
+      mergeParts(curveWalls, 'hot-wheels-banked-turned: curve walls'),
+      curve,
+      'banked-barriers',
+    )
+
+    emit(
+      'wall',
+      mergeParts(
+        [
+          channelLoft(runIn, innerWall, halfWidth),
+          channelLoft(runIn, outerWall, halfWidth),
+          channelLoft(runOut, innerWall, halfWidth),
+          channelLoft(runOut, outerWall, halfWidth),
+        ],
+        'hot-wheels-banked-turned: straight walls',
+      ),
+      straights,
+      'run-in-barriers',
+    )
+
+    if (config.markings) {
+      // The lines are lofted through `place` like everything else, so they follow the bank instead of
+      // needing to be projected onto it afterwards.
+      emit(
+        'marking',
+        mergeParts(
+          markings.map((line) => channelLoft(arc, line, halfWidth)),
+          'hot-wheels-banked-turned: curve lines',
+        ),
+        curve,
+        'banked-edge-lines',
+      )
+      emit(
+        'marking',
+        mergeParts(
+          [
+            ...markings.map((line) => channelLoft(runIn, line, halfWidth)),
+            ...markings.map((line) => channelLoft(runOut, line, halfWidth)),
+          ],
+          'hot-wheels-banked-turned: straight lines',
+        ),
+        straights,
+        'run-in-edge-lines',
+      )
+    }
+
+    // Both seams are flat by construction, so the splice plates are axis-aligned boxes, not lofts.
     const tabParts: BufferGeometry[] = []
     const tabThickness = 0.07
     const tabHalfWidth = config.trackWidth * 0.24
+    const plateHalfLength = 0.45
     const railU = halfWidth - WALL_THICKNESS / 2
     for (const z of [R, -R] as const) {
-      const tab = bevelBox(1.2, tabThickness, tabHalfWidth * 2, 0.02)
-      tab.translate(0, FLOOR_THICKNESS + tabThickness * 0.34, z)
-      tabParts.push(tab)
+      const plate = bevelBox(plateHalfLength * 2, tabThickness, tabHalfWidth * 2, 0.02)
+      plate.translate(0, FLOOR_THICKNESS + tabThickness * 0.34, z)
+      tabParts.push(plate)
+      // Four bolts through the plate read as a bolted steel splice rather than a snap-fit tab.
+      const boltY = FLOOR_THICKNESS + tabThickness * 0.34 + tabThickness / 2
+      for (const dx of [-1, 1] as const) {
+        for (const dz of [-1, 1] as const) {
+          tabParts.push(
+            stud(
+              new Vector3(dx * (plateHalfLength - 0.14), boltY, z + dz * (tabHalfWidth - 0.2)),
+              new Vector3(0, 1, 0),
+              BOLT_RADIUS,
+              BOLT_HEIGHT,
+            ),
+          )
+        }
+      }
       for (const side of [1, -1] as const) {
-        tabParts.push(pin(new Vector3(0, wallHeight + 0.02, z + side * railU), new Vector3(0, 1, 0)))
+        tabParts.push(
+          stud(
+            new Vector3(0, wallHeight + 0.02, z + side * railU),
+            new Vector3(0, 1, 0),
+            PIN_RADIUS,
+            PIN_HEIGHT,
+          ),
+        )
       }
     }
-    // Fastener heads on the curve's inner rail, where the reference shows moulding pins.
+    // Post caps on the curve's inner rail, where the reference shows fixing pins.
     for (const t of [0.13, 0.87] as const) {
       const st = arc[Math.round(t * ARC_SEGMENTS)]!
-      tabParts.push(pin(place(st, -halfWidth + WALL_THICKNESS / 2, wallHeight + 0.02, halfWidth), bankedUp(st)))
+      tabParts.push(
+        stud(
+          place(st, -halfWidth + WALL_THICKNESS / 2, wallHeight + 0.02, halfWidth),
+          bankedUp(st),
+          PIN_RADIUS,
+          PIN_HEIGHT,
+        ),
+      )
     }
     emit(
       'connector',
@@ -414,12 +771,20 @@ export function createModel(
         config.wallHeight = Math.max(FLOOR_THICKNESS + 0.12, patch.wallHeight)
         rebuildGeometry = true
       }
+      if (patch.markings !== undefined && patch.markings !== config.markings) {
+        config.markings = patch.markings
+        rebuildGeometry = true
+      }
       if (patch.curveColor !== undefined) config.curveColor = patch.curveColor
       if (patch.straightColor !== undefined) config.straightColor = patch.straightColor
+      if (patch.wallColor !== undefined) config.wallColor = patch.wallColor
+      if (patch.markingColor !== undefined) config.markingColor = patch.markingColor
       if (patch.connectorColor !== undefined) config.connectorColor = patch.connectorColor
       const recolour: ReadonlyArray<readonly [Slot, number | undefined]> = [
         ['curve', patch.curveColor],
         ['straight', patch.straightColor],
+        ['wall', patch.wallColor],
+        ['marking', patch.markingColor],
         ['connector', patch.connectorColor],
       ]
       for (const [slot, value] of recolour) {
@@ -439,6 +804,9 @@ export function createModel(
       releaseGenerated()
       for (const material of owned) material.dispose()
       owned.length = 0
+      for (const texture of ownedTextures) texture.dispose()
+      ownedTextures.length = 0
+      mill = null
       root.removeFromParent()
     },
   }

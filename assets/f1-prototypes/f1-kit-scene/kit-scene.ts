@@ -7,7 +7,7 @@
  *   MID   ribbon + kerb/turf/gravel/fence the full length · sector gantry
  *   START grid / SF / lights · grandstands | verge | ribbon | pit wall | pit | garages
  *
- * Linear verge props (kerb, turf, gravel, drain, fence) tile the full ribbon.
+ * Linear verge props (kerb, turf, gravel, drain, fence) run the full ribbon once.
  * Trackside furniture sits on the marshalling strip or in the stand gap — never
  * behind a grandstand. Every kit id appears at least once.
  */
@@ -18,6 +18,7 @@ import {
   Group,
   HemisphereLight,
   Mesh,
+  Object3D,
   MeshStandardMaterial,
   OrthographicCamera,
   PerspectiveCamera,
@@ -160,24 +161,25 @@ const TEAM_SPAN = TEAM_BAYS * GARAGE_BAY_PITCH
 const GARAGE_SPAN = TEAMS.length * TEAM_SPAN + (TEAMS.length - 1) * TEAM_GAP
 /** Stand block 1 occupies z −15…15; block 2 occupies z 39…69. Furniture goes in the gap. */
 const GAP_Z = 27
-/** Three overlapping runs cover the 220 m ribbon (same trick as the catch fence). */
-const RUN_Z = [-48, 20, 88] as const
+/** Module counts for a single full-ribbon run (~ROAD_LEN). */
+const KERB_MODULES = Math.max(2, Math.round(ROAD_LEN / 0.8))
+const TURF_MODULES = Math.max(1, Math.round(ROAD_LEN / 1.0))
+const GRAVEL_MODULES = Math.max(1, Math.round(ROAD_LEN / 2.5))
+const DRAIN_MODULES = Math.max(1, Math.round(ROAD_LEN / 2.0))
 
 export function createScene(): F1KitScene {
   const root = new Group()
   root.name = 'f1-kit-scene'
-  const live: Live[] = []
+  const instances: Live[] = []
+  const animated: Live[] = []
   const extras: Array<{ dispose: () => void }> = []
 
-  const add = (instance: Live, x: number, z: number, yaw = 0, y = 0): void => {
+  const add = (instance: Live, x: number, z: number, yaw = 0, y = 0, animate = false): void => {
     instance.root.position.set(x, y, z)
     instance.root.rotation.y = yaw
     root.add(instance.root)
-    live.push(instance)
-  }
-
-  const tile = (make: () => Live, x: number): void => {
-    for (const z of RUN_Z) add(make(), x, z, ALONG)
+    instances.push(instance)
+    if (animate) animated.push(instance)
   }
 
   const asphaltMat = new MeshStandardMaterial({
@@ -254,14 +256,14 @@ export function createScene(): F1KitScene {
   add(createStartFinishLine({ kind: 'SF', width: RIBBON_W }), 0, -16, 0)
   add(createStartGantry({ span: 16, height: 7.2 }), 0, -18)
   add(createStartLights({ lit: 5 }), 0, -14)
-  add(createChequeredFlag({ waving: true, windXZ: [0.9, -0.4] }), RIBBON_HALF + 0.55, -16, -0.35)
+  add(createChequeredFlag({ waving: true, windXZ: [0.9, -0.4] }), RIBBON_HALF + 0.55, -16, -0.35, 0, true)
 
-  // Verge — same full-ribbon tiling as the catch fence. Spec side: kerb → turf → gravel.
-  tile(() => createKerb({ modules: 110 }), KERB_X)
-  tile(() => createKerb({ modules: 110 }), -KERB_X)
-  tile(() => createAstroturf({ modules: 100, pileStep: 0.22 }), TURF_X)
-  tile(() => createGravelTrap({ modules: 32, pebblesPerModule: 90 }), GRAVEL_X)
-  tile(() => createSlotDrain({ modules: 50 }), DRAIN_X)
+  // Verge — one full-ribbon run each (catch-fence style), no overlapping tiles.
+  add(createKerb({ modules: KERB_MODULES }), KERB_X, ROAD_Z, ALONG)
+  add(createKerb({ modules: KERB_MODULES }), -KERB_X, ROAD_Z, ALONG)
+  add(createAstroturf({ modules: TURF_MODULES, pileStep: 0.22 }), TURF_X, ROAD_Z, ALONG)
+  add(createGravelTrap({ modules: GRAVEL_MODULES, pebblesPerModule: 90 }), GRAVEL_X, ROAD_Z, ALONG)
+  add(createSlotDrain({ modules: DRAIN_MODULES }), DRAIN_X, ROAD_Z, ALONG)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, -56, ALONG)
   add(createSausageKerb({ modules: 14 }), RIBBON_HALF + 0.3, 70, ALONG)
   // Pit-side turf only where the wall/trucks are not: before the garage and after it.
@@ -303,9 +305,11 @@ export function createScene(): F1KitScene {
       FACE_SPEC,
     )
     for (let j = 0; j < TEAM_BAYS; j++) {
-      const z = cursorZ + (j + 0.5) * GARAGE_BAY_PITCH
-      add(createPitGantry({ span: 5, height: 4.0, bays: 4 }), DOOR_X + 0.4, z)
-      if (j < team.open) openBayZ = z
+      // Bay centre is the door centre — park the boom beside the opening, not through it.
+      const doorZ = cursorZ + (j + 0.5) * GARAGE_BAY_PITCH
+      const gantryZ = doorZ + GARAGE.door * 0.5 + 0.4
+      add(createPitGantry({ span: 5, height: 4.0, bays: 4 }), DOOR_X + 0.4, gantryZ)
+      if (j < team.open) openBayZ = doorZ
     }
     cursorZ += TEAM_SPAN + TEAM_GAP
   }
@@ -356,7 +360,7 @@ export function createScene(): F1KitScene {
   add(createMarkerPost(), EDGE_X, GAP_Z + 6)
   add(createBrakeMarker({ distance: 100 }), EDGE_X, 78, FACE_SPEC)
   add(createMarshalPost({ number: '11', flag: 'yellow' }), EDGE_X, 84, FACE_SPEC)
-  add(createOranjeCan({ lit: true }), EDGE_X + 1.6, 84)
+  add(createOranjeCan({ lit: true }), EDGE_X + 1.6, 84, 0, 0, true)
 
   // END of the track — stairs next to the bridge, runoff barriers in the verge.
   add(createSpectatorBridge({ span: SPAN }), 0, END_Z)
@@ -382,28 +386,43 @@ export function createScene(): F1KitScene {
   add(createFoamMonitor(), RIBBON_HALF + 1.4, END_Z - 14, 0.2)
   add(createCone(), -(RIBBON_HALF + 0.45), -22)
   add(createBollard(), -(RIBBON_HALF + 0.35), -26)
-  // Paddock — team building / race-control tower behind the garage row.
-  const teamBuildingX = GARAGE_X - 12
-  const teamBuildingZ = GARAGE_SPAN / 2 + 14
-  const towerZ = teamBuildingZ + 16
-  // Left of the team building (toward −Z): ceremony, medical, marshal, tunnel.
-  const leftWingX = teamBuildingX - 2
-  const leftWingZ = teamBuildingZ - 22
-  add(createMotorhome(), teamBuildingX, teamBuildingZ, FACE_PIT)
-  add(createRaceControl(), teamBuildingX, towerZ, FACE_PIT)
+  // Paddock — same side of the track as the garages, on the +Z desert past the
+  // garage column (toward the bridge / END). Not the −Z desert. Campus continues
+  // the garage column; Hot Wheels is one street further −X behind that campus.
+  const ROW_X = GARAGE_X
+  const PARK_X = GARAGE_X - 22
 
-  // Service truck behind the garages (on-track fleet stays on the ribbon).
-  const truck = createServiceTruck({ kind: 'box', lamps: true, wheelRpm: 0 })
-  truck.setGround(ground)
-  add(truck, GARAGE_X - 14, 0, FACE_PIT)
+  // Weigh / parc stay near the +Z end of the garage block.
+  add(createWeighbridge(), ROW_X - 1, 30, FACE_PIT)
+  add(createParcFerme(), ROW_X + 3, 30, FACE_PIT)
 
-  // 1×4 on the ribbon, cabs facing the garage.
+  // —— +Z desert (past garage column) — HQ + ceremony + generator ——
+  add(createGeneratorCabin(), ROW_X - 1, 38, FACE_PIT)
+  add(createMotorhome(), ROW_X, 50, FACE_PIT)
+  add(createRaceControl(), ROW_X, 68, FACE_PIT)
+
+  const tableTopY = 0.75 + 0.03
+  const plazaZ = 84
+  add(createPodium(), ROW_X - 1, plazaZ, Math.PI)
+  add(createTrophyTable(), ROW_X - 1, plazaZ - 3.2)
+  add(createTrophyCup(), ROW_X - 1, plazaZ - 3.2, 0, tableTopY)
+  add(createChampagne(), ROW_X - 0.45, plazaZ - 3.2, 0, tableTopY)
+  add(createIceBucket(), ROW_X - 1.55, plazaZ - 3.2, 0, tableTopY)
+  add(createInterviewBackdrop(), ROW_X + 6, plazaZ, Math.PI)
+  add(createCooldownBoard(), ROW_X + 4.5, plazaZ + 3, Math.PI)
+
+  add(createMedicalPost(), ROW_X - 1, 96, FACE_PIT)
+  add(createMarshalPost({ number: '22', flag: 'green' }), ROW_X - 1, 104, FACE_PIT)
+  add(createTunnelPortal(), ROW_X - 2, 114, FACE_PIT)
+
+  // Service trucks on the ribbon.
   const teamPitch = TRUCK.length + 1.8
   const teamRow = [
     { kind: 'box', paint: TOKEN.RED_500, legend: 'ROSSO', number: '16', paper: TOKEN.SHELL_050, ink: TOKEN.RED_500, accent: TOKEN.SHELL_050 },
     { kind: 'curtainside', paint: TOKEN.SHELL_200, legend: 'STEEL', number: '63', paper: TOKEN.SHELL_200, ink: TOKEN.GRAPHITE_800, accent: TOKEN.GRAPHITE_800 },
     { kind: 'reefer', paint: TOKEN.INK_900, legend: 'NAVY', number: '1', paper: TOKEN.SHELL_050, ink: TOKEN.INK_900, accent: TOKEN.AMBER_400 },
     { kind: 'box', paint: TOKEN.ORANGE_500, legend: 'CITRUS', number: '4', paper: TOKEN.ORANGE_500, ink: TOKEN.INK_950, accent: TOKEN.INK_950 },
+    { kind: 'box', paint: TOKEN.GRAPHITE_800, legend: 'PAD', number: '44', paper: TOKEN.SHELL_050, ink: TOKEN.GRAPHITE_800, accent: TOKEN.AMBER_400 },
   ] as const
   for (let i = 0; i < teamRow.length; i++) {
     const spec = teamRow[i]!
@@ -419,39 +438,49 @@ export function createScene(): F1KitScene {
       accent: spec.accent,
     })
     teamTruck.setGround(ground)
-    add(teamTruck, ROAD_X, (i - 1.5) * teamPitch, FACE_SPEC)
+    add(teamTruck, ROAD_X, (i - (teamRow.length - 1) / 2) * teamPitch, FACE_SPEC)
   }
-  add(createWeighbridge(), GARAGE_X - 8, -28, FACE_PIT)
-  add(createParcFerme(), GARAGE_X, -28, FACE_PIT)
-  add(createGeneratorCabin(), leftWingX - 6, leftWingZ + 8, FACE_PIT)
 
-  // Ceremony + tents + through-tunnel on the left wing of the team building.
-  const tableX = leftWingX
-  const tableZ = leftWingZ - 4
-  const tableTopY = 0.75 + 0.03
-  add(createPodium(), leftWingX, leftWingZ + 2, Math.PI)
-  add(createTrophyTable(), tableX, tableZ)
-  add(createTrophyCup(), tableX, tableZ, 0, tableTopY)
-  add(createChampagne(), tableX + 0.55, tableZ, 0, tableTopY)
-  add(createIceBucket(), tableX - 0.55, tableZ, 0, tableTopY)
-  add(createInterviewBackdrop(), leftWingX + 6, leftWingZ + 2, Math.PI)
-  add(createCooldownBoard(), leftWingX + 4, leftWingZ + 4, Math.PI)
-  add(createMedicalPost(), leftWingX - 8, leftWingZ - 2, FACE_PIT)
-  add(createMarshalPost({ number: '22', flag: 'green' }), leftWingX - 8, leftWingZ - 10, FACE_PIT)
-  add(createTunnelPortal(), leftWingX - 14, leftWingZ - 6, FACE_PIT)
+  // Exhibition behind the +Z campus (further from the ribbon).
+  add(createHotWheelsLoop({ radius: 4.5, straightLength: 6 }), PARK_X, 58, FACE_PIT)
+  add(createHotWheelsBanked({ radius: 4, straightLength: 6 }), PARK_X, 78, FACE_PIT)
 
-  // Exhibition Hot Wheels pieces in the empty paddock behind the team building.
-  add(createHotWheelsLoop({ radius: 8, straightLength: 10 }), teamBuildingX - 28, teamBuildingZ + 6, FACE_PIT)
-  add(createHotWheelsBanked({ radius: 6, straightLength: 12 }), teamBuildingX - 28, teamBuildingZ - 18, FACE_PIT)
+  // Flat verge / ground never need shadow casters — keep heroes casting.
+  const noCast = /^(f1-kerb|f1-astroturf|f1-gravel|f1-slot-drain|f1-sausage-kerb|scene-)/
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return
+    let node: Object3D | null = object
+    while (node) {
+      if (noCast.test(node.name)) {
+        object.castShadow = false
+        break
+      }
+      node = node.parent
+    }
+  })
+
+  // Freeze static transforms; keep matrix updates on animated subtrees only.
+  root.updateMatrixWorld(true)
+  const liveNodes = new Set<Object3D>()
+  for (const instance of animated) {
+    instance.root.traverse((object) => {
+      liveNodes.add(object)
+    })
+  }
+  root.traverse((object) => {
+    if (liveNodes.has(object)) return
+    object.matrixAutoUpdate = false
+  })
 
   return {
     root,
     update(deltaSeconds) {
-      for (const instance of live) instance.update(deltaSeconds)
+      for (const instance of animated) instance.update(deltaSeconds)
     },
     dispose() {
-      for (const instance of live) instance.dispose()
-      live.length = 0
+      for (const instance of instances) instance.dispose()
+      instances.length = 0
+      animated.length = 0
       for (const extra of extras) extra.dispose()
       extras.length = 0
       root.clear()

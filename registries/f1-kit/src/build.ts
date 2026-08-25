@@ -38,7 +38,7 @@ function modelDependency(content: string, modelId: string): string[] {
   const importPattern = /from\s+['"]\.\.\/([a-z0-9][a-z0-9-]*)\//g
   for (const match of content.matchAll(importPattern)) {
     const dependency = match[1]
-    if (dependency && dependency !== modelId) dependencies.add(`@racing-kit/${dependency}`)
+    if (dependency && dependency !== modelId) dependencies.add(`@f1-kit/${dependency}`)
   }
   return [...dependencies]
 }
@@ -53,7 +53,7 @@ async function buildSupportItem(itemId: string): Promise<RegistryItem> {
   const paths = await collectTypeScriptFiles(directory)
   const files = await Promise.all(paths.map((path) => registryFile(
     path,
-    `{models}/racing-kit/${itemId}/${relative(directory, path).split(sep).join('/')}`,
+    `{models}/f1-kit/${itemId}/${relative(directory, path).split(sep).join('/')}`,
   )))
   return {
     name: itemId,
@@ -70,13 +70,13 @@ async function buildModelItem(modelId: string): Promise<RegistryItem> {
   const directory = join(prototypesRoot, modelId)
   const paths = await collectTypeScriptFiles(directory)
   const contents = await Promise.all(paths.map((path) => readFile(path, 'utf8')))
-  const dependencies = new Set<string>(['@racing-kit/f1-kit-core'])
+  const dependencies = new Set<string>(['@f1-kit/f1-kit-core'])
   for (const content of contents) {
     for (const dependency of modelDependency(content, modelId)) dependencies.add(dependency)
   }
   const files = await Promise.all(paths.map((path) => registryFile(
     path,
-    `{models}/racing-kit/${modelId}/${relative(directory, path).split(sep).join('/')}`,
+    `{models}/f1-kit/${modelId}/${relative(directory, path).split(sep).join('/')}`,
   )))
   const title = titleFromId(modelId)
   const category = categoryFromId(modelId)
@@ -123,17 +123,17 @@ async function main(): Promise<void> {
     title: 'F1 Kit',
     description: 'Procedural Formula-1 pit-lane props, ready to own and adapt: tyres, pit tools, garage equipment, and signage.',
     dependencies: [],
-    registryDependencies: modelIds.map((id) => `@racing-kit/${id}`),
+    registryDependencies: modelIds.map((id) => `@f1-kit/${id}`),
     files: [],
   })
 
   const registry = registrySchema.parse({
     $schema: 'https://vibe3d.dev/schema/registry.json',
     schemaVersion: 1,
-    namespace: '@racing-kit',
+    namespace: '@f1-kit',
     name: 'F1 Kit',
     description: 'A procedural Formula-1 pit-lane prop library for building motorsport scenes in Three.js — tyres, pit tools, garage equipment, and signage, with no real-team branding baked in.',
-    homepage: 'https://vibe3d.dev/kits/racing-kit',
+    homepage: 'https://vibe3d.dev/kits/f1-kit',
     license: 'MIT',
     defaultItem: 'kit',
     compatibility: {

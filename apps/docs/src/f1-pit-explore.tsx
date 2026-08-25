@@ -29,7 +29,7 @@ export function F1PitExplorePage() {
       if (!renderer) return
       const width = Math.max(host.clientWidth, 1)
       const height = Math.max(host.clientHeight, 1)
-      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5))
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.25))
       renderer.setSize(width, height, false)
       playground.resize(width / height)
     }

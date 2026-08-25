@@ -116,6 +116,16 @@ export function createF1KitInspectPlayground(options: PlaygroundOptions): Inspec
   key.name = 'LIGHT / KEY'
   key.position.set(-36, 58, 28)
   key.castShadow = true
+  key.shadow.mapSize.set(1024, 1024)
+  key.shadow.bias = -0.0005
+  key.shadow.camera.near = 8
+  key.shadow.camera.far = 240
+  key.shadow.camera.left = -95
+  key.shadow.camera.right = 55
+  key.shadow.camera.top = 120
+  key.shadow.camera.bottom = -100
+  key.target.position.set(-8, 0, 20)
+  scene.add(key.target)
   scene.add(key)
 
   const fill = new DirectionalLight(0x83a8be, 0.52)
