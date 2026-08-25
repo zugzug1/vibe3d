@@ -1,31 +1,40 @@
-// f1-pit-gantry — the overhead structure spanning a pit bay: four braced truss columns carrying a
-// rectangular roof truss, with a tensioned banner slung beneath it, a lighting bar, and a cable tray.
+// f1-pit-gantry — the overhead structure spanning a pit bay: four braced truss columns carrying a flat
+// roof truss grid, with a tensioned banner slung beneath the front run and downlights clamped to the
+// front run's bottom chord either side of it.
 //
-// Real pit gantries are bolted aluminium box truss, and that is the whole silhouette: four chords per
-// member with zig-zag lacing between them, so the structure reads as open framework against the sky
-// rather than as a solid beam. A post-and-beam of plain boxes has no such read at any distance, which is
-// what this prop was before. Geometry is merged into a small, stable set of semantic meshes.
+// Real pit gantries are assembled from one modular aluminium box-truss product, and that single fact
+// drives the whole silhouette. Every run — column, perimeter, rib — is the same square section, four
+// chords with an X-brace on each face of each bay. Nothing tapers and nothing is a solid beam, so the
+// structure reads as open framework with sky through it at any distance. A post-and-beam of plain boxes,
+// or a doubled roof rectangle packed with cross-ties, has no such read: it closes up into a slab.
 //
 // The banner colour is genericised (no team livery — plain corporate blue by default).
 
 import {
   BufferGeometry,
   CylinderGeometry,
+  Float32BufferAttribute,
   Group,
   Mesh,
+  MeshStandardMaterial,
   Vector3,
   type Material,
 } from 'three/webgpu'
 
 import {
+  AXIS_X,
   AXIS_Y,
+  TOKEN,
   acquireF1Materials,
   bevelBox,
+  bevelRing,
   bolt,
   createF1Preview,
   disposeF1Materials,
   member,
   mergeParts,
+  shade,
+  tubeSection,
 } from '../f1-kit-core/index.ts'
 
 type Slot = 'post' | 'banner' | 'fitting'
@@ -54,70 +63,113 @@ export interface F1PitGantryInstance {
   dispose(): void
 }
 
-const defaults: F1PitGantryConfig = { span: 5.0, height: 2.5, bays: 8 }
+// The reference stands about nine truss modules to the roof over a six-metre span — a squat outdoor
+// stance, not a walk-through portal. Measured off the photograph: the near column reads roughly six
+// X-bays between its base plate and the roof's underside.
+const defaults: F1PitGantryConfig = { span: 6.0, height: 2.65, bays: 12 }
 
-const CHORD = 0.032 // truss chord tube radius, world units
-const LACE = 0.020  // lacing tube radius
+/** The one modular truss section used everywhere, chord centre to chord centre, world units. */
+const SECTION = 0.29
+// Product tube sizes: a 300 mm truss carries ~48 mm chords laced with ~22 mm diagonals. Holding those
+// against the section is what keeps the lattice airy — fatten either and the X-band closes into a wall.
+const CHORD = 0.024 // truss chord tube radius
+const LACE = 0.0115 // X-brace tube radius
+/** Depth of the bay as a fraction of its span, from the reference footprint. */
+const DEPTH_RATIO = 0.62
+/** Bolted base plate: thickness, and the chord centreline where a column lands on it. */
+const PLATE_T = 0.038
+const BASE_Y = 0.055
+
+/**
+ * Baked lattice occlusion, as a vertex-colour multiplier on the mill finish.
+ *
+ * The kit's rig has no shadow map and no ambient occlusion, so a single-material truss renders its chords
+ * and its laces at exactly the same value and the X-band flattens into a printed pattern. The laces sit
+ * inside the section, shaded by the four chords around them, so carrying that as vertex colour is what
+ * restores the deep recesses the reference shows between bright chord highlights.
+ */
+const CHORD_VALUE = 1.0
+const LACE_VALUE = 0.32
 
 /** Interpolate one structural node along a chord. */
 function pointOn(from: Vector3, to: Vector3, t: number): Vector3 {
   return from.clone().lerp(to, t)
 }
 
-/** A vertical truss face with two continuous chords and an orderly node-to-node Warren web. */
-function planarTruss(
-  parts: BufferGeometry[],
-  lowerFrom: Vector3,
-  lowerTo: Vector3,
-  rise: number,
+/**
+ * The four chord offsets of a square truss section running along `direction`. Every run in this model is
+ * axis-aligned, so the fallback reference axis only has to avoid the degenerate vertical case.
+ */
+function sectionCorners(direction: Vector3, section: number): Vector3[] {
+  const reference = Math.abs(direction.y) > 0.9
+    ? new Vector3(0, 0, 1)
+    : new Vector3(0, 1, 0)
+  const u = new Vector3().crossVectors(direction, reference).normalize()
+  const v = new Vector3().crossVectors(direction, u).normalize()
+  const h = section / 2
+  return [
+    u.clone().multiplyScalar(h).addScaledVector(v, h),
+    u.clone().multiplyScalar(-h).addScaledVector(v, h),
+    u.clone().multiplyScalar(-h).addScaledVector(v, -h),
+    u.clone().multiplyScalar(h).addScaledVector(v, -h),
+  ]
+}
+
+/**
+ * One run of modular box truss between two centreline points: four continuous chords plus a full X-brace
+ * on all four faces of every bay. Adjacent bays share their chord nodes, so the braces chain into the
+ * unbroken zig-zag band that identifies this product, rather than floating mid-chord.
+ *
+ * Chords and laces are collected separately because they carry different baked values; the chords also
+ * take more radial segments, since they are the tubes whose specular band the eye actually follows.
+ */
+function boxTruss(
+  chordParts: BufferGeometry[],
+  laceParts: BufferGeometry[],
+  from: Vector3,
+  to: Vector3,
   bays: number,
+  section = SECTION,
 ): void {
-  const upperFrom = lowerFrom.clone().setY(lowerFrom.y + rise)
-  const upperTo = lowerTo.clone().setY(lowerTo.y + rise)
-  parts.push(member(lowerFrom, lowerTo, CHORD))
-  parts.push(member(upperFrom, upperTo, CHORD))
+  const direction = to.clone().sub(from).normalize()
+  const corners = sectionCorners(direction, section)
+  for (const corner of corners) {
+    chordParts.push(member(from.clone().add(corner), to.clone().add(corner), CHORD, 12))
+  }
   for (let bay = 0; bay < bays; bay++) {
-    const t0 = bay / bays
-    const t1 = (bay + 1) / bays
-    const lowerFirst = bay % 2 === 0
-    parts.push(member(
-      pointOn(lowerFirst ? lowerFrom : upperFrom, lowerFirst ? lowerTo : upperTo, t0),
-      pointOn(lowerFirst ? upperFrom : lowerFrom, lowerFirst ? upperTo : lowerTo, t1),
-      LACE,
-      6,
-    ))
+    const near = pointOn(from, to, bay / bays)
+    const far = pointOn(from, to, (bay + 1) / bays)
+    for (let face = 0; face < 4; face++) {
+      const a = corners[face]!
+      const b = corners[(face + 1) % 4]!
+      laceParts.push(member(near.clone().add(a), far.clone().add(b), LACE, 6))
+      laceParts.push(member(near.clone().add(b), far.clone().add(a), LACE, 6))
+    }
   }
 }
 
-/** Four continuous post chords; every diagonal ends on a chord's explicit bay node. */
-function lacedColumn(
-  parts: BufferGeometry[],
-  footprint: readonly Vector3[],
-  bottomY: number,
-  topY: number,
-  bays: number,
-): void {
-  for (const point of footprint) {
-    parts.push(member(
-      new Vector3(point.x, bottomY, point.z),
-      new Vector3(point.x, topY, point.z),
-      CHORD,
-    ))
-  }
-  for (let bay = 0; bay < bays; bay++) {
-    const y0 = bottomY + (topY - bottomY) * (bay / bays)
-    const y1 = bottomY + (topY - bottomY) * ((bay + 1) / bays)
-    for (let face = 0; face < footprint.length; face++) {
-      const a = footprint[face]!
-      const b = footprint[(face + 1) % footprint.length]!
-      parts.push(member(
-        bay % 2 === 0 ? new Vector3(a.x, y0, a.z) : new Vector3(b.x, y0, b.z),
-        bay % 2 === 0 ? new Vector3(b.x, y1, b.z) : new Vector3(a.x, y1, a.z),
-        LACE,
-        6,
-      ))
-    }
-  }
+/**
+ * Merge one structural batch, tagging the chords bright and the laces shadowed.
+ *
+ * The colour attribute is written after the merge on purpose: `mergeParts` strips everything but position,
+ * normal and uv so that mixed sources can batch at all, and `mergeGeometries` concatenates in argument
+ * order, so the two vertex spans are exactly the two counts read here.
+ */
+function mergeShaded(
+  chordParts: BufferGeometry[],
+  laceParts: BufferGeometry[],
+  label: string,
+): BufferGeometry {
+  const chords = mergeParts(chordParts, `${label}: chords`)
+  const laces = mergeParts(laceParts, `${label}: laces`)
+  const chordVertices = chords.getAttribute('position').count
+  const laceVertices = laces.getAttribute('position').count
+  const merged = mergeParts([chords, laces], label)
+  const values = new Float32Array((chordVertices + laceVertices) * 3)
+  values.fill(CHORD_VALUE, 0, chordVertices * 3)
+  values.fill(LACE_VALUE, chordVertices * 3)
+  merged.setAttribute('color', new Float32BufferAttribute(values, 3))
+  return merged
 }
 
 export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstance {
@@ -128,13 +180,32 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
   }
 
   // Shared kit materials. Overrides handed in through `options` belong to the caller and are never
-  // disposed here (rule 16).
+  // disposed here (rule 16); the dark slot is reserved for bolted hardware so it still reads.
   const bundle = acquireF1Materials()
   const m = bundle.materials
+  const owned: Material[] = []
+  const own = (material: Material): Material => {
+    owned.push(material)
+    return material
+  }
+
+  // Bare mill-finish alloy. The kit's `steel` is authored for machined hardware, and at metalness 0.85
+  // with no environment map in the rig it has almost no diffuse term left to catch — which is what made
+  // this frame render as chalky grey rather than bright aluminium. Half-metal at a low roughness keeps a
+  // bright alloy body and lays a tight specular band down every round chord, and vertex colours let the
+  // baked lattice occlusion sink the laces behind it.
+  const millFinish = options.materials?.post ?? own(new MeshStandardMaterial({
+    name: 'f1-kit / pit-gantry mill finish',
+    color: shade(TOKEN.SHELL_200, 0.06),
+    roughness: 0.19,
+    metalness: 0.55,
+    vertexColors: true,
+  }))
+
   const materialSlots: Record<Slot, Material> = {
-    post: options.materials?.post ?? m.graphite,
+    post: millFinish,
     banner: options.materials?.banner ?? m.cobalt,
-    fitting: options.materials?.fitting ?? m.steel,
+    fitting: options.materials?.fitting ?? m.graphite,
   }
 
   // Runtime anchors: created once, never replaced (rules 10, 14).
@@ -169,242 +240,222 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
     group.add(mesh)
   }
 
-  const rebuild = (): void => {
-    releaseGenerated()
+  /**
+   * Every dimension the parts below share. One bay length is solved once from the span and carried into
+   * the columns and the transverse runs, because a modular kit cannot change bay pitch between members
+   * and an uneven pitch is the first thing that makes a truss look generated.
+   */
+  const solve = () => {
     const { span, height, bays } = config
     const half = span / 2
-    const depth = 3.0
-    const halfDepth = depth / 2
-    const columnSize = 0.30
-    const beamSize = 0.42
-    const lowerY = height - beamSize
-    const upperY = height
-    const innerHalf = half - columnSize
-    const innerHalfDepth = halfDepth - columnSize
+    const halfDepth = (span * DEPTH_RATIO) / 2
+    const inset = SECTION / 2
+    const bayLength = span / bays
+    // Chord centres of the perimeter runs. The outer chord lands exactly on the footprint edge, so the
+    // roof ends flush over its column instead of overhanging it.
+    const railX = half - inset
+    const railZ = halfDepth - inset
+    const roofBottom = height - SECTION
+    const roofCentre = height - inset
+    const depthBays = Math.max(2, Math.round((halfDepth * 2) / bayLength))
+    const columnBays = Math.max(2, Math.round((roofBottom - BASE_Y) / bayLength))
+    // Interior ribs, spaced across the span at roughly the section's own module.
+    const ribCount = Math.max(1, Math.round(span / (SECTION * 7)) - 1)
+    const ribX: number[] = []
+    for (let i = 0; i < ribCount; i++) {
+      ribX.push(-railX + (2 * railX * (i + 1)) / (ribCount + 1))
+    }
+    return {
+      half, halfDepth, railX, railZ, roofBottom, roofCentre, depthBays, columnBays, ribX,
+    }
+  }
 
-    const postParts: BufferGeometry[] = []
-    const roofParts: BufferGeometry[] = []
-    const fittingParts: BufferGeometry[] = []
-
-    // Four measured posts. Their four top nodes are retained through each corner cage rather than
-    // disappearing into intersecting roof runs.
+  /**
+   * Four X-braced columns, each landing on a bolted base plate.
+   *
+   * The plate is mill finish rather than dark hardware, and steps proud of the section on all four sides,
+   * because that is how the reference's feet read: a wider alloy pad with dark bolt heads on it, not a
+   * black block the column disappears into.
+   */
+  const buildColumns = (
+    chordParts: BufferGeometry[],
+    laceParts: BufferGeometry[],
+    fittingParts: BufferGeometry[],
+    d: ReturnType<typeof solve>,
+  ): void => {
     for (const sx of [-1, 1] as const) {
       for (const sz of [-1, 1] as const) {
-        const xOuter = sx * half
-        const xInner = sx * innerHalf
-        const zOuter = sz * halfDepth
-        const zInner = sz * innerHalfDepth
-        const footprint = [
-          new Vector3(xOuter, 0, zOuter),
-          new Vector3(xInner, 0, zOuter),
-          new Vector3(xInner, 0, zInner),
-          new Vector3(xOuter, 0, zInner),
-        ]
-        lacedColumn(
-          postParts,
-          footprint,
-          0.06,
-          lowerY,
-          Math.max(3, Math.round(height / 0.7)),
+        const cx = sx * d.railX
+        const cz = sz * d.railZ
+        boxTruss(
+          chordParts,
+          laceParts,
+          new Vector3(cx, BASE_Y, cz),
+          new Vector3(cx, d.roofBottom, cz),
+          d.columnBays,
         )
-
-        const plate = bevelBox(0.52, 0.05, 0.52, 0.008)
-        plate.translate(sx * half, 0.025, sz * halfDepth)
-        postParts.push(plate)
-        for (let i = 0; i < 4; i++) {
-          const angle = (i / 4) * Math.PI * 2 + Math.PI / 4
-          fittingParts.push(bolt(
-            [
-              sx * half + Math.cos(angle) * 0.19,
-              0.062,
-              sz * halfDepth + Math.sin(angle) * 0.19,
-            ],
-            0.022, 0.030, AXIS_Y,
-          ))
+        const plate = bevelBox(SECTION + 0.17, PLATE_T, SECTION + 0.17, 0.006)
+        plate.translate(cx, PLATE_T / 2, cz)
+        chordParts.push(plate)
+        // Corner fixings, outboard of the chords rather than on a circle through them.
+        for (const bx of [-1, 1] as const) {
+          for (const bz of [-1, 1] as const) {
+            fittingParts.push(bolt(
+              [cx + bx * 0.19, PLATE_T, cz + bz * 0.19],
+              0.016, 0.022, AXIS_Y,
+            ))
+          }
         }
-
-        // The outer perimeter supplies two cage edges; only the two inward links are added here.
-        // Crossed diagonals transfer that outer corner node into the inset roof without doubled rails.
-        for (const y of [lowerY, upperY]) {
-          roofParts.push(member(
-            new Vector3(xInner, y, zOuter),
-            new Vector3(xInner, y, zInner),
-            CHORD,
-          ))
-          roofParts.push(member(
-            new Vector3(xInner, y, zInner),
-            new Vector3(xOuter, y, zInner),
-            CHORD,
-          ))
-        }
-        for (const point of footprint) {
-          roofParts.push(member(
-            new Vector3(point.x, lowerY, point.z),
-            new Vector3(point.x, upperY, point.z),
-            LACE,
-            6,
-          ))
-        }
-        roofParts.push(member(
-          new Vector3(xOuter, lowerY, zOuter),
-          new Vector3(xInner, upperY, zInner),
-          LACE,
-          6,
-        ))
-        roofParts.push(member(
-          new Vector3(xInner, lowerY, zInner),
-          new Vector3(xOuter, upperY, zOuter),
-          LACE,
-          6,
-        ))
       }
     }
+  }
 
-    // Continuous outer and inset rectangular trusses. Warren diagonals repeat bay-by-bay, while
-    // transverse ties stop at their paired nodes instead of crossing or floating beyond a chord.
+  /**
+   * The flat roof: a single rectangular perimeter of box truss plus full-depth interior ribs. One
+   * perimeter rather than two concentric rectangles is what leaves sky between the members.
+   */
+  const buildRoof = (
+    chordParts: BufferGeometry[],
+    laceParts: BufferGeometry[],
+    d: ReturnType<typeof solve>,
+  ): void => {
     for (const sz of [-1, 1] as const) {
-      const zOuter = sz * halfDepth
-      const zInner = sz * innerHalfDepth
-      const outerFrom = new Vector3(-half, lowerY, zOuter)
-      const outerTo = new Vector3(half, lowerY, zOuter)
-      const innerFrom = new Vector3(-innerHalf, lowerY, zInner)
-      const innerTo = new Vector3(innerHalf, lowerY, zInner)
-      planarTruss(roofParts, outerFrom, outerTo, beamSize, bays)
-      planarTruss(roofParts, innerFrom, innerTo, beamSize, bays)
-      for (let node = 1; node < bays; node++) {
-        const outer = pointOn(outerFrom, outerTo, node / bays)
-        const inner = pointOn(innerFrom, innerTo, node / bays)
-        roofParts.push(member(outer, inner, LACE, 6))
-        roofParts.push(member(
-          outer.clone().setY(upperY),
-          inner.clone().setY(upperY),
-          LACE,
-          6,
-        ))
-      }
+      boxTruss(
+        chordParts,
+        laceParts,
+        new Vector3(-d.half, d.roofCentre, sz * d.railZ),
+        new Vector3(d.half, d.roofCentre, sz * d.railZ),
+        config.bays,
+      )
     }
-
-    const depthBays = Math.max(4, Math.round(depth / 0.65))
+    for (const x of [-d.railX, ...d.ribX, d.railX]) {
+      boxTruss(
+        chordParts,
+        laceParts,
+        new Vector3(x, d.roofCentre, -d.halfDepth),
+        new Vector3(x, d.roofCentre, d.halfDepth),
+        d.depthBays,
+      )
+    }
+    // Corner couplers, where the perimeter's outermost chords cross. Real truss is bolted through a block
+    // here, and without one the crossing tubes read as an intersection error. They stay in the frame's own
+    // alloy, because a dark block on each corner punches holes in the roof's silhouette.
     for (const sx of [-1, 1] as const) {
-      const xOuter = sx * half
-      const xInner = sx * innerHalf
-      const outerFrom = new Vector3(xOuter, lowerY, -halfDepth)
-      const outerTo = new Vector3(xOuter, lowerY, halfDepth)
-      const innerFrom = new Vector3(xInner, lowerY, -innerHalfDepth)
-      const innerTo = new Vector3(xInner, lowerY, innerHalfDepth)
-      planarTruss(roofParts, outerFrom, outerTo, beamSize, depthBays)
-      planarTruss(roofParts, innerFrom, innerTo, beamSize, depthBays)
-      for (let node = 1; node < depthBays; node++) {
-        const outer = pointOn(outerFrom, outerTo, node / depthBays)
-        const inner = pointOn(innerFrom, innerTo, node / depthBays)
-        roofParts.push(member(outer, inner, LACE, 6))
-        roofParts.push(member(
-          outer.clone().setY(upperY),
-          inner.clone().setY(upperY),
-          LACE,
-          6,
-        ))
+      for (const sz of [-1, 1] as const) {
+        for (const y of [d.roofBottom, config.height]) {
+          const block = bevelBox(0.085, 0.085, 0.085, 0.010)
+          block.translate(sx * d.half, y, sz * d.halfDepth)
+          chordParts.push(block)
+        }
       }
     }
-    emit('post', mergeParts(postParts, 'columns'), posts, 'columns')
-    emit('post', mergeParts(roofParts, 'roof-truss'), beam, 'roof-truss')
+  }
 
-    // The banner frame spans exact front-truss nodes, so its rails end at the same two hangers.
-    const bannerLeft = pointOn(
-      new Vector3(-half, lowerY, halfDepth),
-      new Vector3(half, lowerY, halfDepth),
-      1 / bays,
-    )
-    const bannerRight = pointOn(
-      new Vector3(-half, lowerY, halfDepth),
-      new Vector3(half, lowerY, halfDepth),
-      (bays - 1) / bays,
-    )
-    const bannerW = bannerRight.x - bannerLeft.x
-    const bannerH = 0.62
-    const bannerY = lowerY - 0.10 - bannerH / 2
-    const bannerTop = bannerY + bannerH / 2
-    const bannerBottom = bannerY - bannerH / 2
-    const bannerZ = halfDepth + 0.030
-    const panel = bevelBox(bannerW, bannerH, 0.030, 0.006)
-    panel.translate(0, bannerY, bannerZ)
-    emit('banner', mergeParts([panel], 'banner'), banner, 'panel')
+  /**
+   * A slung banner on the front run, framed on its own rails and hung from two straps. Deliberately short
+   * of the span and tucked hard under the truss: the open bay is the silhouette, and a full-width board
+   * across it turns the gantry back into a billboard on legs.
+   */
+  const buildBanner = (
+    fittingParts: BufferGeometry[],
+    d: ReturnType<typeof solve>,
+  ): BufferGeometry => {
+    const bannerW = config.span * 0.46
+    const bannerH = 0.38
+    const bannerTop = d.roofBottom - 0.08
+    const bannerBottom = bannerTop - bannerH
+    // Clear of the front chord's outer surface by more than the kit's minimum applied-layer gap (rule 8).
+    const bannerZ = d.halfDepth + CHORD + 0.018 + 0.014
+    const panel = bevelBox(bannerW, bannerH, 0.028, 0.006)
+    panel.translate(0, (bannerTop + bannerBottom) / 2, bannerZ)
 
-    fittingParts.push(member(
-      new Vector3(bannerLeft.x, bannerTop, bannerZ),
-      new Vector3(bannerRight.x, bannerTop, bannerZ),
-      0.023,
-      8,
-    ))
-    fittingParts.push(member(
-      new Vector3(bannerLeft.x, bannerBottom, bannerZ),
-      new Vector3(bannerRight.x, bannerBottom, bannerZ),
-      0.023,
-      8,
-    ))
-    for (const x of [bannerLeft.x, bannerRight.x]) {
+    const edges: Array<[Vector3, Vector3]> = [
+      [new Vector3(-bannerW / 2, bannerTop, bannerZ), new Vector3(bannerW / 2, bannerTop, bannerZ)],
+      [
+        new Vector3(-bannerW / 2, bannerBottom, bannerZ),
+        new Vector3(bannerW / 2, bannerBottom, bannerZ),
+      ],
+    ]
+    for (const sx of [-1, 1] as const) {
+      edges.push([
+        new Vector3((sx * bannerW) / 2, bannerBottom, bannerZ),
+        new Vector3((sx * bannerW) / 2, bannerTop, bannerZ),
+      ])
+    }
+    for (const [from, to] of edges) fittingParts.push(member(from, to, 0.020, 8))
+    for (const sx of [-1, 1] as const) {
       fittingParts.push(member(
-        new Vector3(x, bannerBottom, bannerZ),
-        new Vector3(x, bannerTop, bannerZ),
-        0.023,
-        8,
-      ))
-      fittingParts.push(member(
-        new Vector3(x, lowerY, halfDepth),
-        new Vector3(x, bannerTop, bannerZ),
+        new Vector3((sx * bannerW) / 2, d.roofBottom, d.halfDepth),
+        new Vector3((sx * bannerW) / 2, bannerTop, bannerZ),
         0.010,
         6,
       ))
     }
+    return panel
+  }
 
-    // The pale service rail begins and ends at V-hangers rooted on matching inset roof nodes.
-    const serviceStartNode = 1
-    const serviceEndNode = bays - 1
-    const serviceY = lowerY - 0.16
-    const serviceStartX = -innerHalf + (2 * innerHalf * serviceStartNode) / bays
-    const serviceEndX = -innerHalf + (2 * innerHalf * serviceEndNode) / bays
-    fittingParts.push(member(
-      new Vector3(serviceStartX, serviceY, 0),
-      new Vector3(serviceEndX, serviceY, 0),
-      0.024,
-      8,
-    ))
-    const hangerNodes: number[] = []
-    for (let node = serviceStartNode; node <= serviceEndNode; node += 2) hangerNodes.push(node)
-    if (hangerNodes[hangerNodes.length - 1] !== serviceEndNode) hangerNodes.push(serviceEndNode)
-    for (const node of hangerNodes) {
-      const x = -innerHalf + (2 * innerHalf * node) / bays
-      fittingParts.push(member(
-        new Vector3(x, lowerY, -innerHalfDepth),
-        new Vector3(x, serviceY, 0),
-        0.012,
-        6,
-      ))
-      fittingParts.push(member(
-        new Vector3(x, lowerY, innerHalfDepth),
-        new Vector3(x, serviceY, 0),
-        0.012,
-        6,
-      ))
-    }
+  /**
+   * Downlights clamped to the outer bottom chord of the front run, flanking the banner, where the light
+   * actually has to reach the car. Each one carries the hardware a truss clamp is recognised by: a collar
+   * round the chord, a bolted jaw under it, then the drop stem and the fixture.
+   *
+   * They sit midway between rib lines rather than at a fraction of the span, so a clamp can never land on
+   * the coupler block where a rib crosses the rail, whatever span the consumer configures.
+   */
+  const buildLights = (fittingParts: BufferGeometry[], d: ReturnType<typeof solve>): void => {
+    const ribLines = [-d.railX, ...d.ribX, d.railX]
+    const midpoints = ribLines.slice(1).map((x, i) => (x + ribLines[i]!) / 2)
+    const z = d.halfDepth
+    const clampRadius = CHORD + 0.021
+    const jawHeight = 0.018
 
-    for (let i = 0; i < 5; i++) {
-      const x = serviceStartX + (serviceEndX - serviceStartX) * (i / 4)
+    for (const x of [midpoints[0]!, midpoints[midpoints.length - 1]!]) {
+      fittingParts.push(tubeSection(clampRadius, 0.078, [x, d.roofBottom, z], AXIS_X, 12))
+      // The jaw bites 6 mm up into the collar, so the two parts are bolted together rather than stacked.
+      const jawY = d.roofBottom - clampRadius - jawHeight / 2 + 0.006
+      const jaw = bevelBox(0.078, jawHeight, 0.115, 0.004)
+      jaw.translate(x, jawY, z)
+      fittingParts.push(jaw)
+      const jawFace = jawY - jawHeight / 2
+      for (const bz of [-1, 1] as const) {
+        fittingParts.push(bolt([x, jawFace, z + bz * 0.04], 0.012, 0.018, [0, -1, 0]))
+      }
+      const stemEnd = jawFace - 0.095
       fittingParts.push(member(
-        new Vector3(x, serviceY, 0),
-        new Vector3(x, serviceY - 0.12, 0.16),
-        0.012,
-        6,
+        new Vector3(x, jawFace, z),
+        new Vector3(x, stemEnd, z),
+        0.014,
+        8,
       ))
-      const body = new CylinderGeometry(0.085, 0.10, 0.16, 12)
-      body.rotateX(Math.PI / 2)
-      body.translate(x, serviceY - 0.18, 0.16)
+      const bodyTop = stemEnd + 0.01
+      const body = new CylinderGeometry(0.07, 0.086, 0.15, 14)
+      body.translate(x, bodyTop - 0.075, z)
       fittingParts.push(body)
-      const yoke = bevelBox(0.024, 0.16, 0.20, 0.004)
-      yoke.translate(x, serviceY - 0.12, 0.16)
-      fittingParts.push(yoke)
+      const trim = bevelRing(0.084, 0.098, 0.014, 0.003, 22)
+      trim.rotateX(Math.PI / 2)
+      trim.translate(x, bodyTop - 0.145, z)
+      fittingParts.push(trim)
     }
+  }
 
+  const rebuild = (): void => {
+    releaseGenerated()
+    const d = solve()
+
+    const columnChords: BufferGeometry[] = []
+    const columnLaces: BufferGeometry[] = []
+    const roofChords: BufferGeometry[] = []
+    const roofLaces: BufferGeometry[] = []
+    const fittingParts: BufferGeometry[] = []
+
+    buildColumns(columnChords, columnLaces, fittingParts, d)
+    buildRoof(roofChords, roofLaces, d)
+    const panel = buildBanner(fittingParts, d)
+    buildLights(fittingParts, d)
+
+    emit('post', mergeShaded(columnChords, columnLaces, 'columns'), posts, 'columns')
+    emit('post', mergeShaded(roofChords, roofLaces, 'roof-truss'), beam, 'roof-truss')
+    emit('banner', mergeParts([panel], 'banner'), banner, 'panel')
     emit('fitting', mergeParts(fittingParts, 'fittings'), posts, 'fittings')
   }
   rebuild()
@@ -421,13 +472,13 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
       rebuild()
     },
     setMaterial(slot, material) {
-      // One mesh per slot, so this is a direct reassignment with no rebuild.
       materialSlots[slot] = material
       for (const mesh of meshesBySlot[slot]) mesh.material = material
     },
     update: () => {},
     dispose() {
       releaseGenerated()
+      for (const material of owned) material.dispose()
       disposeF1Materials(bundle)
       root.removeFromParent()
     },
@@ -435,5 +486,17 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
 }
 
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
-  return createF1Preview(createModel(), { aspect, target: [0, 1.3, 0], distance: 9.0, fov: 42 })
+  // The reference is photographed from standing height, below the roof. That matters more than it sounds:
+  // seen from underneath, the far roof run projects above the near one, and the grid between them opens
+  // up. Level with the roof plane the whole thing collapses into a single band.
+  //
+  // The eye height sits just under the roof rather than halfway up the legs, which is where the reference
+  // photographer stood: from below the mid-point the columns rake away and read taller than they are.
+  return createF1Preview(createModel(), {
+    aspect,
+    target: [0, 1.5, 0],
+    distance: 8.6,
+    pitch: 0.08,
+    fov: 50,
+  })
 }
