@@ -1,12 +1,13 @@
 // f1-tyre — a loose F1 tyre: an 18-inch rim barrel inside a lathe-revolved carcass whose
 // crown carries four continuous circumferential grooves and a directional V pattern of bevelled tread
-// blocks, ten ordered forged spokes over a visible brake assembly, a slim hub and clean centre lock,
-// plus procedural PIRELLI / P ZERO sidewall type. Dressed on BOTH faces (axle along local Z) —
-// a carried tyre is seen from both sides, unlike a fitted car tyre.
+// blocks, a near-solid aero disc cover opened only by thin radial vent slots, a recessed centre-lock hub
+// bowl read through that cover's aperture, plus procedural PIRELLI / P ZERO sidewall type. Dressed on
+// BOTH faces (axle along local Z) — a carried tyre is seen from both sides, unlike a fitted car tyre.
 //
 // Proportions are measured off a face-on reference of a current-spec 18" tyre: the rim seat sits at 0.635
-// of the tyre's outer radius (a 457 mm rim inside a 720 mm tyre), the spokes span 0.158..0.586 of it,
-// the hub socket 0..0.159, and the sidewall wordmarks sit at 0.805.
+// of the tyre's outer radius (a 457 mm rim inside a 720 mm tyre), the flange crest reaches 0.700 of it,
+// the aero cover spans 0.196..0.640 with its vent band at 0.376..0.462, and the sidewall wordmarks sit
+// at 0.805.
 //
 // Every applied feature occupies its own radial band with a real world-unit axial step to its neighbour, or
 // interpenetrates its host outright — never a coplanar decal floating a fraction of a millimetre off the
@@ -20,7 +21,6 @@ import {
   Float32BufferAttribute,
   Group,
   LatheGeometry,
-  MathUtils,
   Mesh,
   MeshStandardMaterial,
   Vector2,
@@ -460,27 +460,50 @@ export function createModel(options: F1TyreOptions = {}): F1TyreInstance {
       }), 30), tire, 'tread')
     }
 
-    // --- Rim barrel: one closed shell, both flanges included, hollow between the two spoke planes ----
-    // The spoke plane sits 0.050 m inboard of the flange face, so rim lip and spoke plane read as two
-    // separate steps in silhouette rather than one domed dish.
-    const zFlange = 0.424 * W  // 0.140 — outboard face of the rim flange
-    const zSpoke = 0.273 * W   // 0.090 — the plane the spokes are rooted in
-    const rFlange = 0.673 * R  // 0.222 — stands 0.012 proud of the bead, a hard lip that catches light
-    const rBarrel = 0.606 * R  // 0.200 — where the spokes meet the barrel wall
+    // --- Rim barrel: one closed shell, both flanges included, hollow between the two cover planes -----
+    // The flange is carried out radially until its crest bites into the tyre's bead bore, and out axially
+    // until it stops just short of the sidewall's outer face. That leaves an annular end face pointing
+    // straight down the axle — the bright outboard lip — rather than a small step lost in the shadow of
+    // the bore. The cover plane then sits 0.026 m inboard of the lip crest, so lip and cover read as two
+    // separate steps in silhouette instead of one domed dish.
+    const zLip = 0.470 * W     // 0.155 — the flange's axial extremity
+    const zFace = 0.390 * W    // 0.129 — the aero cover's outer face
+    const rLip = 0.700 * R     // 0.252 — lip crest, 0.003 inside the sidewall bore at this z
+    const rSeat = 0.634 * R    // 0.228 — short cylindrical land the aero cover seats against
+    const rBarrel = 0.606 * R  // 0.218 — the barrel well
     const barrel: Array<readonly [number, number]> = [
-      [rBarrel, -zSpoke], [0.642 * R, -0.291 * W], [0.667 * R, -0.339 * W],
-      [rFlange, -0.388 * W], [rFlange, -zFlange], [0.645 * R, -zFlange], [rBead, -0.400 * W],
-      [rBead, 0.400 * W], [0.645 * R, zFlange], [rFlange, zFlange],
-      [rFlange, 0.388 * W], [0.667 * R, 0.339 * W], [0.642 * R, 0.291 * W], [rBarrel, zSpoke],
-      [0.594 * R, 0.261 * W], [0.594 * R, -0.261 * W], [rBarrel, -zSpoke],
+      [rBarrel, -0.330 * W],
+      [rSeat, -0.372 * W], [rSeat, -0.406 * W], [0.660 * R, -0.440 * W],
+      [rLip, -0.458 * W], [rLip, -zLip], [0.664 * R, -zLip], [0.652 * R, -0.462 * W],
+      [rBead, -0.430 * W],
+      [rBead, 0.430 * W],
+      [0.652 * R, 0.462 * W], [0.664 * R, zLip], [rLip, zLip], [rLip, 0.458 * W],
+      [0.660 * R, 0.440 * W], [rSeat, 0.406 * W], [rSeat, 0.372 * W],
+      [rBarrel, 0.330 * W],
+      [0.594 * R, 0.296 * W], [0.594 * R, -0.296 * W], [rBarrel, -0.330 * W],
     ]
     const rimParts: BufferGeometry[] = [latheZ(barrel, seg)]
 
-    // --- Per-face dressing: spoke blades, hub and the centre lock nut --------------------------------
+    // --- Per-face dressing: the aero cover, its vents, and the recessed centre lock ------------------
     const metalParts: BufferGeometry[] = []
     const coverParts: BufferGeometry[] = []
     const accentParts: BufferGeometry[] = []
     const bandParts: BufferGeometry[] = []
+
+    // A current F1 wheel is closed by a near-solid aero cover; an open spoke fan is a road-car read.
+    // The cover cannot be booleaned here, so it is two solid annular plates bridged by a ring of
+    // sectors: the gaps between those sectors *are* the vents. Both plates are wider than the band they
+    // bridge, and the sectors carry only a hairline chamfer, so the ring reads as one continuous plate
+    // slit by thin slots rather than as a second set of spokes.
+    const tPlate = 0.007
+    const rCoverOut = 0.640 * R  // interpenetrates the barrel's rSeat land, so there is no seam gap
+    const rVentOut = 0.462 * R
+    const rVentIn = 0.376 * R
+    const rAperture = 0.200 * R  // the opening the hub bowl is read through
+    const rPlateIn = rAperture - 0.004
+    const vents = 12
+    const ventGap = 0.030       // radians of slot: ~0.005 m across at the band's mid radius
+    const zBowl = 0.278 * W     // 0.0917 — bowl floor, 0.037 m below the cover face
 
     for (const face of [1, -1] as const) {
       const mirror = (g: BufferGeometry): BufferGeometry => {
@@ -488,22 +511,56 @@ export function createModel(options: F1TyreOptions = {}): F1TyreInstance {
         return g
       }
 
-      // Ten evenly indexed forged spokes leave orderly negative space and carry a slight directional rake.
-      const web = 0.016
-      rimParts.push(mirror(ringOfMerged(
-        10,
-        0,
-        `spokes-${face}`,
-        () => {
-          const spoke = bevelBlade(0.158 * R, 0.586 * R, 0.020, 0.012, web, 0.003)
-          spoke.rotateZ(MathUtils.degToRad(5.5))
-          spoke.translate(0, 0, zSpoke - web / 2)
-          return spoke
-        },
-        face > 0 ? 0 : 0.25,
-      )))
+      // Outer plate, chamfered at its rim so the cover's own edge carries a highlight.
+      coverParts.push(mirror(latheZ([
+        [rVentOut, zFace], [rCoverOut - 0.004, zFace], [rCoverOut, zFace - 0.004],
+        [rCoverOut, zFace - tPlate], [rVentOut, zFace - tPlate], [rVentOut, zFace],
+      ], seg)))
 
-      // Carbon brake rotor and caliper sit behind the spokes and remain visible through their windows.
+      // Inner plate. Its chamfered inner edge is the aperture; everything behind it is the hub recess.
+      coverParts.push(mirror(latheZ([
+        [rPlateIn + 0.004, zFace], [rVentIn + 0.004, zFace],
+        [rVentIn + 0.004, zFace - tPlate], [rPlateIn, zFace - tPlate],
+        [rPlateIn, zFace - 0.003], [rPlateIn + 0.004, zFace],
+      ], seg)))
+
+      // The vent band: solid sectors, thin gaps.
+      for (let i = 0; i < vents; i++) {
+        const aStart = (i / vents) * Math.PI * 2 + ventGap / 2
+        const aEnd = ((i + 1) / vents) * Math.PI * 2 - ventGap / 2
+        const sector = arcBand(rVentIn - 0.004, rVentOut + 0.004, aStart, aEnd, tPlate, 0.0004, 8)
+        sector.translate(0, 0, zFace - tPlate / 2)
+        coverParts.push(mirror(sector))
+      }
+
+      // Six cover retention screws, half-buried in the outer plate.
+      metalParts.push(mirror(ringOfMerged(6, 0.560 * R, `cover-screws-${face}`, () => {
+        const screw = new CylinderGeometry(0.0075 * R, 0.0075 * R, 0.005, 8)
+        screw.rotateX(Math.PI / 2)
+        screw.translate(0, 0, zFace)
+        return screw
+      }, face > 0 ? 0 : 0.5)))
+
+      // The centre-lock hub bowl: a well sunk 0.037 m behind the aperture, entered through a near-
+      // vertical wall so the aperture reads as depth rather than as a hole punched in a flat plate. The
+      // bowl's lip is wider than the aperture and so hides behind the inner plate, which leaves no gap
+      // to see through at a grazing angle.
+      coverParts.push(mirror(latheZ([
+        [rAperture, zFace - 0.002], [rAperture - 0.002, zFace - 0.012],
+        [0.186 * R, zBowl + 0.020], [0.150 * R, zBowl + 0.004], [0.140 * R, zBowl],
+        [1e-4, zBowl], [1e-4, zBowl - 0.010],
+        [0.150 * R, zBowl - 0.010], [0.204 * R, zBowl + 0.022],
+        [rAperture + 0.014, zFace - 0.002], [rAperture, zFace - 0.002],
+      ], Math.max(24, seg / 2))))
+
+      // Stepped drive ring on the bowl floor, ringing the nut.
+      coverParts.push(mirror(latheZ([
+        [0.076 * R, zBowl + 0.001], [0.076 * R, zBowl + 0.011], [0.090 * R, zBowl + 0.016],
+        [0.100 * R, zBowl + 0.016], [0.110 * R, zBowl + 0.010], [0.110 * R, zBowl + 0.001],
+        [0.076 * R, zBowl + 0.001],
+      ], Math.max(24, seg / 2))))
+
+      // Carbon brake rotor and caliper sit behind the bowl. The cover hides them, as a real one does.
       coverParts.push(mirror(latheZ([
         [0.232 * R, 0.182 * W], [0.500 * R, 0.182 * W], [0.520 * R, 0.194 * W],
         [0.520 * R, 0.214 * W], [0.232 * R, 0.214 * W], [0.232 * R, 0.182 * W],
@@ -521,32 +578,17 @@ export function createModel(options: F1TyreOptions = {}): F1TyreInstance {
       }, face > 0 ? 0 : 0.5)
       metalParts.push(mirror(boltRing))
 
-      // Slim recessed hub lets the spokes terminate cleanly around a compact machined drive bowl.
-      coverParts.push(mirror(latheZ([
-        [0.000, 0.180 * W], [0.112 * R, 0.180 * W], [0.141 * R, 0.205 * W],
-        [0.159 * R, zSpoke], [0.159 * R, 0.248 * W], [0.139 * R, 0.218 * W],
-        [0.106 * R, 0.166 * W], [0.000, 0.166 * W],
-      ], Math.max(20, seg / 2))))
-
-      // Stepped drive ring inside the bowl.
-      coverParts.push(mirror(latheZ([
-        [0.073 * R, 0.158 * W], [0.073 * R, 0.190 * W], [0.091 * R, 0.202 * W],
-        [0.112 * R, 0.202 * W], [0.126 * R, 0.188 * W], [0.126 * R, 0.158 * W],
-        [0.073 * R, 0.158 * W],
-      ], Math.max(20, seg / 2))))
-
-      // The livery accent instead lives where a real team stripe does: a pinstripe edging the rim lip.
+      // The livery accent instead lives where a real team stripe does: a pinstripe edging the cover.
       // Kept deliberately thin — the tyre already carries one saturated colour in the compound grading,
       // and a second broad band of it turns the prop into a toy.
-      accentParts.push(mirror(latheZ([
-        [0.598 * R, 0.318 * W], [0.607 * R, 0.330 * W], [0.607 * R, 0.348 * W],
-        [0.598 * R, 0.352 * W], [0.598 * R, 0.318 * W],
-      ], seg)))
+      const stripe = arcBand(rCoverOut - 0.017, rCoverOut - 0.006, 0, Math.PI * 2, 0.004, 0.0008, seg)
+      stripe.translate(0, 0, zFace)
+      accentParts.push(mirror(stripe))
 
       // Compact ten-sided centre lock supplies one clean machined highlight inside the dark drive bowl.
-      const nut = new CylinderGeometry(0.073 * R, 0.073 * R, 0.022, 10)
+      const nut = new CylinderGeometry(0.073 * R, 0.073 * R, 0.016, 10)
       nut.rotateX(Math.PI / 2)
-      nut.translate(0, 0, 0.204 * W * face)
+      nut.translate(0, 0, (zBowl + 0.008) * face)
       metalParts.push(nut)
 
       // Current tyre hierarchy: PIRELLI above the hub and P ZERO below, in the compound colour.
@@ -556,9 +598,9 @@ export function createModel(options: F1TyreOptions = {}): F1TyreInstance {
       bandParts.push(sidewallWord('P ZERO', R * 0.805, zSkin, -Math.PI / 2 + spin, 0.034, face))
     }
 
-    emit('rim', mergeParts(rimParts, 'rim'), rim, 'barrel')
+    emit('rim', creased(mergeParts(rimParts, 'rim'), 34), rim, 'barrel')
     emit('metal', mergeParts(metalParts, 'nuts'), rim, 'nuts')
-    emit('cover', mergeParts(coverParts, 'dish'), rim, 'dish')
+    emit('cover', creased(mergeParts(coverParts, 'dish'), 34), rim, 'dish')
     emit('accent', mergeParts(accentParts, 'accent'), trim, 'accent')
     emit('band', mergeParts(bandParts, 'marking'), trim, 'marking')
   }

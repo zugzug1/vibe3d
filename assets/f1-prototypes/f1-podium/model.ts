@@ -1,9 +1,17 @@
-// f1-podium — FIA Appendix 5 GP dais (2026 F1-supplied numbered blocks).
-// Camera-facing P2 | P1 | P3, carpeted walkway ≥ 1.20 m, flag slot ≥ 0.50 m,
-// large front numerals, solid backdrop. Trophies and champagne are separate props.
+// f1-podium — Albert Park GP dais (Wikimedia 028A8788 / 028A8821).
+//
+// One curved maroon structure, not three loose blocks: a single concentric band bowed toward the cameras
+// and cut into P2 | P1 | P3 sectors at Appendix 5 heights, seated on a full-width walkway apron of the
+// same paint. Every camera-facing arc carries an ivory pinstripe under its top edge and a second at its
+// base, a large ivory numeral between them, and a low frameless glass run held by spigot clamps that lap
+// down over the paint. Trophies, champagne and flags are separate props.
+//
+// The arc is what makes the reference read: 3.56 m of dais frontage on a 4.80 m radius bows 0.33 m at the
+// crown, so the outer sectors turn visibly away from the lens instead of lining up as a flat wall.
 
 import {
   BufferGeometry,
+  DoubleSide,
   Group,
   Mesh,
   MeshStandardMaterial,
@@ -11,10 +19,10 @@ import {
 } from 'three/webgpu'
 
 import {
-  LAYER_CLEARANCE,
   PODIUM,
   TOKEN,
   acquireF1Materials,
+  arcBand,
   bevelBox,
   bevelPrism,
   createF1Preview,
@@ -26,6 +34,7 @@ import {
 type Slot = 'steps' | 'deck' | 'barrier' | 'frame' | 'plate'
 
 export interface F1PodiumConfig {
+  /** Front chord of the walkway apron, in metres. The dais band inside it is fixed by Appendix 5. */
   width: number
 }
 
@@ -44,10 +53,42 @@ export interface F1PodiumInstance {
   dispose(): void
 }
 
-const DAIS_SPAN =
-  PODIUM.p2.width + PODIUM.gap + PODIUM.p1.width + PODIUM.gap + PODIUM.p3.width
-const defaults: F1PodiumConfig = { width: Math.max(5.5, DAIS_SPAN + 1.2) }
-const NUMBERS = ['1', '2', '3'] as const
+/** Radius of the dais front face. Sized so the Appendix 5 frontage bows ~0.33 m at the crown. */
+const FACE_R = 4.8
+const BACK_R = FACE_R - PODIUM.p1.depth
+/** The walkway is the apron the drivers stand on; its front riser is the band the cameras see. */
+const APRON = { depth: 0.55, height: 0.34 } as const
+const APRON_R = FACE_R + APRON.depth
+/** Model Z of the dais face crown, which puts the whole structure roughly on the origin. */
+const FACE_Z = 0.3
+const ARC_Z = FACE_Z - FACE_R
+
+/** Ivory pinstripe: 6 mm into the paint, 10 mm proud of it. */
+const TRIM_IN = 0.006
+const TRIM_OUT = 0.01
+/** Frameless glass sits just off the paint and rises this far above the surface it guards. */
+const GLASS_T = 0.019
+const GLASS_STANDOFF = 0.004
+const GLASS_RISE = 0.32
+const GLASS_GRIP = 0.05
+
+/** Half the dais band's angular sweep, measured along the front face. */
+const DAIS_HALF_A = (PODIUM.p1.width / 2 + PODIUM.gap + PODIUM.p2.width) / FACE_R
+/** The apron has to clear the outer dais corners before it can read as a step around them. */
+const MIN_WIDTH = 2 * APRON_R * Math.sin(DAIS_HALF_A + 0.02)
+const defaults: F1PodiumConfig = { width: 4.4 }
+
+interface Sector {
+  readonly place: 1 | 2 | 3
+  readonly digit: '1' | '2' | '3'
+  readonly a0: number
+  readonly a1: number
+  readonly mid: number
+  /** Standing surface, in metres above the ground. */
+  readonly top: number
+  /** Exposed front-face height above the apron. */
+  readonly face: number
+}
 
 function daisSpec(place: 1 | 2 | 3) {
   if (place === 1) return PODIUM.p1
@@ -55,103 +96,188 @@ function daisSpec(place: 1 | 2 | 3) {
   return PODIUM.p3
 }
 
-/** Camera-facing X: P2 left (−X), P1 centre, P3 right (+X). */
-function daisX(place: 1 | 2 | 3): number {
-  if (place === 1) return 0
-  const half = PODIUM.p1.width / 2 + PODIUM.gap + daisSpec(place).width / 2
-  return place === 2 ? -half : half
+/** Camera-facing sweep: P2 turns to −X, P1 holds the crown, P3 turns to +X. */
+function sectors(): readonly Sector[] {
+  const gap = PODIUM.gap / FACE_R
+  const half = PODIUM.p1.width / FACE_R / 2
+  const p2 = PODIUM.p2.width / FACE_R
+  const p3 = PODIUM.p3.width / FACE_R
+  const spans: Record<1 | 2 | 3, readonly [number, number]> = {
+    1: [-half, half],
+    2: [-half - gap - p2, -half - gap],
+    3: [half + gap, half + gap + p3],
+  }
+  return ([2, 1, 3] as const).map((place) => {
+    const [a0, a1] = spans[place]
+    return {
+      place,
+      digit: String(place) as '1' | '2' | '3',
+      a0,
+      a1,
+      mid: (a0 + a1) / 2,
+      top: APRON.height + daisSpec(place).height,
+      face: daisSpec(place).height,
+    }
+  })
 }
 
-function raisedDigit(digit: '1' | '2' | '3', width: number, height: number): BufferGeometry {
-  const t = 0.032
-  const hz = width * 0.78
-  const vt = width * 0.18
-  const hh = height * 0.13
-  const yTop = height * 0.38
-  const yMid = 0
-  const yBot = -height * 0.38
-  const xR = width * 0.28
-  const xL = -width * 0.28
-  const vH = height * 0.34
-  const parts: BufferGeometry[] = []
-  const hBar = (y: number) => parts.push(bevelBox(hz, hh, t, 0.003).translate(0, y, 0))
-  const vBar = (x: number, y: number) => parts.push(bevelBox(vt, vH, t, 0.003).translate(x, y, 0))
-  if (digit === '1') {
-    parts.push(bevelBox(vt * 1.15, height * 0.82, t, 0.003))
-    hBar(yBot)
-  } else if (digit === '2') {
-    hBar(yTop)
-    vBar(xR, height * 0.18)
-    hBar(yMid)
-    vBar(xL, -height * 0.18)
-    hBar(yBot)
-  } else {
-    hBar(yTop)
-    vBar(xR, height * 0.18)
-    hBar(yMid)
-    vBar(xR, -height * 0.18)
-    hBar(yBot)
-  }
-  return mergeParts(parts, `digit-${digit}`)
-}
-
-/** D-shaped dais: straight back, curved camera face (2026 F1-supplied blocks). */
-function daisSolid(width: number, height: number, depth: number): BufferGeometry {
-  const hw = width / 2
-  const radius = Math.min(hw, depth * 0.58)
-  const back = depth - radius
-  const y0 = -depth / 2
-  const outline: Array<readonly [number, number]> = [
-    [-hw, y0],
-    [hw, y0],
-    [hw, y0 + back],
-  ]
-  const segs = 14
-  for (let i = 0; i <= segs; i++) {
-    const a = (i / segs) * Math.PI
-    outline.push([Math.cos(a) * radius, y0 + back + Math.sin(a) * radius])
-  }
-  const geo = bevelPrism(outline, height, 0.008)
+/**
+ * An annular sector standing on end: the band lies in XZ about the shared arc centre, bows toward +Z, and
+ * extrudes `height` along Y centred on the origin. Angles are measured from the crown, +A toward +X.
+ */
+function arcSolid(
+  rIn: number,
+  rOut: number,
+  a0: number,
+  a1: number,
+  height: number,
+  bevel: number,
+  segments = 22,
+): BufferGeometry {
+  const geo = arcBand(rIn, rOut, a0 - Math.PI / 2, a1 - Math.PI / 2, height, bevel, segments)
   geo.rotateX(-Math.PI / 2)
-  geo.scale(1, 1, -1)
+  geo.translate(0, 0, ARC_Z)
   return geo
+}
+
+/** Ivory pinstripe following a painted arc, held back from each end so it cannot overshoot the corner. */
+function pinstripe(r: number, a0: number, a1: number, y: number, height: number): BufferGeometry {
+  return arcSolid(r - TRIM_IN, r + TRIM_OUT, a0 + 0.01, a1 - 0.01, height, 0.003, 18)
+    .translate(0, y, 0)
+}
+
+/** World point on an arc of `r` at angle `a`, as `[x, z]`. */
+function arcPoint(r: number, a: number): readonly [number, number] {
+  return [r * Math.sin(a), ARC_Z + r * Math.cos(a)]
+}
+
+/**
+ * A tier numeral: real arc bowls for 2 and 3, a flagged polygon for 1, so the digits read as painted
+ * signage rather than a seven-segment display. Authored facing +Z, `h` tall, centred on the origin.
+ */
+function numeral(digit: '1' | '2' | '3', h: number, proud: number): BufferGeometry {
+  const t = h * 0.19
+  const parts: BufferGeometry[] = []
+  const bowl = (cy: number, r: number, a0: number, a1: number): void => {
+    parts.push(arcBand(r - t / 2, r + t / 2, a0, a1, proud, 0.004, 20).translate(0, cy, 0))
+  }
+
+  if (digit === '1') {
+    const sw = t * 0.62
+    const flag = h * 0.3
+    parts.push(
+      bevelPrism(
+        [
+          [-sw, -h / 2],
+          [sw, -h / 2],
+          [sw, h / 2],
+          [-sw * 0.4, h / 2],
+          [-flag, h * 0.3],
+          [-flag * 0.82, h * 0.13],
+          [-sw, h * 0.24],
+        ],
+        proud,
+        0.004,
+      ),
+    )
+  } else if (digit === '2') {
+    const r = h * 0.245
+    const cy = h * 0.5 - t / 2 - r
+    const open = -0.62
+    bowl(cy, r, open, Math.PI + 0.12)
+    const from = [Math.cos(open) * r, cy + Math.sin(open) * r] as const
+    const to = [-h * 0.24, -h * 0.3] as const
+    const dx = to[0] - from[0]
+    const dy = to[1] - from[1]
+    const diagonal = bevelBox(Math.hypot(dx, dy) + t * 0.4, t, proud, 0.004)
+    diagonal.rotateZ(Math.atan2(dy, dx))
+    diagonal.translate((from[0] + to[0]) / 2, (from[1] + to[1]) / 2, 0)
+    parts.push(diagonal)
+    parts.push(bevelBox(h * 0.68, t, proud, 0.004).translate(0, -h / 2 + t / 2, 0))
+  } else {
+    const r = (h - t) / 4
+    bowl(r, r, -1.3, Math.PI * 0.96)
+    bowl(-r, r, -Math.PI * 0.96, 1.3)
+  }
+  return mergeParts(parts, `f1-podium: numeral ${digit}`)
+}
+
+/**
+ * Spigot clamps along a guarded front edge: a dark bracket that bites into the paint, straddles the glass
+ * and laps down over the face. This is the detail that reads as frameless glass rather than a railing.
+ */
+function clampRun(r: number, a0: number, a1: number, top: number): BufferGeometry {
+  const start = a0 + 0.024
+  const end = a1 - 0.024
+  const count = Math.max(2, Math.round(((end - start) * r) / 0.62) + 1)
+  const parts: BufferGeometry[] = []
+  for (let i = 0; i < count; i++) {
+    const a = start + ((end - start) * i) / (count - 1)
+    const block = bevelBox(0.058, 0.22, 0.072, 0.005)
+    block.rotateY(a)
+    const [x, z] = arcPoint(r + 0.026, a)
+    block.translate(x, top - 0.04, z)
+    parts.push(block)
+  }
+  return mergeParts(parts, 'f1-podium: clamps')
 }
 
 export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
   const config: F1PodiumConfig = {
-    width: Math.max(DAIS_SPAN + 0.4, options.width ?? defaults.width),
+    width: Math.max(MIN_WIDTH, options.width ?? defaults.width),
   }
 
   const bundle = acquireF1Materials()
   const kit = bundle.materials
   const extras: Material[] = []
-  const carpet = new MeshStandardMaterial({
-    name: 'f1-kit / podium carpet',
-    color: shade(TOKEN.COBALT_500, -0.62),
-    roughness: 0.92,
-    metalness: 0,
+  const paint = new MeshStandardMaterial({
+    name: 'f1-kit / podium maroon',
+    color: shade(TOKEN.RED_500, -0.4),
+    roughness: 0.58,
+    metalness: 0.04,
+  })
+  const apronPaint = new MeshStandardMaterial({
+    name: 'f1-kit / podium apron maroon',
+    color: shade(TOKEN.RED_500, -0.5),
+    roughness: 0.62,
+    metalness: 0.04,
+  })
+  const ivory = new MeshStandardMaterial({
+    name: 'f1-kit / podium ivory',
+    color: shade(TOKEN.DUST_300, 0.62),
+    roughness: 0.44,
+    metalness: 0.05,
   })
   const glass = new MeshStandardMaterial({
     name: 'f1-kit / podium glass',
-    color: shade(TOKEN.ICE_300, -0.28),
-    roughness: 0.12,
-    metalness: 0.18,
+    color: shade(TOKEN.ICE_300, -0.08),
+    roughness: 0.06,
+    metalness: 0.02,
+    transparent: true,
+    opacity: 0.24,
+    side: DoubleSide,
+    depthWrite: false,
   })
-  const daisCarpet = new MeshStandardMaterial({
-    name: 'f1-kit / dais carpet',
-    color: shade(TOKEN.COBALT_500, -0.42),
-    roughness: 0.9,
+  const fascia = new MeshStandardMaterial({
+    name: 'f1-kit / podium fascia',
+    color: shade(TOKEN.RED_500, -0.58),
+    roughness: 0.8,
     metalness: 0,
   })
-  extras.push(carpet, glass, daisCarpet)
+  const rigging = new MeshStandardMaterial({
+    name: 'f1-kit / podium rigging',
+    color: shade(TOKEN.RED_500, -0.78),
+    roughness: 0.86,
+    metalness: 0,
+  })
+  extras.push(paint, apronPaint, ivory, glass, fascia, rigging)
 
-  const ownsPlate = options.materials?.plate === undefined
   const materialSlots: Record<Slot, Material> = {
-    steps: options.materials?.steps ?? daisCarpet,
-    deck: options.materials?.deck ?? carpet,
+    steps: options.materials?.steps ?? paint,
+    deck: options.materials?.deck ?? apronPaint,
     barrier: options.materials?.barrier ?? glass,
-    frame: options.materials?.frame ?? kit.ink,
-    plate: options.materials?.plate ?? kit.shell,
+    frame: options.materials?.frame ?? fascia,
+    plate: options.materials?.plate ?? ivory,
   }
 
   const root = new Group(); root.name = 'f1-podium'
@@ -192,110 +318,119 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
 
   const rebuild = (): void => {
     releaseGenerated()
-    const w = config.width
-    const deckH = PODIUM.deck
-    const daisFront = PODIUM.p1.depth / 2
-    const daisBack = -PODIUM.p1.depth / 2
-    const railZ = daisFront + PODIUM.walkway
-    const backdropFront = daisBack - PODIUM.flagGap
-    const platformZ0 = daisBack
-    const platformZ1 = railZ
-    const platformDepth = platformZ1 - platformZ0
-    const platformZ = (platformZ0 + platformZ1) / 2
+    const apronHalf = Math.asin(Math.min(0.92, config.width / (2 * APRON_R)))
+    const deckTop = APRON.height
 
     emit(
       'deck',
-      bevelBox(w, deckH, platformDepth, 0.008).translate(0, deckH / 2, platformZ),
+      arcSolid(BACK_R, APRON_R, -apronHalf, apronHalf, deckTop, 0.01, 26)
+        .translate(0, deckTop / 2, 0),
       deck,
-      'deck',
+      'apron',
+    )
+    emit(
+      'plate',
+      pinstripe(APRON_R, -apronHalf, apronHalf, deckTop - 0.066, 0.032),
+      deck,
+      'apron-stripe-top',
+    )
+    emit(
+      'plate',
+      pinstripe(APRON_R, -apronHalf, apronHalf, 0.037, 0.018),
+      deck,
+      'apron-stripe-base',
     )
 
-    for (const place of [2, 1, 3] as const) {
-      const spec = daisSpec(place)
-      const x = daisX(place)
-      const y = deckH + spec.height / 2
+    for (const sector of sectors()) {
+      const { place, a0, a1, mid, top, face } = sector
+      // Sunk 20 mm into the apron so the seated cap never co-planes with the deck it stands on.
+      const height = face + 0.02
       emit(
         'steps',
-        daisSolid(spec.width, spec.height, spec.depth).translate(x, y, 0),
+        arcSolid(BACK_R, FACE_R, a0, a1, height, 0.01)
+          .translate(0, deckTop - 0.02 + height / 2, 0),
         steps,
         `dais-${place}`,
       )
+
+      const stripeTop = top - 0.071
+      const stripeBase = deckTop + 0.042
+      emit('plate', pinstripe(FACE_R, a0, a1, stripeTop, 0.032), steps, `stripe-top-${place}`)
+      emit('plate', pinstripe(FACE_R, a0, a1, stripeBase, 0.02), steps, `stripe-base-${place}`)
+
+      const proud = 0.026
+      const digit = numeral(sector.digit, Math.min(0.34, (face - 0.1) * 0.72), proud)
+      digit.rotateY(mid)
+      const [dx, dz] = arcPoint(FACE_R - TRIM_IN + proud / 2, mid)
+      digit.translate(dx, (stripeBase + 0.01 + stripeTop - 0.016) / 2, dz)
+      emit('plate', digit, plates, `numeral-${place}`)
+
+      const glassH = GLASS_RISE + GLASS_GRIP
       emit(
-        'steps',
-        bevelBox(spec.width * 0.88, 0.016, 0.012, 0.002).translate(
-          x, deckH + spec.height - 0.028, spec.depth / 2 + 0.004,
-        ),
-        steps,
-        `stripe-top-${place}`,
-        kit.shell,
+        'barrier',
+        arcSolid(
+          FACE_R + GLASS_STANDOFF,
+          FACE_R + GLASS_STANDOFF + GLASS_T,
+          a0 + 0.012,
+          a1 - 0.012,
+          glassH,
+          0.002,
+          18,
+        ).translate(0, top - GLASS_GRIP + glassH / 2, 0),
+        barrier,
+        `glass-${place}`,
       )
-      emit(
-        'steps',
-        bevelBox(spec.width * 0.88, 0.016, 0.012, 0.002).translate(
-          x, deckH + 0.028, spec.depth / 2 + 0.004,
-        ),
-        steps,
-        `stripe-bot-${place}`,
-        kit.shell,
-      )
-      const faceZ = spec.depth / 2 + 0.06
-      const plateW = spec.width * 0.78
-      const plateH = spec.height * 0.8
-      const digit = raisedDigit(NUMBERS[place - 1], plateW, plateH).translate(x, y, faceZ)
-      emit('plate', digit, plates, `plate-${place}`, ownsPlate ? kit.shell : undefined)
     }
 
-    const railH = PODIUM.barrierH
-    const railY = deckH + railH / 2
-    const glassT = 0.024
+    const apronGlassH = GLASS_RISE + GLASS_GRIP
     emit(
       'barrier',
-      bevelBox(w - 0.12, railH, glassT, 0.003).translate(0, railY, railZ),
+      arcSolid(
+        APRON_R + GLASS_STANDOFF,
+        APRON_R + GLASS_STANDOFF + GLASS_T,
+        -apronHalf + 0.012,
+        apronHalf - 0.012,
+        apronGlassH,
+        0.002,
+        22,
+      ).translate(0, deckTop - GLASS_GRIP + apronGlassH / 2, 0),
       barrier,
       'rail',
     )
-    emit(
-      'barrier',
-      bevelBox(w - 0.06, 0.028, 0.045, 0.003).translate(0, deckH + railH, railZ + 0.008),
-      barrier,
-      'handrail',
-      kit.steel,
-    )
-    const postH = railH + 0.08
-    const postY = deckH + postH / 2
-    const postParts: BufferGeometry[] = []
-    const postCount = 5
-    for (let i = 0; i < postCount; i++) {
-      const t = postCount === 1 ? 0.5 : i / (postCount - 1)
-      const x = (t - 0.5) * (w - 0.08)
-      postParts.push(bevelBox(0.04, postH, 0.04, 0.003).translate(x, postY, railZ + 0.018))
-      postParts.push(bevelBox(0.07, 0.03, 0.05, 0.002).translate(x, deckH + 0.08, railZ + 0.01))
-      postParts.push(bevelBox(0.07, 0.03, 0.05, 0.002).translate(x, deckH + railH - 0.06, railZ + 0.01))
-    }
-    emit('barrier', mergeParts(postParts, 'posts'), barrier, 'posts', kit.graphite)
 
-    const wallT = PODIUM.backdropT
+    const clamps: BufferGeometry[] = [clampRun(APRON_R, -apronHalf, apronHalf, deckTop)]
+    for (const sector of sectors()) {
+      clamps.push(clampRun(FACE_R, sector.a0, sector.a1, sector.top))
+    }
+    emit('barrier', mergeParts(clamps, 'f1-podium: clamps'), barrier, 'clamps', kit.graphite)
+
+    const wallW = config.width + 2.0
     const wallH = PODIUM.backdropH
-    const wallZ = backdropFront - wallT / 2
+    const wallT = PODIUM.backdropT
+    const wallZ = ARC_Z + BACK_R - PODIUM.flagGap - wallT / 2 - 0.04
+    emit('frame', bevelBox(wallW, wallH, wallT, 0.008).translate(0, wallH / 2, wallZ), frame, 'backdrop')
     emit(
       'frame',
-      bevelBox(w, wallH, wallT, 0.008).translate(0, wallH / 2, wallZ),
+      bevelBox(wallW + 0.06, 0.22, wallT + 0.05, 0.006).translate(0, 0.11, wallZ),
       frame,
-      'backdrop',
+      'skirt',
+      rigging,
     )
+    const seamH = wallH - 0.34
+    const seamParts: BufferGeometry[] = []
+    for (let i = 0; i < 5; i++) {
+      const x = (i / 4 - 0.5) * (wallW - 0.9)
+      seamParts.push(
+        bevelBox(0.07, seamH, 0.02, 0.003).translate(x, 0.28 + seamH / 2, wallZ + wallT / 2 - 0.008),
+      )
+    }
+    emit('frame', mergeParts(seamParts, 'f1-podium: seams'), frame, 'seams', rigging)
     emit(
       'frame',
-      bevelBox(w + 0.04, 0.08, wallT + 0.02, 0.004).translate(0, wallH - 0.04, wallZ),
+      bevelBox(wallW, 0.87, wallT * 0.7, 0.006).translate(0, wallH + 0.415, wallZ),
       frame,
-      'cap',
-      kit.graphite,
-    )
-    emit(
-      'frame',
-      bevelBox(w * 0.92, 0.06, wallT + 0.012, 0.003).translate(0, 2.35, wallZ + LAYER_CLEARANCE),
-      frame,
-      'belt',
-      kit.cobalt,
+      'rigging',
+      rigging,
     )
   }
   rebuild()
@@ -306,7 +441,7 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
     materials: materialSlots,
     getConfig: () => ({ ...config }),
     configure(patch) {
-      if (patch.width !== undefined) config.width = Math.max(DAIS_SPAN + 0.4, patch.width)
+      if (patch.width !== undefined) config.width = Math.max(MIN_WIDTH, patch.width)
       rebuild()
     },
     setMaterial(slot, material) {
@@ -324,13 +459,14 @@ export function createModel(options: F1PodiumOptions = {}): F1PodiumInstance {
   }
 }
 
+/** Near-frontal long lens at dais-top height: the reference framing, with the fascia filling the top. */
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
   return createF1Preview(createModel(), {
     aspect,
-    target: [0, 0.65, 0],
-    distance: 8.8,
+    target: [0, 1.05, 0.1],
+    distance: 10,
     fov: 30,
-    yaw: -0.22,
-    pitch: 0.34,
+    yaw: -0.15,
+    pitch: 0.2,
   })
 }

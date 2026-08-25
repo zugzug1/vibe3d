@@ -1,10 +1,14 @@
-// f1-tyre-gun — a pit-lane impact wrench: a two-stage motor barrel with an exhaust tail, a rubber
-// pistol grip with a guarded trigger, a heel air inlet, and a ribbed hollow socket on the anvil.
+// f1-tyre-gun — a pit-lane impact wrench: a cast alloy rear housing carrying the big anodized reverse
+// dial, a carbon-wrapped mid barrel, a chrome two-finger trigger blade slung under the nose, a rubber
+// pistol grip with a heel air inlet, and a ribbed hollow socket on the anvil.
 //
 // The read depends on three things a tapered blob cannot give you: a cylindrical motor housing with real
 // volume *behind* the grip, the air inlet (the single most identifiable feature of a pneumatic wrench),
 // and a proper anvil chain — bearing housing, exposed anvil, then a hollow socket — rather than a
 // dumbbell floating off the nose.
+//
+// The trigger blade pivots on a pin through Z, so it is authored in XY and thin along Z: from any side
+// view its skeletonized face and lightening hole are what read, not a foreshortened edge.
 //
 // `configure({ engaged })` slides the gun +X so the socket seats on a hub; `configure({ spinning: true })`
 // free-spins the socket via `update(deltaSeconds)`, and the status LED brightens while it runs.
@@ -78,6 +82,18 @@ const defaults: F1TyreGunConfig = { engaged: 0, spinning: false }
 const GUN_ENGAGE_TRAVEL = 0.2 // how far the gun slides +X from held-back (0) to seated (1)
 const GUN_SPIN_RATE = 55 // rad/s the socket spins while running (impact-wrench fast)
 
+// Reverse dial: bezel outer radius is half the housing radius, so the dial owns the butt without
+// eating its cast silhouette.
+const DIAL = { x: -0.248, y: -0.012, r: 0.056 }
+// Tip ring: thin along the tool axis, but 1.4x the socket OD so a readable band of it stays clear of
+// the spline in any three-quarter view.
+const COLLAR_X = 0.086
+const COLLAR_R = 0.074
+const COLLAR_W = 0.028
+// Trigger hangs forward of the grip so two fingers clear the front strap; the pivot sits up inside
+// the nose taper.
+const TRIGGER = { x: 0.070, y: -0.126, pivotX: 0.062, pivotY: -0.080 }
+
 // ---------------------------------------------------------------------------------------------------
 // Local geometry helpers, deliberately private to this file rather than shared through f1-kit-core:
 // every `.ts` under f1-kit-core ships to kit consumers as permanent public surface.
@@ -90,6 +106,16 @@ function axial(
   const geo = new CylinderGeometry(rTop, rBottom, length, radial, 1, open)
   geo.rotateZ(Math.PI / 2)
   geo.translate(x, 0, 0)
+  return geo
+}
+
+/** A cylinder laid along +Z, for the cast pad that stands the dial off the barrel flank. */
+function lateral(
+  rFront: number, rBack: number, length: number, x: number, y: number, z: number, radial = 24,
+): BufferGeometry {
+  const geo = new CylinderGeometry(rFront, rBack, length, radial, 1)
+  geo.rotateX(Math.PI / 2)
+  geo.translate(x, y, z)
   return geo
 }
 
@@ -126,27 +152,25 @@ function carbonTwillTexture(n = 64): DataTexture {
   return tex
 }
 
-/** One two-finger slab with a circular cutout, plate in YZ, thin along +X. */
+/**
+ * The two-finger trigger blade: a tall skeletonized plate in XY, thin along Z, hung from the pivot at
+ * its top-rear corner. The rear edge is scalloped for the fingers and the toe hooks forward.
+ */
 function triggerPlate(): BufferGeometry {
-  const hw = 0.024
-  const hh = 0.052
-  const corner = 0.007
-  const hole = 0.019
-  const thick = 0.008
-  const bevel = 0.0015
+  const w = 0.027
+  const h = 0.048
+  const thick = 0.013
+  const bevel = 0.0012
   const shape = new Shape()
-  shape.moveTo(-hw + corner, -hh)
-  shape.lineTo(hw - corner, -hh)
-  shape.quadraticCurveTo(hw, -hh, hw, -hh + corner)
-  shape.lineTo(hw, hh - corner)
-  shape.quadraticCurveTo(hw, hh, hw - corner, hh)
-  shape.lineTo(-hw + corner, hh)
-  shape.quadraticCurveTo(-hw, hh, -hw, hh - corner)
-  shape.lineTo(-hw, -hh + corner)
-  shape.quadraticCurveTo(-hw, -hh, -hw + corner, -hh)
+  shape.moveTo(-0.013, h)
+  shape.lineTo(w * 0.50, h * 0.78)
+  shape.lineTo(w * 0.86, -h * 0.06)
+  shape.quadraticCurveTo(w * 0.92, -h * 0.74, w * 0.30, -h)
+  shape.quadraticCurveTo(-w * 0.34, -h * 1.02, -w * 0.66, -h * 0.52)
+  shape.quadraticCurveTo(-w * 0.82, -h * 0.06, -0.013, h)
   shape.closePath()
   const cut = new Path()
-  cut.absarc(0, 0, hole, 0, Math.PI * 2, true)
+  cut.absarc(0.0015, -0.008, 0.0155, 0, Math.PI * 2, true)
   shape.holes.push(cut)
   const geo = new ExtrudeGeometry(shape, {
     depth: thick - 2 * bevel,
@@ -161,9 +185,36 @@ function triggerPlate(): BufferGeometry {
   geo.translate(0, 0, -(thick / 2 - bevel))
   const creased = toCreasedNormals(geo, MathUtils.degToRad(50))
   if (creased !== geo) geo.dispose()
-  creased.rotateY(Math.PI / 2)
-  creased.translate(0.058, -0.088, 0)
+  creased.translate(TRIGGER.x, TRIGGER.y, 0)
   return creased
+}
+
+/**
+ * The rotation cue stamped on the tip ring: "LH" in raised bars on the ring's outer band at +Z.
+ * Strokes are sized to survive a 1024px capture, so they are engraving-thick rather than hairlines.
+ */
+function lhCue(radius: number): BufferGeometry[] {
+  const z = radius + 0.0006
+  const depth = 0.006
+  const stroke = 0.0038
+  const tall = 0.020
+  const stem = (x: number): BufferGeometry => {
+    const g = bevelBox(stroke, tall, depth, 0.0006)
+    g.translate(x, 0, z)
+    return g
+  }
+  const bar = (x: number, y: number, width: number): BufferGeometry => {
+    const g = bevelBox(width, stroke, depth, 0.0006)
+    g.translate(x, y, z)
+    return g
+  }
+  return [
+    stem(0.0765),
+    bar(0.0784, -0.0081, 0.0076),
+    stem(0.0855),
+    stem(0.0935),
+    bar(0.0895, 0, 0.0080),
+  ]
 }
 
 export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
@@ -183,7 +234,7 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     const weave = carbonTwillTexture()
     textures.push(weave)
     carbon = new MeshStandardMaterial({
-      name: 'f1-kit / tyre-gun carbon cone',
+      name: 'f1-kit / tyre-gun carbon barrel',
       map: weave,
       color: shade(TOKEN.SHELL_200, -0.15),
       roughness: 0.025,
@@ -255,24 +306,35 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
   const build = (): void => {
     releaseGenerated()
 
-    // --- Fat T-shaped impact housing: volume behind the grip, not a heat-gun taper -------------------
+    // --- Cast alloy rear housing: the butt, its vent grille, flanks and the reverse-dial pad ---------
+    // Only the rear third is alloy; the mid barrel is carbon, as on the real gun.
     const gunmetalParts: BufferGeometry[] = [
-      axial(0.104, 0.118, 0.11, -0.118, 24),
-      axial(0.118, 0.108, 0.14, -0.242, 24),
+      axial(0.118, 0.106, 0.115, -0.2545, 24),
     ]
     for (const sz of [-1, 1] as const) {
-      const cover = bevelBox(0.16, 0.122, 0.024, 0.014)
-      cover.translate(-0.12, 0, sz * 0.086)
+      const cover = bevelBox(0.115, 0.118, 0.024, 0.014)
+      cover.translate(-0.246, 0, sz * 0.086)
       gunmetalParts.push(cover)
     }
-    for (let i = 0; i < 10; i++) {
+    for (let i = 0; i < 8; i++) {
       const rib = bevelBox(0.005, 0.016, 0.13, 0.0015)
-      rib.translate(-0.28 + i * 0.012, 0.108, 0)
+      rib.translate(-0.286 + i * 0.012, 0.108, 0)
       gunmetalParts.push(rib)
     }
-    emit('gunmetal', mergeParts(gunmetalParts, 'barrel'), body, 'barrel')
+    // Deep pad, so the dial's lower rim never floats off the barrel's falling curvature (rule 8).
+    gunmetalParts.push(lateral(DIAL.r, DIAL.r + 0.024, 0.052, DIAL.x, DIAL.y, 0.088, 28))
+    emit('gunmetal', mergeParts(gunmetalParts, 'housing'), body, 'housing')
 
-    // Glossy carbon taper, small end just behind the spline so the blue collar can wrap it.
+    // --- Glossy carbon: a wrapped mid barrel running into the nose taper ------------------------------
+    const midBarrel = axial(0.106, 0.118, 0.136, -0.131, 32)
+    generated.push(midBarrel)
+    const midMesh = new Mesh(midBarrel, carbon)
+    midMesh.name = 'carbon-barrel'
+    midMesh.castShadow = true
+    midMesh.receiveShadow = true
+    body.add(midMesh)
+
+    // Small end just behind the spline so the blue collar can wrap it.
     const cone = axial(0.050, 0.096, 0.166, 0.015, 40, true)
     generated.push(cone)
     const coneMesh = new Mesh(cone, carbon)
@@ -287,11 +349,15 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     }
     emit('gripRubber', mergeParts(boltParts, 'flange-bolts'), body, 'flange-bolts')
 
-    emit('gripRubber', triggerPlate(), body, 'trigger')
-    const triggerRim = bevelRing(0.0185, 0.0205, 0.0085, 0.0008, 24)
-    triggerRim.rotateY(Math.PI / 2)
-    triggerRim.translate(0.058, -0.088, 0)
-    emit('steel', triggerRim, body, 'trigger-rim')
+    // --- Chrome trigger: blade, hanger bracket and pivot pin, all one steel part ----------------------
+    const triggerParts: BufferGeometry[] = [triggerPlate()]
+    const hanger = bevelBox(0.019, 0.050, 0.021, 0.002)
+    hanger.translate(TRIGGER.pivotX, -0.056, 0)
+    triggerParts.push(hanger)
+    triggerParts.push(bolt([TRIGGER.pivotX, TRIGGER.pivotY, 0], 0.0058, 0.027, AXIS_Z))
+    emit('steel', mergeParts(triggerParts, 'trigger'), body, 'trigger')
+
+    // --- Air inlet, dial hardware and the LH cue on the tip ring --------------------------------------
     const steelParts: BufferGeometry[] = []
     const inlet = new CylinderGeometry(0.015, 0.015, 0.048, 14)
     inlet.translate(-0.018, -0.312, 0)
@@ -299,9 +365,19 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     const inletCollar = new CylinderGeometry(0.021, 0.021, 0.016, 14)
     inletCollar.translate(-0.018, -0.288, 0)
     steelParts.push(inletCollar)
-    const dialBolt = bolt([-0.248, 0.012, 0.116], 0.008, 0.016, AXIS_Z)
-    steelParts.push(dialBolt)
-    emit('steel', mergeParts(steelParts, 'inlet-and-dial'), body, 'nose')
+    const bezel = bevelRing(DIAL.r - 0.009, DIAL.r, 0.016, 0.0012, 32)
+    bezel.translate(DIAL.x, DIAL.y, 0.118)
+    steelParts.push(bezel)
+    for (let i = 0; i < 14; i++) {
+      const notch = bevelBox(0.0042, 0.0075, 0.016, 0.0008)
+      notch.translate(DIAL.r - 0.0012, 0, 0)
+      notch.rotateZ((i / 14) * Math.PI * 2)
+      notch.translate(DIAL.x, DIAL.y, 0.118)
+      steelParts.push(notch)
+    }
+    steelParts.push(bolt([DIAL.x, DIAL.y, 0.130], 0.0105, 0.020, AXIS_Z))
+    steelParts.push(...lhCue(COLLAR_R))
+    emit('steel', mergeParts(steelParts, 'hardware'), body, 'hardware')
 
     // --- Slender rubber grip -------------------------------------------------------------------------
     const gripParts: BufferGeometry[] = [
@@ -314,16 +390,17 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     ]
     emit('gripRubber', mergeParts(gripParts, 'grip'), body, 'grip')
 
-    // Thin blue collar wrapping the cone, immediately behind the spline — not a nose flange.
-    // Keep collar and rear dial as separate meshes: merging them makes a paper-thin AABB that
+    // --- Anodized blue: a thin tip ring and the big reverse dial face ---------------------------------
+    // Keep the ring and the dial as separate meshes: merging them makes a paper-thin AABB that
     // plate-overlaps the grip (rule 8).
-    // Thick ring, not a thin shell: inner hugs the spline OD so there is no dark tunnel.
-    const collar = bevelRing(0.040, 0.050, 0.012, 0.0012, 28)
+    // Thick ring, not a thin shell: inner hugs the cone OD so there is no dark tunnel.
+    const collar = bevelRing(0.048, COLLAR_R, COLLAR_W, 0.0014, 32)
     collar.rotateY(Math.PI / 2)
-    collar.translate(0.093, 0, 0)
+    collar.translate(COLLAR_X, 0, 0)
     emit('accent', collar, body, 'collar')
-    const reverseDial = bevelDisc(0.038, 0.012, 0.002, 28)
-    reverseDial.translate(-0.248, 0.012, 0.114)
+    // The dial face fills its chrome bezel and stands proud of it, so the butt reads dial-first.
+    const reverseDial = bevelDisc(DIAL.r - 0.009, 0.018, 0.0025, 36)
+    reverseDial.translate(DIAL.x, DIAL.y, 0.120)
     emit('accent', reverseDial, body, 'rear-dial')
 
     const hose = ovalTube([
@@ -340,15 +417,16 @@ export function createModel(options: F1TyreGunOptions = {}): F1TyreGunInstance {
     emit('led', ledGeo, body, 'led')
 
     // --- Spinner: short anvil, ribbed spline and visibly hollow round socket -------------------------
+    // Sit the spline forward of the tip collar/hardware so rule-8 clearance stays ≥ FACE.
     const spinnerParts: BufferGeometry[] = [
-      tubeSection(0.026, 0.054, [0.121, 0, 0], AXIS_X, 16),
+      tubeSection(0.026, 0.054, [0.138, 0, 0], AXIS_X, 16),
     ]
     for (let i = 0; i < 12; i++) {
       const angle = (i / 12) * Math.PI * 2
       const spline = bevelBox(0.050, 0.012, 0.012, 0.002)
       spline.translate(0, 0.032, 0)
       spline.rotateX(angle)
-      spline.translate(0.121, 0, 0)
+      spline.translate(0.138, 0, 0)
       spinnerParts.push(spline)
     }
     emit('steel', mergeParts(spinnerParts, 'socket'), spinner, 'socket')
