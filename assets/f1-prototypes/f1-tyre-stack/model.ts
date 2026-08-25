@@ -1,9 +1,13 @@
 // f1-tyre-stack — a long chrome two-tier trolley packed with individually blanketed F1 tyres: the
-// pit-lane landmark a garage is read by. Each padded warmer covers its tyre with a dished face, a hard
-// shoulder and a flat tread wrap, so the row grooves into distinct courses instead of merging into one
-// drum. The outermost warmer carries the supplier's ring mark, and the near course of the bottom tier
-// goes out unbagged so the tyre's own sidewall and tread mass stay readable. Depends on `f1-tyre` for
-// that anatomy while keeping stable stack-level runtime anchors and configuration.
+// pit-lane landmark a garage is read by. Each padded warmer covers its tyre in black quilted fabric with
+// a dished face, a hard shoulder and a flat tread wrap, and carries one bold high-vis position stripe
+// around the crown — yellow on the fronts, red on the rears, in the blocks a garage loads sets in. That
+// stripe is the graphic the row is recognised by from the pit wall, and it only works as a mark *on*
+// black: colour the bag itself and the whole thing reads as a rack of coral drums. The outboard warmer
+// faces carry the supplier's ring mark, every warmer trails a short black power lead to its connector,
+// and the near course of the bottom tier goes out unbagged so the tyre's own sidewall and tread mass stay
+// readable. Depends on `f1-tyre` for that anatomy while keeping stable stack-level runtime anchors and
+// configuration.
 
 import {
   BufferGeometry,
@@ -24,6 +28,7 @@ import {
   acquireF1Materials,
   arcBand,
   bevelBox,
+  bevelRing,
   castor,
   createCompoundMaterial,
   createF1Preview,
@@ -84,10 +89,25 @@ const BLANKET_HALF = 0.18  // half a padded warmer's width, measured at its wide
 const BLANKET_R = R + 0.04 // a warmer's outer radius over the tread
 const TH = 0.366           // course pitch: a warmer's full width plus a 6 mm seam
 
+// The position stripe: 144 mm of the 308 mm tread wrap. Just under half, which is the band this shape has
+// twice been wrong about in both directions — two thirds of the crown made every course a coloured drum,
+// a third left the mark reading as trim. At this width the stripe dominates the lit crown at a glance
+// while the shoulders and faces stay unmistakably black quilt. It stands 16 mm proud, so it also carries
+// a lit side wall and a shadow line onto the fabric either side rather than relying on area alone.
+const STRIPE_HALF = 0.072
+const STRIPE_PROUD = 0.016
+const STRIPE_BITE = 0.009  // enough to stay seated through the warmer's own surface wobble
+
+// How many courses a colour runs for before the next block starts. A set is two fronts and two rears, a
+// garage loads them in that order, and a trolley leaves with three sets on it — so the row arrives in
+// blocks, not alternating course by course, which would read as a pattern rather than as staged sets.
+const STRIPE_BLOCK = 3
+
 const FRAME_HALF_D = 0.42  // frame half-depth — clear of the 0.80 m courses, so posts read in front of them
 const CRADLE_Z = 0.2       // how far off centre the pair of rails each tier nests between sits
 const TIER_Y = [0.56, 1.4] as const
 const HOOP_TOP = 1.52      // the push handles are the only frame member that rises past the top tier
+const CASTOR_R = 0.074
 
 // Buried tyres do not need the hero tread resolution — the blanket hides most of the crown, and only the
 // bottom course and the top sidewall are ever seen. This is the tyre's single LOD knob.
@@ -115,6 +135,9 @@ function jitter(index: number, salt: number): number {
  * which is exactly what makes a swept blanket read as a moulded drum however well the vertical profile is
  * shaped. Perturbing the radius per vertex breaks that circle without needing a hand-authored sweep, and
  * `phase` moves the perturbation on per course, so the row is not one slack shape repeated a dozen times.
+ *
+ * Because it is a pure function of angle and height, the same amount and phase applied to a band laid on
+ * the same revolve deforms the two together, and the band stays seated instead of cutting through it.
  */
 function wobble(geometry: BufferGeometry, amount: number, phase: number): BufferGeometry {
   const position = geometry.getAttribute('position')
@@ -185,6 +208,26 @@ const BLANKET_HALF_PROFILE: ReadonlyArray<readonly [number, number]> = [
   [BLANKET_R, 0.026], // and the tread wrap runs at constant radius from here
 ]
 
+/**
+ * How far the outboard face sits inboard of the widest plane, at a given radius.
+ *
+ * A printed mark laid on a *dished* face cannot be parked at one flat depth. The face falls away by 6 mm
+ * across the radii a supplier ring occupies and by 13 mm again by the time it reaches the wordmark, so a
+ * mark set placed at one depth either buries its inner half or floats its outer half off the surface.
+ * Reading the depth off the same profile the face is revolved from, per mark, keeps all of them seated,
+ * and it stays correct if that profile is ever retuned.
+ */
+function faceInset(radius: number): number {
+  for (let i = 1; i < BLANKET_HALF_PROFILE.length; i++) {
+    const [rIn, insetIn] = BLANKET_HALF_PROFILE[i - 1]!
+    const [rOut, insetOut] = BLANKET_HALF_PROFILE[i]!
+    if (radius > rOut) continue
+    const t = Math.min(1, Math.max(0, (radius - rIn) / Math.max(1e-6, rOut - rIn)))
+    return insetIn + (insetOut - insetIn) * t
+  }
+  return BLANKET_HALF_PROFILE[BLANKET_HALF_PROFILE.length - 1]![1]
+}
+
 export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstance {
   const config: F1TyreStackConfig = {
     count: Math.max(1, Math.round(options.count ?? defaults.count)),
@@ -203,26 +246,51 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
 
   // Warmers photograph near black with a soft sheen. The shared `fabric` value is pitched for a single
   // strap or bag read against a dark garage; a whole row of it turns the courses mid grey and the
-  // grading bands stop being the brightest thing on the prop.
+  // position stripes stop being the brightest thing on the prop.
   const quilt = own(kit.fabric.clone())
   quilt.name = 'f1-tyre-stack / warmer shell'
   quilt.color.set(shade(TOKEN.INK_950, -0.1))
   quilt.roughness = 0.9
 
-  // The webbing is the compound's grading colour, which is what a row of these is actually read by from
-  // the pit wall — dyed a value step down from the moulded sidewall paint the token names, or a dozen
-  // bands across a black row blow out to cream. Owned here so `configure({ compound })` recolours it,
-  // and never mutated if a consumer supplied their own strap material (rule 16).
-  const webbing = own(createCompoundMaterial(config.compound))
-  webbing.name = 'f1-tyre-stack / webbing'
-  webbing.color.set(shade(COMPOUND_TOKEN[config.compound], -0.22))
-  webbing.roughness = 0.82
+  // The two position colours are the yellow/red pair out of the sport's own grading key.
+  //
+  // Dyed webbing left fabric-rough takes so much bounce off a garage key that Dawn's tonemapper hands the
+  // colour back as coral and cream. Emissive is the wrong lever against that: adding light drives the
+  // stripe further up the curve, which is exactly where the chroma is being crushed. Going the other way
+  // works — a deeper albedo, near-zero metalness so no grey specular is mixed through the diffuse, and a
+  // tight coated sheen. That keeps the lit face on the steep part of the curve, where hue survives. Owned
+  // here, and never mutated if a consumer supplied their own strap material (rule 16).
+  const frontStripe = own(createCompoundMaterial('medium'))
+  frontStripe.name = 'f1-tyre-stack / front position stripe'
+  frontStripe.color.set(shade(COMPOUND_TOKEN.medium, -0.08))
+  frontStripe.roughness = 0.4
+  frontStripe.metalness = 0.06
+
+  const rearStripe = own(createCompoundMaterial('soft'))
+  rearStripe.name = 'f1-tyre-stack / rear position stripe'
+  // The red is sunk further than the yellow: `RED-500` carries enough blue to go salmon the moment it is
+  // lit hard, and value is the only lever the palette leaves for holding it at red.
+  rearStripe.color.set(shade(COMPOUND_TOKEN.soft, -0.3))
+  rearStripe.roughness = 0.4
+  rearStripe.metalness = 0.06
+
+  // Castor tread is moulded rubber, not the frame's bright steel. Sunk out of `ICE-300` so it lands
+  // blue-grey and the four wheels read cool against the chrome forks instead of dissolving into them.
+  const castorRubber = own(new MeshStandardMaterial({
+    name: 'f1-tyre-stack / castor tread',
+    color: shade(TOKEN.ICE_300, -0.5),
+    roughness: 0.66,
+    metalness: 0.08,
+  }))
 
   const materialSlots: Record<Slot, Material> = {
     blanket: options.materials?.blanket ?? quilt,
-    strap: options.materials?.strap ?? webbing,
+    strap: options.materials?.strap ?? frontStripe,
     cable: options.materials?.cable ?? kit.ink,
   }
+  // A consumer overriding `strap` is overriding the webbing, not half of it, so the rear block follows
+  // the slot when one was supplied and only falls back to the red when it was not.
+  const rearStripeMaterial = options.materials?.strap ?? rearStripe
 
   // Runtime anchors: created once, never replaced (rules 10, 14).
   const root = new Group()
@@ -253,9 +321,16 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
     for (const slot of Object.keys(meshesBySlot) as Slot[]) meshesBySlot[slot].length = 0
   }
 
-  const emit = (slot: Slot, geometry: BufferGeometry, group: Group, name: string): void => {
+  /**
+   * Publish one merged mesh into a consumer material slot. `material` overrides the slot's default for
+   * this mesh alone — the two-tone stripe row is two meshes on one slot — while still registering with
+   * the slot, so `setMaterial` retargets the whole row.
+   */
+  const emit = (
+    slot: Slot, geometry: BufferGeometry, group: Group, name: string, material?: Material,
+  ): void => {
     generated.push(geometry)
-    const mesh = new Mesh(geometry, materialSlots[slot])
+    const mesh = new Mesh(geometry, material ?? materialSlots[slot])
     mesh.name = name
     mesh.castShadow = true
     mesh.receiveShadow = true
@@ -285,9 +360,17 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
     const tyrePosition = (index: number): Vector3 =>
       new Vector3(((index % columns) - (columns - 1) / 2) * TH, TIER_Y[index < columns ? 0 : 1], 0)
 
+    // Offsetting the top tier by one block stops the two tiers from stacking into vertical bars.
+    const isFront = (index: number): boolean => {
+      const column = index % columns
+      const tier = index < columns ? 0 : 1
+      return (Math.floor(column / STRIPE_BLOCK) + tier) % 2 === 0
+    }
+
     // --- The tyres themselves ------------------------------------------------------------------------
     // One tyre geometry set, drawn `count` times via InstancedMesh. GPU buffers exist once; dispose
     // runs once on the prototype. The prototype root stays off-scene so its meshes are not extra draws.
+    // `compound` reaches a visible surface through the unbagged course's own sidewall grading.
     prototype = createTyre({
       compound,
       treadSegments: STACK_TREAD_SEGMENTS,
@@ -313,7 +396,7 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
       tyresGroup.add(instanced)
     })
 
-    // --- Individual full-coverage warmers ------------------------------------------------------------
+    // --- Individual full-coverage warmers, with their closures ---------------------------------------
     const profile: Array<readonly [number, number]> = [
       ...BLANKET_HALF_PROFILE.map(([r, inset]) => [r, -BLANKET_HALF + inset] as const),
       ...[...BLANKET_HALF_PROFILE].reverse().map(([r, inset]) => [r, BLANKET_HALF - inset] as const),
@@ -326,52 +409,76 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
       warmer.rotateZ(-Math.PI / 2)
       warmer.translate(position.x, position.y, position.z)
       blanketParts.push(warmer)
+      // The buckle is a black plastic clip, so it merges into the shell rather than costing a draw of its
+      // own. Nobody does them up at the same point on the clock, and a row of a dozen identical ones at
+      // bottom-dead-centre is the tell that this was generated: spread them over the aisle side.
+      const closure = bevelBox(0.052, 0.044, 0.03, 0.005)
+      closure.translate(0, 0, BLANKET_R + STRIPE_PROUD + 0.005)
+      closure.rotateX(jitter(i, 1) * 0.85 - 0.35)
+      closure.translate(position.x, position.y, position.z)
+      blanketParts.push(closure)
     }
     emit('blanket', mergeParts(blanketParts, 'blankets'), blanketGroup, 'blankets')
 
-    // --- Flat grading webbing and its closure --------------------------------------------------------
-    const strapParts: BufferGeometry[] = []
+    // --- The position stripe: one bold belt per warmer, yellow front / red rear ----------------------
+    // Wobbled with the same amount and phase as its host warmer, so the belt follows the slack of the bag
+    // instead of cutting a machined circle through it.
+    const frontParts: BufferGeometry[] = []
+    const rearParts: BufferGeometry[] = []
     for (let i = 0; i < count; i++) {
       if (i === bare) continue
       const position = tyrePosition(i)
-      // About a fifth of the course pitch. Any thinner and it reads as piping on a black bag; any wider
-      // and a dozen of them turn the whole row into a banded pattern with no black left to sit on.
-      const half = 0.038
-      const band = latheY([
-        [BLANKET_R - 0.002, -half],
-        [BLANKET_R + 0.011, -half + 0.005],
-        [BLANKET_R + 0.011, half - 0.005],
-        [BLANKET_R - 0.002, half],
-        [BLANKET_R - 0.002, -half],
+      const inner = BLANKET_R - STRIPE_BITE
+      const outer = BLANKET_R + STRIPE_PROUD
+      const belt = latheY([
+        [inner, -STRIPE_HALF],
+        [outer, -STRIPE_HALF + 0.008],
+        [outer, STRIPE_HALF - 0.008],
+        [inner, STRIPE_HALF],
+        [inner, -STRIPE_HALF],
       ], 44)
-      band.rotateZ(-Math.PI / 2)
-      band.translate(position.x, position.y, position.z)
-      strapParts.push(band)
-      // Nobody does the buckles up at the same point on the clock, and a row of a dozen identical ones
-      // at bottom-dead-centre is the tell that this was generated. Spread them over the aisle side.
-      const closure = bevelBox(0.058, 0.052, 0.03, 0.005)
-      closure.translate(0, 0, BLANKET_R + 0.006)
-      closure.rotateX(jitter(i, 1) * 0.85 - 0.35)
-      closure.translate(position.x, position.y, position.z)
-      strapParts.push(closure)
+      wobble(belt, 0.008, jitter(i, 0) * Math.PI)
+      belt.rotateZ(-Math.PI / 2)
+      belt.translate(position.x, position.y, position.z)
+      ;(isFront(i) ? frontParts : rearParts).push(belt)
     }
-    emit('strap', mergeParts(strapParts, 'straps'), blanketGroup, 'straps')
+    if (frontParts.length > 0) {
+      emit('strap', mergeParts(frontParts, 'front-stripes'), blanketGroup, 'front-stripes')
+    }
+    if (rearParts.length > 0) {
+      emit('strap', mergeParts(rearParts, 'rear-stripes'), blanketGroup, 'rear-stripes',
+        rearStripeMaterial)
+    }
 
-    // --- The supplier's ring mark, on the one face that is actually seen -----------------------------
-    // Every other face is buried by the next course, and the bottom tier's near course is unbagged, so
-    // this is one pair of arcs rather than `count` of them. They sit inside the flat of the face: run
-    // them out near the shoulder and the surface has already begun to turn, which foreshortens the ring
-    // to a thread from any angle that shows the row.
-    const faceX = -rowHalf + 0.012 // 4 mm into the face at the radii the arcs occupy, 8 mm proud of it
-    const mark = (rIn: number, rOut: number, from: number, to: number): BufferGeometry => {
-      const band = arcBand(BLANKET_R * rIn, BLANKET_R * rOut, from * Math.PI, to * Math.PI, 0.012, 0.002)
-      band.rotateY(-Math.PI / 2)
-      band.translate(faceX, TIER_Y[1], 0)
-      return band
+    // --- The supplier's ring mark, on the black faces that are actually seen -------------------------
+    // Every interior face is buried by the next course, so this is three mark sets rather than `count` of
+    // them: both ends of the top tier, and the far end of the bottom tier — the near end of that tier is
+    // where the unbagged course sits, and it carries the mark on its own sidewall.
+    const brand = (facing: 1 | -1, centreY: number): BufferGeometry[] => {
+      // Each mark is placed at the depth its *own* radius sits at, not at one depth for the set.
+      const place = (geometry: BufferGeometry, meanRadius: number): BufferGeometry => {
+        const inset = faceInset(meanRadius)
+        geometry.rotateY(facing * Math.PI / 2)
+        geometry.translate(facing < 0 ? -rowHalf + inset : rowHalf - inset, centreY, 0)
+        return geometry
+      }
+      // The wordmark plate, slightly off square and off centre: applied by hand, not moulded in.
+      const plate = bevelBox(0.152, 0.044, 0.018, 0.005)
+      plate.rotateZ(0.08)
+      plate.translate(-0.012, BLANKET_R * 0.42, 0)
+      return [
+        // The full ring, not an arc pair: a broken ring foreshortens to a hook from any angle that also
+        // shows the row, which is what stopped the earliest mark from reading as a supplier badge.
+        place(bevelRing(BLANKET_R * 0.58, BLANKET_R * 0.72, 0.02, 0.003, 44), BLANKET_R * 0.65),
+        place(arcBand(BLANKET_R * 0.34, BLANKET_R * 0.46, -0.46 * Math.PI, 0.1 * Math.PI, 0.016, 0.002, 24),
+          BLANKET_R * 0.4),
+        place(plate, BLANKET_R * 0.44),
+      ]
     }
     fixture(mergeParts([
-      mark(0.53, 0.66, -0.28, 1.08),
-      mark(0.44, 0.75, 0.8, 1.2),
+      ...brand(-1, TIER_Y[1]),
+      ...brand(1, TIER_Y[1]),
+      ...brand(1, TIER_Y[0]),
     ], 'face-marks'), kit.amber, 'face-marks')
 
     // --- Chrome two-tier wheeled trolley -------------------------------------------------------------
@@ -424,33 +531,67 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
         ], 0.022, 10))
       }
     }
+    const wheels: Array<{ at: [number, number, number]; swivel: number }> = []
     for (const sx of [-1, 1] as const) {
       for (const sz of [-1, 1] as const) {
-        rackParts.push(castor([sx * (rowHalf - 0.26), 0, sz * FRAME_HALF_D], 0.074, sx * sz * 0.4))
+        const at: [number, number, number] = [sx * (rowHalf - 0.26), 0, sz * FRAME_HALF_D]
+        wheels.push({ at, swivel: sx * sz * 0.4 })
+        rackParts.push(castor(at, CASTOR_R, sx * sz * 0.4))
       }
     }
     fixture(mergeParts(rackParts, 'rack'), kit.steel, 'two-tier-rack')
 
-    // --- One short lead and connector per warmer ----------------------------------------------------
+    // The moulded tread over each castor wheel, standing proud of the chrome fork it turns in and wide
+    // enough to be the wheel rather than a tyre on it. Authored through the same rotate-then-place order
+    // the shared `castor` uses, so it lands on its own wheel.
+    const treadParts: BufferGeometry[] = []
+    for (const { at, swivel } of wheels) {
+      const half = CASTOR_R * 0.3
+      const tread = latheY([
+        [CASTOR_R * 0.5, -half],
+        [CASTOR_R * 1.08, -half + CASTOR_R * 0.05],
+        [CASTOR_R * 1.1, 0],
+        [CASTOR_R * 1.08, half - CASTOR_R * 0.05],
+        [CASTOR_R * 0.5, half],
+        [CASTOR_R * 0.5, -half],
+      ], 18)
+      tread.rotateZ(Math.PI / 2)
+      tread.rotateY(swivel)
+      tread.translate(at[0], at[1] + CASTOR_R, at[2])
+      treadParts.push(tread)
+    }
+    fixture(mergeParts(treadParts, 'castor-treads'), castorRubber, 'castor-treads')
+
+    // --- One short black power lead and connector per warmer -----------------------------------------
+    // The lead leaves the wrap just off top-dead-centre and runs down the aisle side to a connector
+    // resting on the crown. Two things keep it reading as a cable: it stays outside the warmer's own
+    // radius the whole way, because a lead that droops toward the axis is a lead inside the tyre; and it
+    // is held low and asymmetric, because a symmetric loop standing clear of the crown is a bail handle.
     const cableParts: BufferGeometry[] = []
     for (let i = 0; i < count; i++) {
       if (i === bare) continue
       const position = tyrePosition(i)
       const side = i % 2 === 0 ? 1 : -1
-      // Leaves the wrap up near the crown, angled out toward the aisle a garage would plug it in from.
-      const lift = 0.5 + jitter(i, 2) * 0.14
-      const start = new Vector3(
-        position.x + side * 0.05,
-        position.y + BLANKET_R * Math.cos(lift),
-        BLANKET_R * Math.sin(lift),
+      const exit = 0.15 + jitter(i, 2) * 0.09
+      const rest = exit + 0.32 + jitter(i, 3) * 0.07
+      // Clear of the stripe, so the lead runs on black fabric and does not break the belt's silhouette.
+      const on = (angle: number, proud: number): Vector3 => new Vector3(
+        position.x + side * (STRIPE_HALF + 0.03),
+        position.y + (BLANKET_R + proud) * Math.cos(angle),
+        (BLANKET_R + proud) * Math.sin(angle),
       )
       cableParts.push(taperedTube([
-        start,
-        new Vector3(start.x + side * 0.06, start.y + 0.028, start.z + 0.05),
-        new Vector3(start.x + side * 0.11, start.y - 0.008, start.z + 0.076),
-      ], 0.011, 8))
-      const connector = bevelBox(0.046, 0.026, 0.028, 0.004)
-      connector.translate(start.x + side * 0.13, start.y - 0.012, start.z + 0.076)
+        on(exit, -0.014),
+        on(exit + 0.04, 0.02),
+        on(exit + 0.13, 0.025),
+        on(rest - 0.06, 0.017),
+        on(rest, 0.013),
+      ], 0.0075, 8))
+      // Seated radially on the wrap, so it reads as a plug lying on the bag rather than a floating block.
+      const connector = bevelBox(0.034, 0.048, 0.028, 0.005)
+      connector.rotateX(rest + 0.045)
+      const seat = on(rest + 0.045, 0.012)
+      connector.translate(seat.x, seat.y, seat.z)
       cableParts.push(connector)
     }
     emit('cable', mergeParts(cableParts, 'cables'), cableGroup, 'cables')
@@ -464,13 +605,13 @@ export function createModel(options: F1TyreStackOptions = {}): F1TyreStackInstan
     getConfig: () => ({ ...config }),
     configure(patch) {
       if (patch.count !== undefined) config.count = Math.max(1, Math.round(patch.count))
-      if (patch.compound !== undefined) { config.compound = patch.compound; webbing.color.set(shade(COMPOUND_TOKEN[patch.compound], -0.22)) }
+      if (patch.compound !== undefined) config.compound = patch.compound
       if (patch.coverColor !== undefined) { config.coverColor = patch.coverColor; tyreCover.color.set(patch.coverColor) }
       if (patch.accentColor !== undefined) { config.accentColor = patch.accentColor; tyreAccent.color.set(patch.accentColor) }
       rebuild()
     },
     setMaterial(slot, material) {
-      // One mesh per slot, so this is a direct reassignment with no rebuild.
+      // The stripe row is two meshes on one slot, so an override unifies them; every other slot is one.
       materialSlots[slot] = material
       for (const mesh of meshesBySlot[slot]) mesh.material = material
     },

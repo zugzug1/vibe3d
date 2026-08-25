@@ -1,6 +1,6 @@
-// f1-jumbotron — trackside broadcast installation with a continuous LED video wall,
-// symmetric braced truss towers, ballast, rear stabilization, speaker arrays, services,
-// access equipment, and safety barriers. The video feed remains deterministic and generic.
+// f1-jumbotron — trackside broadcast installation whose silhouette is a single large LED
+// cabinet lifted high on one thick dark mast, braced back to ground pads, with a compact
+// service plinth and perimeter barrier. The video feed remains deterministic and generic.
 
 import {
   BufferGeometry,
@@ -8,6 +8,7 @@ import {
   Group,
   Mesh,
   MeshBasicMaterial,
+  MeshStandardMaterial,
   NearestFilter,
   PlaneGeometry,
   RGBAFormat,
@@ -162,6 +163,14 @@ export function createModel(options: F1JumbotronOptions = {}): F1JumbotronInstan
     color: 0x070a0e,
     toneMapped: false,
   }))
+  // Round braces need a lit material to keep their form, but sit a hair off the mast's flat
+  // navy so they recede instead of flashing as pale wings behind a near-black column.
+  const braceMat = options.materials?.frame ?? own(new MeshStandardMaterial({
+    name: 'f1-kit / jumbotron rear bracing',
+    color: 0x0a0e15,
+    roughness: 0.92,
+    metalness: 0.1,
+  }))
 
   const materialSlots: Record<Slot, Material> = {
     frame: options.materials?.frame ?? kit.graphite,
@@ -218,131 +227,134 @@ export function createModel(options: F1JumbotronOptions = {}): F1JumbotronInstan
     releaseGenerated()
     const w = config.width
     const h = w * 0.5625
-    const elev = 2.85
+
+    // The cabinet clears the crowd and the grandstand banner, so the mast — not the screen —
+    // sets the height of the installation.
+    const elev = Math.max(3.8, w * 0.88)
     const y = elev + h / 2
-    const half = w / 2
-    const towerX = half + 0.58
-    const towerTop = elev + h + 0.24
-    const legs: BufferGeometry[] = []
+    const bezel = 0.085
+    const mastW = Math.max(1.78, w * 0.41)
+    const mastD = Math.max(1.15, w * 0.22)
+    const mastZ = -0.3
+    const mastFront = mastZ + mastD / 2
+    const mastBack = mastZ - mastD / 2
+    const mastTop = elev + Math.min(0.5, h * 0.12)
+
+    // One thick box column: the panel joints are a shallow proud plate rather than applied
+    // ribs, so the mast keeps a single unbroken value at reference distance.
+    const mast: BufferGeometry[] = []
+    const column = bevelBox(mastW, mastTop, mastD, 0.05)
+    column.translate(0, mastTop / 2, mastZ)
+    mast.push(column)
+    const facePlate = bevelBox(mastW * 0.86, mastTop - 1.15, 0.06, 0.02)
+    facePlate.translate(0, mastTop / 2 - 0.1, mastFront + 0.015)
+    mast.push(facePlate)
+    const yoke = bevelBox(mastW + w * 0.07, 0.2, mastD + 0.08, 0.03)
+    yoke.translate(0, elev - 0.12, mastZ)
+    mast.push(yoke)
+    const collar = bevelBox(mastW + 0.5, 0.5, mastD + 0.44, 0.05)
+    collar.translate(0, 0.25, mastZ)
+    mast.push(collar)
+    emit('frame', mergeParts(mast, 'central-mast'), frame, 'central-mast', supportMat)
+
+    // Slim surround: the dark border is a lip around the LED face, not a housing that
+    // competes with it.
+    const cabinet: BufferGeometry[] = []
+    const shell = bevelBox(w + bezel * 2, h + bezel * 2, 0.46, 0.02)
+    shell.translate(0, y, -0.17)
+    cabinet.push(shell)
+    const walk = bevelBox(w * 0.86, 0.06, 0.44, 0.01)
+    walk.translate(0, elev - 0.12, mastBack - 0.28)
+    cabinet.push(walk)
+    emit('frame', mergeParts(cabinet, 'led-cabinet'), frame, 'led-cabinet', supportMat)
+
+    const rearZ = mastBack - Math.max(1.4, elev * 0.38)
+    const bracing: BufferGeometry[] = []
     for (const sx of [-1, 1] as const) {
-      const x = sx * towerX
-      for (const dx of [-0.2, 0.2]) {
-        for (const z of [-0.34, 0.34]) {
-          legs.push(member(new Vector3(x + dx, 0.12, z), new Vector3(x + dx, towerTop, z), 0.065, 8))
-        }
-      }
-      for (let i = 0; i < 7; i++) {
-        const y0 = 0.18 + i * (towerTop - 0.2) / 7
-        const y1 = 0.18 + (i + 1) * (towerTop - 0.2) / 7
-        for (const z of [-0.34, 0.34]) {
-          legs.push(member(new Vector3(x - 0.2, y0, z), new Vector3(x + 0.2, y1, z), 0.028, 6))
-          legs.push(member(new Vector3(x + 0.2, y0, z), new Vector3(x - 0.2, y1, z), 0.028, 6))
-        }
-      }
-      for (const dx of [-0.2, 0.2]) {
-        const ballast = bevelBox(0.58, 0.2, 0.72, 0.025)
-        ballast.translate(x + dx, 0.1, 0.02)
-        legs.push(ballast)
-      }
-      const rearX = x + sx * 0.72
-      const rearBallast = bevelBox(1.15, 0.28, 0.92, 0.035)
-      rearBallast.translate(rearX, 0.14, -1.28)
-      legs.push(rearBallast)
-      legs.push(member(new Vector3(x - 0.2, 2.35, -0.34), new Vector3(rearX - 0.34, 0.26, -1.28), 0.075, 8))
-      legs.push(member(new Vector3(x + 0.2, 2.35, -0.34), new Vector3(rearX + 0.34, 0.26, -1.28), 0.075, 8))
-      legs.push(member(new Vector3(x, 0.34, -0.34), new Vector3(rearX, 0.34, -1.28), 0.055, 8))
+      const footX = sx * (mastW * 0.5 + 0.7)
+      bracing.push(member(
+        new Vector3(sx * mastW * 0.32, elev - 0.5, mastBack),
+        new Vector3(footX, 0.32, rearZ),
+        0.08,
+        8,
+      ))
+      bracing.push(member(
+        new Vector3(sx * mastW * 0.32, elev * 0.5, mastBack),
+        new Vector3(footX, 0.32, rearZ),
+        0.055,
+        8,
+      ))
+      bracing.push(member(
+        new Vector3(footX, 0.32, rearZ),
+        new Vector3(sx * mastW * 0.4, 0.32, mastBack),
+        0.05,
+        8,
+      ))
+      const pad = bevelBox(0.85, 0.32, 0.95, 0.04)
+      pad.translate(footX, 0.16, rearZ)
+      bracing.push(pad)
     }
-    emit('leg', mergeParts(legs, 'truss-towers'), frame, 'truss-towers')
+    emit('frame', mergeParts(bracing, 'rear-bracing'), frame, 'rear-bracing', braceMat)
 
-    const installation: BufferGeometry[] = []
-    const housing = bevelBox(w + 0.34, h + 0.34, 0.34, 0.025)
-    housing.translate(0, y, -0.06)
-    installation.push(housing)
-    const hood = bevelBox(w + 0.48, 0.16, 0.62, 0.018)
-    hood.translate(0, y + h / 2 + 0.16, 0.02)
-    installation.push(hood)
-    const walk = bevelBox(w + 0.4, 0.07, 0.72, 0.01)
-    walk.translate(0, elev - 0.18, -0.43)
-    installation.push(walk)
-    for (const sx of [-1, 1] as const) {
-      const x = sx * (half + 0.42)
-      installation.push(member(new Vector3(x, elev - 0.05, -0.08), new Vector3(x, towerTop - 0.28, -0.08), 0.06, 8))
-      for (let i = 0; i < 5; i++) {
-        const speaker = bevelBox(0.5, 0.56, 0.56, 0.035)
-        speaker.translate(x, y + 1.02 - i * 0.57, 0.08 + i * 0.022)
-        installation.push(speaker)
-      }
-      for (let box = 0; box < 2; box++) {
-        const control = bevelBox(0.68, 0.86, 0.52, 0.03)
-        control.translate(sx * (towerX + 0.02), 1.0 + box * 0.92, -0.52)
-        installation.push(control)
-      }
-      for (let cable = 0; cable < 5; cable++) {
-        installation.push(member(
-          new Vector3(x + sx * cable * 0.035, elev + 0.18, -0.28),
-          new Vector3(sx * (towerX + 0.02), 1.84 - cable * 0.14, -0.3),
-          0.022,
-          6,
-        ))
-      }
-      for (let rung = 0; rung < 9; rung++) {
-        const rungY = 0.48 + rung * 0.28
-        installation.push(member(
-          new Vector3(sx * towerX - 0.16, rungY, -0.55),
-          new Vector3(sx * towerX + 0.16, rungY, -0.55),
-          0.021,
-          6,
-        ))
-      }
-    }
-    emit('frame', mergeParts(installation, 'broadcast-installation'), frame, 'broadcast-installation')
+    const plinthW = Math.min(w * 0.64, mastW + 1.75)
+    const plinthH = 1.2
+    const plinthD = Math.max(1.4, mastD + 0.6)
+    const plinthZ = mastZ + 0.06
+    const plinthFront = plinthZ + plinthD / 2
+    const plinth: BufferGeometry[] = []
+    const cabin = bevelBox(plinthW, plinthH, plinthD, 0.04)
+    cabin.translate(0, plinthH / 2 + 0.1, plinthZ)
+    plinth.push(cabin)
+    const kerb = bevelBox(plinthW + 0.34, 0.2, plinthD + 0.34, 0.03)
+    kerb.translate(0, 0.1, plinthZ)
+    plinth.push(kerb)
+    emit('frame', mergeParts(plinth, 'service-plinth'), frame, 'service-plinth', supportMat)
 
-    const equipmentBase: BufferGeometry[] = []
-    const baseShell = bevelBox(w * 0.94, 2.32, 0.74, 0.035)
-    baseShell.translate(0, 1.3, -0.18)
-    equipmentBase.push(baseShell)
-    const basePlinth = bevelBox(w + 0.36, 0.24, 0.96, 0.035)
-    basePlinth.translate(0, 0.12, -0.14)
-    equipmentBase.push(basePlinth)
-    const cabinetWidth = (w * 0.9) / 6
-    for (let i = 0; i < 6; i++) {
-      const cabinet = bevelBox(cabinetWidth - 0.055, 1.86, 0.18, 0.018)
-      cabinet.translate(-w * 0.375 + i * cabinetWidth, 1.36, 0.24)
-      equipmentBase.push(cabinet)
+    const plinthDetails: BufferGeometry[] = []
+    const doorPitch = plinthW / 4
+    for (let i = 0; i <= 4; i++) {
+      const x = -plinthW / 2 + i * doorPitch
+      plinthDetails.push(member(
+        new Vector3(x, 0.28, plinthFront + 0.015),
+        new Vector3(x, plinthH + 0.04, plinthFront + 0.015),
+        0.02,
+        6,
+      ))
     }
-    emit('frame', mergeParts(equipmentBase, 'equipment-support-base'), frame, 'equipment-support-base', supportMat)
-
-    const baseDetails: BufferGeometry[] = []
-    baseDetails.push(member(new Vector3(-w * 0.45, 2.35, 0.34), new Vector3(w * 0.45, 2.35, 0.34), 0.03, 8))
-    for (let i = 0; i <= 6; i++) {
-      const x = -w * 0.45 + i * cabinetWidth
-      baseDetails.push(member(new Vector3(x, 0.45, 0.34), new Vector3(x, 2.28, 0.34), 0.018, 6))
-    }
-    emit('frame', mergeParts(baseDetails, 'equipment-door-seams'), frame, 'equipment-door-seams')
+    plinthDetails.push(member(
+      new Vector3(-plinthW / 2, plinthH + 0.06, plinthFront + 0.015),
+      new Vector3(plinthW / 2, plinthH + 0.06, plinthFront + 0.015),
+      0.026,
+      8,
+    ))
+    emit('frame', mergeParts(plinthDetails, 'plinth-door-seams'), frame, 'plinth-door-seams')
 
     const barriers: BufferGeometry[] = []
-    const barrierHalf = half + 1.45
-    for (const z of [1.02, -1.72]) {
-      for (const railY of [0.38, 0.76]) {
+    const barrierHalf = Math.max(plinthW / 2 + 1.2, w * 0.34)
+    const zFront = plinthFront + 0.95
+    const zBack = rearZ - 0.75
+    for (const z of [zFront, zBack]) {
+      for (const railY of [0.36, 0.74]) {
         barriers.push(member(new Vector3(-barrierHalf, railY, z), new Vector3(barrierHalf, railY, z), 0.034, 8))
       }
-      for (let i = 0; i <= 10; i++) {
-        const x = -barrierHalf + i * barrierHalf * 2 / 10
-        barriers.push(member(new Vector3(x, 0.05, z), new Vector3(x, 0.8, z), 0.03, 8))
+      for (let i = 0; i <= 8; i++) {
+        const x = -barrierHalf + i * barrierHalf * 2 / 8
+        barriers.push(member(new Vector3(x, 0.05, z), new Vector3(x, 0.78, z), 0.03, 8))
       }
     }
     for (const sx of [-1, 1] as const) {
-      for (const railY of [0.38, 0.76]) {
-        barriers.push(member(new Vector3(sx * barrierHalf, railY, 1.02), new Vector3(sx * barrierHalf, railY, -1.72), 0.034, 8))
+      for (const railY of [0.36, 0.74]) {
+        barriers.push(member(new Vector3(sx * barrierHalf, railY, zFront), new Vector3(sx * barrierHalf, railY, zBack), 0.034, 8))
       }
-      for (const z of [0.55, 0.08, -0.39, -0.86, -1.33]) {
-        barriers.push(member(new Vector3(sx * barrierHalf, 0.05, z), new Vector3(sx * barrierHalf, 0.8, z), 0.03, 8))
+      for (let i = 1; i < 5; i++) {
+        const z = zFront + (zBack - zFront) * (i / 5)
+        barriers.push(member(new Vector3(sx * barrierHalf, 0.05, z), new Vector3(sx * barrierHalf, 0.78, z), 0.03, 8))
       }
     }
     emit('leg', mergeParts(barriers, 'connected-safety-barriers'), frame, 'connected-safety-barriers')
 
     const panel = new PlaneGeometry(w, h)
-    panel.translate(0, y, 0.12)
+    panel.translate(0, y, 0.09)
     emit('screen', panel, screen, 'continuous-led-video')
   }
   rebuild()
@@ -384,9 +396,9 @@ export function createModel(options: F1JumbotronOptions = {}): F1JumbotronInstan
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
   return createF1Preview(createModel({ width: 6 }), {
     aspect,
-    target: [0, 3.05, -0.18],
-    distance: 17.2,
-    fov: 32,
+    target: [0, 4.7, -0.2],
+    distance: 18.1,
+    fov: 30,
     pitch: 0.05,
     yaw: -0.1,
   })

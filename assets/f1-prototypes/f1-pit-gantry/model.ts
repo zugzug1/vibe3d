@@ -1,25 +1,32 @@
-// f1-pit-gantry — the overhead structure spanning a pit bay: four braced truss columns carrying a flat
-// roof truss grid, with a tensioned banner slung beneath the front run and downlights clamped to the
-// front run's bottom chord either side of it.
+// f1-pit-gantry — the cantilever boom that stands in a modern F1 pit box: one white mast on a wheeled
+// base plate, a slim horizontal boom reaching out over the car, a wishbone brace opening the elbow, a
+// thin camera mast raked up off the joint, and a hi-vis umbilical dropped off the boom to the ground.
 //
-// Real pit gantries are assembled from one modular aluminium box-truss product, and that single fact
-// drives the whole silhouette. Every run — column, perimeter, rib — is the same square section, four
-// chords with an X-brace on each face of each bay. Nothing tapers and nothing is a solid beam, so the
-// structure reads as open framework with sky through it at any distance. A post-and-beam of plain boxes,
-// or a doubled roof rectangle packed with cross-ties, has no such read: it closes up into a slab.
+// The typology matters more than any detail on it. This is not a portal: nothing stands on the far side
+// of the car, because a pit stop needs the whole outboard face of the box clear for a crew of twenty.
+// Everything the structure has to do is therefore done by a single root at one end, and that constraint
+// is the silhouette — a mast that is deep front-to-back and shallow across, a boom that is slim because
+// it only carries services, and a brace at the elbow because a bare right angle in a cantilever this
+// long would be visibly wrong. Four legs and a flat truss roof read as a concert stage, not a pit box.
 //
-// The banner colour is genericised (no team livery — plain corporate blue by default).
+// The second thing the reference sells is finish. These are moulded, semi-gloss white panelled bodies
+// with generous radii — a paddock-branded product, not site scaffolding. So the mast is lofted through
+// measured rounded-rectangle sections rather than assembled from tubes, and every hard edge carries a
+// real fillet. Open lattice anywhere in it destroys the read.
+//
+// No livery: the body is neutral white and the only saturated colour is the hi-vis cable, which is the
+// landmark that fixes the scale and tells you the thing is plugged in.
 
 import {
   BufferGeometry,
-  CylinderGeometry,
-  Float32BufferAttribute,
+  CatmullRomCurve3,
   Group,
   Mesh,
   MeshStandardMaterial,
   Vector3,
   type Material,
 } from 'three/webgpu'
+import { LoftGeometry } from 'three/examples/jsm/geometries/LoftGeometry.js'
 
 import {
   AXIS_X,
@@ -27,24 +34,29 @@ import {
   TOKEN,
   acquireF1Materials,
   bevelBox,
-  bevelRing,
+  bevelDisc,
   bolt,
+  castor,
   createF1Preview,
+  creased,
   disposeF1Materials,
+  loftRoundedBox,
   member,
   mergeParts,
   shade,
+  taperedTube,
   tubeSection,
 } from '../f1-kit-core/index.ts'
+import { mixToken } from '../f1-kit-core/palette.ts'
 
-type Slot = 'post' | 'banner' | 'fitting'
+type Slot = 'post' | 'banner' | 'fitting' | 'lens' | 'band'
 
 export interface F1PitGantryConfig {
-  /** Distance between the two columns along local +X, metres. */
+  /** Boom reach: mast centreline to boom tip, metres. The cantilever's defining dimension. */
   span: number
-  /** Column height / beam elevation, metres. */
+  /** Soffit height: the boom's underside above the pit-box floor, metres. */
   height: number
-  /** Truss bays across the span. Doubles as the LOD knob. */
+  /** Service pods along the boom soffit. Doubles as the LOD knob. */
   bays: number
 }
 
@@ -54,7 +66,7 @@ export interface F1PitGantryOptions extends Partial<F1PitGantryConfig> {
 
 export interface F1PitGantryInstance {
   readonly root: Group
-  readonly parts: { posts: Group; beam: Group; banner: Group }
+  readonly parts: { mast: Group; boom: Group; umbilical: Group }
   readonly materials: Readonly<Record<Slot, Material>>
   getConfig(): Readonly<F1PitGantryConfig>
   configure(patch: Partial<F1PitGantryConfig>): void
@@ -63,124 +75,137 @@ export interface F1PitGantryInstance {
   dispose(): void
 }
 
-// The reference stands about nine truss modules to the roof over a six-metre span — a squat outdoor
-// stance, not a walk-through portal. Measured off the photograph: the near column reads roughly six
-// X-bays between its base plate and the roof's underside.
-const defaults: F1PitGantryConfig = { span: 6.0, height: 2.65, bays: 12 }
+// Measured against the crew in the reference: the soffit clears a walking mechanic with room to spare
+// (2.8 m), and the boom reaches the far side of a car plus a wheel man (4.3 m from the mast).
+const defaults: F1PitGantryConfig = { span: 5.0, height: 2.8, bays: 3 }
 
-/** The one modular truss section used everywhere, chord centre to chord centre, world units. */
-const SECTION = 0.29
-// Product tube sizes: a 300 mm truss carries ~48 mm chords laced with ~22 mm diagonals. Holding those
-// against the section is what keeps the lattice airy — fatten either and the X-band closes into a wall.
-const CHORD = 0.024 // truss chord tube radius
-const LACE = 0.0115 // X-brace tube radius
-/** Depth of the bay as a fraction of its span, from the reference footprint. */
-const DEPTH_RATIO = 0.62
-/** Bolted base plate: thickness, and the chord centreline where a column lands on it. */
-const PLATE_T = 0.038
-const BASE_Y = 0.055
+/** How far the boom carries on *behind* the mast. Short, but a flush end would read as a broken beam. */
+const BACKSPAN = 0.62
 
 /**
- * Baked lattice occlusion, as a vertex-colour multiplier on the mill finish.
+ * Boom section: slim enough that the eye follows it as one line.
  *
- * The kit's rig has no shadow map and no ambient occlusion, so a single-material truss renders its chords
- * and its laces at exactly the same value and the X-band flattens into a printed pattern. The laces sit
- * inside the section, shaded by the four chords around them, so carrying that as vertex colour is what
- * restores the deep recesses the reference shows between bright chord highlights.
+ * This came down twice. A boom heavy enough to look structural is wrong for what it carries — services,
+ * not load — and any second member run alongside it reads as truss, which is the language this typology
+ * is defined by not speaking.
  */
-const CHORD_VALUE = 1.0
-const LACE_VALUE = 0.32
+const BOOM_H = 0.125
+const BOOM_Z = 0.1
+const BOOM_R = 0.042
 
-/** Interpolate one structural node along a chord. */
-function pointOn(from: Vector3, to: Vector3, t: number): Vector3 {
-  return from.clone().lerp(to, t)
+/** Wheeled base plate. The plate floats on castors, so its underside is above the floor. */
+const PLATE_T = 0.13
+const CASTOR_R = 0.05
+const PLATE_BOTTOM = 0.092
+const PLATE_TOP = PLATE_BOTTOM + PLATE_T
+/** The plate is offset toward the boom so the cantilever's overturning moment lands inside it. */
+const PLATE_X = 0.12
+
+/** Hi-vis cable radius, and the proud radius of its black wrap bands. */
+const CABLE_R = 0.036
+const BAND_R = 0.046
+
+/**
+ * The mast's measured sections, bottom to top: `t` along the mast, then the section's back and front X
+ * faces, its half-depth across the lane, and its corner fillet.
+ *
+ * Two things are deliberate. The front face rakes hard (0.68 -> 0.21) while the back face is nearly
+ * plumb, which is what makes the mast read as a wedge braced against the boom rather than a plain post.
+ * And the fillet shrinks with the section instead of staying constant, because a 110 mm radius on a
+ * 420 mm neck would swallow the flats and turn the top of the mast into a cylinder.
+ */
+const MAST_SECTIONS: ReadonlyArray<readonly [number, number, number, number, number]> = [
+  [-0.035, -0.398, 0.762, 0.325, 0.105],
+  [0.000, -0.310, 0.660, 0.265, 0.085],
+  [0.160, -0.311, 0.549, 0.252, 0.080],
+  [0.400, -0.316, 0.402, 0.230, 0.072],
+  [0.660, -0.316, 0.272, 0.205, 0.066],
+  [0.860, -0.308, 0.185, 0.185, 0.060],
+  [1.000, -0.298, 0.135, 0.172, 0.056],
+]
+
+interface MastSection {
+  xMin: number
+  xMax: number
+  halfZ: number
+  radius: number
 }
 
-/**
- * The four chord offsets of a square truss section running along `direction`. Every run in this model is
- * axis-aligned, so the fallback reference axis only has to avoid the degenerate vertical case.
- */
-function sectionCorners(direction: Vector3, section: number): Vector3[] {
-  const reference = Math.abs(direction.y) > 0.9
-    ? new Vector3(0, 0, 1)
-    : new Vector3(0, 1, 0)
-  const u = new Vector3().crossVectors(direction, reference).normalize()
-  const v = new Vector3().crossVectors(direction, u).normalize()
-  const h = section / 2
-  return [
-    u.clone().multiplyScalar(h).addScaledVector(v, h),
-    u.clone().multiplyScalar(-h).addScaledVector(v, h),
-    u.clone().multiplyScalar(-h).addScaledVector(v, -h),
-    u.clone().multiplyScalar(h).addScaledVector(v, -h),
-  ]
-}
-
-/**
- * One run of modular box truss between two centreline points: four continuous chords plus a full X-brace
- * on all four faces of every bay. Adjacent bays share their chord nodes, so the braces chain into the
- * unbroken zig-zag band that identifies this product, rather than floating mid-chord.
- *
- * Chords and laces are collected separately because they carry different baked values; the chords also
- * take more radial segments, since they are the tubes whose specular band the eye actually follows.
- */
-function boxTruss(
-  chordParts: BufferGeometry[],
-  laceParts: BufferGeometry[],
-  from: Vector3,
-  to: Vector3,
-  bays: number,
-  section = SECTION,
-): void {
-  const direction = to.clone().sub(from).normalize()
-  const corners = sectionCorners(direction, section)
-  for (const corner of corners) {
-    chordParts.push(member(from.clone().add(corner), to.clone().add(corner), CHORD, 12))
-  }
-  for (let bay = 0; bay < bays; bay++) {
-    const near = pointOn(from, to, bay / bays)
-    const far = pointOn(from, to, (bay + 1) / bays)
-    for (let face = 0; face < 4; face++) {
-      const a = corners[face]!
-      const b = corners[(face + 1) % 4]!
-      laceParts.push(member(near.clone().add(a), far.clone().add(b), LACE, 6))
-      laceParts.push(member(near.clone().add(b), far.clone().add(a), LACE, 6))
+/** Linear interpolation through {@link MAST_SECTIONS}, clamped at both ends. */
+function sectionAt(t: number): MastSection {
+  const first = MAST_SECTIONS[0]!
+  const last = MAST_SECTIONS[MAST_SECTIONS.length - 1]!
+  if (t <= first[0]) return { xMin: first[1], xMax: first[2], halfZ: first[3], radius: first[4] }
+  if (t >= last[0]) return { xMin: last[1], xMax: last[2], halfZ: last[3], radius: last[4] }
+  for (let i = 1; i < MAST_SECTIONS.length; i++) {
+    const b = MAST_SECTIONS[i]!
+    if (t > b[0]) continue
+    const a = MAST_SECTIONS[i - 1]!
+    const k = (t - a[0]) / (b[0] - a[0])
+    return {
+      xMin: a[1] + (b[1] - a[1]) * k,
+      xMax: a[2] + (b[2] - a[2]) * k,
+      halfZ: a[3] + (b[3] - a[3]) * k,
+      radius: a[4] + (b[4] - a[4]) * k,
     }
   }
+  return { xMin: last[1], xMax: last[2], halfZ: last[3], radius: last[4] }
 }
 
 /**
- * Merge one structural batch, tagging the chords bright and the laces shadowed.
+ * One rounded-rectangle loft station in the XZ plane at height `y`, for a body swept up +Y.
  *
- * The colour attribute is written after the merge on purpose: `mergeParts` strips everything but position,
- * normal and uv so that mixed sources can batch at all, and `mergeGeometries` concatenates in argument
- * order, so the two vertex spans are exactly the two counts read here.
+ * The point order is the truck cab's ring order permuted one axis round (advance X -> advance Y), which
+ * is what keeps `LoftGeometry` generating outward normals; reversing it inverts the whole body and the
+ * mast renders as a hole. Fixed point count per ring, because a loft cannot stitch uneven stations.
  */
-function mergeShaded(
-  chordParts: BufferGeometry[],
-  laceParts: BufferGeometry[],
-  label: string,
+function slabRing(
+  y: number, xMin: number, xMax: number, zMin: number, zMax: number, radius: number,
+): Vector3[] {
+  const x0 = Math.min(xMin, xMax)
+  const x1 = Math.max(xMin, xMax)
+  const z0 = Math.min(zMin, zMax)
+  const z1 = Math.max(zMin, zMax)
+  const cx = (x0 + x1) / 2
+  const cz = (z0 + z1) / 2
+  const hx = (x1 - x0) / 2
+  const hz = (z1 - z0) / 2
+  const r = Math.max(1e-4, Math.min(radius, hx - 1e-4, hz - 1e-4))
+  const seg = 5
+  const pts: Vector3[] = []
+  const corner = (ax: number, az: number, a0: number): void => {
+    for (let j = 0; j <= seg; j++) {
+      const a = a0 + (j / seg) * (Math.PI / 2)
+      pts.push(new Vector3(cx + ax + r * Math.cos(a), y, cz + az + r * Math.sin(a)))
+    }
+  }
+  corner(hx - r, -(hz - r), -Math.PI / 2)
+  corner(hx - r, hz - r, 0)
+  corner(-(hx - r), hz - r, Math.PI / 2)
+  corner(-(hx - r), -(hz - r), Math.PI)
+  pts.reverse()
+  return pts
+}
+
+/** A slim rounded-rectangle bar running along X, centred on `(0, y, z)` over `x0..x1`. */
+function railBar(
+  x0: number, x1: number, y: number, z: number, height: number, depth: number, radius: number,
 ): BufferGeometry {
-  const chords = mergeParts(chordParts, `${label}: chords`)
-  const laces = mergeParts(laceParts, `${label}: laces`)
-  const chordVertices = chords.getAttribute('position').count
-  const laceVertices = laces.getAttribute('position').count
-  const merged = mergeParts([chords, laces], label)
-  const values = new Float32Array((chordVertices + laceVertices) * 3)
-  values.fill(CHORD_VALUE, 0, chordVertices * 3)
-  values.fill(LACE_VALUE, chordVertices * 3)
-  merged.setAttribute('color', new Float32BufferAttribute(values, 3))
-  return merged
+  const geo = loftRoundedBox(depth, height, Math.max(1e-3, x1 - x0), radius)
+  geo.rotateY(Math.PI / 2)
+  geo.translate((x0 + x1) / 2, y, z)
+  return geo
 }
 
 export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstance {
   const config: F1PitGantryConfig = {
-    span: Math.max(2, options.span ?? defaults.span),
-    height: Math.max(1.5, options.height ?? defaults.height),
-    bays: Math.max(3, Math.round(options.bays ?? defaults.bays)),
+    span: Math.max(1.6, options.span ?? defaults.span),
+    height: Math.max(1.8, options.height ?? defaults.height),
+    bays: Math.min(8, Math.max(1, Math.round(options.bays ?? defaults.bays))),
   }
 
   // Shared kit materials. Overrides handed in through `options` belong to the caller and are never
-  // disposed here (rule 16); the dark slot is reserved for bolted hardware so it still reads.
+  // disposed here (rule 16).
   const bundle = acquireF1Materials()
   const m = bundle.materials
   const owned: Material[] = []
@@ -189,47 +214,65 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
     return material
   }
 
-  // Bare mill-finish alloy. The kit's `steel` is authored for machined hardware, and at metalness 0.85
-  // with no environment map in the rig it has almost no diffuse term left to catch — which is what made
-  // this frame render as chalky grey rather than bright aluminium. Half-metal at a low roughness keeps a
-  // bright alloy body and lays a tight specular band down every round chord, and vertex colours let the
-  // baked lattice occlusion sink the laces behind it.
-  const millFinish = options.materials?.post ?? own(new MeshStandardMaterial({
-    name: 'f1-kit / pit-gantry mill finish',
-    color: shade(TOKEN.SHELL_200, 0.06),
-    roughness: 0.19,
-    metalness: 0.55,
-    vertexColors: true,
+  // Moulded semi-gloss white. The kit's `shell` is a matt coated panel at roughness 0.55, which under
+  // this rig gives the body no highlight at all and drops a 3 m mast into a flat grey cutout. A lifted
+  // neutral at roughness 0.33 keeps the value high while still laying a soft sheen down the mast's
+  // rounded flanks, which is the only thing that describes the loft's curvature without an env map.
+  const bodyWhite = options.materials?.post ?? own(new MeshStandardMaterial({
+    name: 'f1-kit / pit-gantry body white',
+    color: shade(TOKEN.SHELL_200, 0.2),
+    roughness: 0.4,
+    metalness: 0.04,
+  }))
+
+  // Hi-vis cable sheath, mixed off the ramp between `LIME-400` and `AMBER-400`.
+  //
+  // Neat `LIME-400` is the closer literal match to the sheath, but against the black bands it reads
+  // green, and green is not what makes a hi-vis cable the landmark in this frame. Pulling it 45% toward
+  // amber lands red and green level with each other — a hot yellow — which is the only saturated value in
+  // the model and has to hold its own against a body that is almost white and bands that are almost
+  // black. Both endpoints are canonical tokens, so this stays a point on the palette rather than a
+  // hand-picked hex.
+  const hiVis = options.materials?.banner ?? own(new MeshStandardMaterial({
+    name: 'f1-kit / pit-gantry hi-vis umbilical',
+    color: mixToken(TOKEN.LIME_400, TOKEN.AMBER_400, 0.45),
+    roughness: 0.45,
+    metalness: 0.0,
   }))
 
   const materialSlots: Record<Slot, Material> = {
-    post: millFinish,
-    banner: options.materials?.banner ?? m.cobalt,
+    post: bodyWhite,
+    banner: hiVis,
     fitting: options.materials?.fitting ?? m.graphite,
+    lens: options.materials?.lens ?? m.orange,
+    // The wrap bands need to be black, not the graphite the rest of the hardware uses: at this size they
+    // are read purely as the dark half of a hazard stripe, and graphite's blue cast greys that out.
+    band: options.materials?.band ?? m.ink,
   }
 
   // Runtime anchors: created once, never replaced (rules 10, 14).
   const root = new Group()
   root.name = 'f1-pit-gantry'
-  const posts = new Group(); posts.name = 'posts'
-  const beam = new Group(); beam.name = 'beam'
-  const banner = new Group(); banner.name = 'banner'
-  root.add(posts, beam, banner)
+  const mast = new Group(); mast.name = 'mast'
+  const boom = new Group(); boom.name = 'boom'
+  const umbilical = new Group(); umbilical.name = 'umbilical'
+  root.add(mast, boom, umbilical)
 
   // Per-rebuild geometry ownership. Geometry is regenerated by configure(), so it is tracked separately
-  // from the bag and released at the top of every rebuild — putting it in the bag would both grow the bag
-  // without bound and double-dispose everything it already released.
+  // and released at the top of every rebuild.
   const generated: BufferGeometry[] = []
-  const meshesBySlot: Record<Slot, Mesh[]> = { post: [], banner: [], fitting: [] }
+  const meshesBySlot: Record<Slot, Mesh[]> = {
+    post: [], banner: [], fitting: [], lens: [], band: [],
+  }
 
   const releaseGenerated = (): void => {
-    for (const group of [posts, beam, banner]) group.clear()
+    for (const group of [mast, boom, umbilical]) group.clear()
     for (const geometry of generated) geometry.dispose()
     generated.length = 0
     for (const slot of Object.keys(meshesBySlot) as Slot[]) meshesBySlot[slot].length = 0
   }
 
-  /** One merged geometry per material slot, so there is exactly one mesh per slot and one draw call. */
+  /** One merged geometry per material slot per part group: one mesh, one draw call, one anchor. */
   const emit = (slot: Slot, geometry: BufferGeometry, group: Group, name: string): void => {
     generated.push(geometry)
     const mesh = new Mesh(geometry, materialSlots[slot])
@@ -240,235 +283,306 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
     group.add(mesh)
   }
 
-  /**
-   * Every dimension the parts below share. One bay length is solved once from the span and carried into
-   * the columns and the transverse runs, because a modular kit cannot change bay pitch between members
-   * and an uneven pitch is the first thing that makes a truss look generated.
-   */
+  /** Every dimension the parts below share, solved once from the config. */
   const solve = () => {
-    const { span, height, bays } = config
-    const half = span / 2
-    const halfDepth = (span * DEPTH_RATIO) / 2
-    const inset = SECTION / 2
-    const bayLength = span / bays
-    // Chord centres of the perimeter runs. The outer chord lands exactly on the footprint edge, so the
-    // roof ends flush over its column instead of overhanging it.
-    const railX = half - inset
-    const railZ = halfDepth - inset
-    const roofBottom = height - SECTION
-    const roofCentre = height - inset
-    const depthBays = Math.max(2, Math.round((halfDepth * 2) / bayLength))
-    const columnBays = Math.max(2, Math.round((roofBottom - BASE_Y) / bayLength))
-    // Interior ribs, spaced across the span at roughly the section's own module.
-    const ribCount = Math.max(1, Math.round(span / (SECTION * 7)) - 1)
-    const ribX: number[] = []
-    for (let i = 0; i < ribCount; i++) {
-      ribX.push(-railX + (2 * railX * (i + 1)) / (ribCount + 1))
-    }
+    const { span, height } = config
+    const neckY = height - 0.34
+    const rise = Math.max(0.4, neckY - PLATE_TOP)
+    const boomX0 = -BACKSPAN
+    const boomX1 = span
+    const boomCy = height + BOOM_H / 2
+    const boomTop = boomCy + BOOM_H / 2
     return {
-      half, halfDepth, railX, railZ, roofBottom, roofCentre, depthBays, columnBays, ribX,
+      neckY,
+      rise,
+      boomX0,
+      boomX1,
+      boomCy,
+      boomTop,
+      /** Height of a mast station, from its normalised `t`. */
+      mastY: (t: number) => PLATE_TOP + t * rise,
+      /** Where the umbilical is glanded onto the boom: outboard, but short of the tip fitting. */
+      dropX: boomX1 * 0.82,
     }
   }
 
+  type Solved = ReturnType<typeof solve>
+
   /**
-   * Four X-braced columns, each landing on a bolted base plate.
+   * The base plate and the mast lofted up through its measured sections.
    *
-   * The plate is mill finish rather than dark hardware, and steps proud of the section on all four sides,
-   * because that is how the reference's feet read: a wider alloy pad with dark bolt heads on it, not a
-   * black block the column disappears into.
+   * The lowest station sits *below* the plate's top face and flares wider than the section above it, so
+   * the mast grows out of a fillet instead of being planted on the deck as a separate box. That flare is
+   * the whole reason the reference's foot reads as one moulding.
    */
-  const buildColumns = (
-    chordParts: BufferGeometry[],
-    laceParts: BufferGeometry[],
-    fittingParts: BufferGeometry[],
-    d: ReturnType<typeof solve>,
-  ): void => {
+  const buildMast = (body: BufferGeometry[], hardware: BufferGeometry[], d: Solved): void => {
+    const plate = loftRoundedBox(1.50, 0.86, PLATE_T, 0.075)
+    plate.rotateX(Math.PI / 2)
+    plate.translate(PLATE_X, PLATE_BOTTOM + PLATE_T / 2, 0)
+    body.push(plate)
+
+    // A shallower deck stepped in from the plate edge: a real 40 mm shadow line round the base, which a
+    // single slab cannot give at any bevel width.
+    const deck = loftRoundedBox(1.20, 0.66, 0.05, 0.06)
+    deck.rotateX(Math.PI / 2)
+    deck.translate(PLATE_X, PLATE_TOP - 0.012, 0)
+    body.push(deck)
+
+    const rings: Vector3[][] = []
+    for (const [t] of MAST_SECTIONS) {
+      const s = sectionAt(t)
+      rings.push(slabRing(d.mastY(t), s.xMin, s.xMax, -s.halfZ, s.halfZ, s.radius))
+    }
+    body.push(creased(new LoftGeometry(rings, { closed: true, capStart: true, capEnd: true }), 55))
+
+    const collar: Vector3[][] = []
+    for (const t of [0.685, 0.7, 0.715]) {
+      const s = sectionAt(t)
+      const grow = t === 0.7 ? 0.014 : 0.002
+      collar.push(slabRing(
+        d.mastY(t), s.xMin - grow, s.xMax + grow,
+        -(s.halfZ + grow), s.halfZ + grow, s.radius + grow,
+      ))
+    }
+    body.push(creased(new LoftGeometry(collar, { closed: true, capStart: true, capEnd: true }), 50))
+
     for (const sx of [-1, 1] as const) {
       for (const sz of [-1, 1] as const) {
-        const cx = sx * d.railX
-        const cz = sz * d.railZ
-        boxTruss(
-          chordParts,
-          laceParts,
-          new Vector3(cx, BASE_Y, cz),
-          new Vector3(cx, d.roofBottom, cz),
-          d.columnBays,
-        )
-        const plate = bevelBox(SECTION + 0.17, PLATE_T, SECTION + 0.17, 0.006)
-        plate.translate(cx, PLATE_T / 2, cz)
-        chordParts.push(plate)
-        // Corner fixings, outboard of the chords rather than on a circle through them.
-        for (const bx of [-1, 1] as const) {
-          for (const bz of [-1, 1] as const) {
-            fittingParts.push(bolt(
-              [cx + bx * 0.19, PLATE_T, cz + bz * 0.19],
-              0.016, 0.022, AXIS_Y,
-            ))
-          }
-        }
+        hardware.push(castor([PLATE_X + sx * 0.54, 0, sz * 0.3], CASTOR_R, sx * sz * 0.5))
       }
     }
-  }
-
-  /**
-   * The flat roof: a single rectangular perimeter of box truss plus full-depth interior ribs. One
-   * perimeter rather than two concentric rectangles is what leaves sky between the members.
-   */
-  const buildRoof = (
-    chordParts: BufferGeometry[],
-    laceParts: BufferGeometry[],
-    d: ReturnType<typeof solve>,
-  ): void => {
+    const deckTop = PLATE_TOP + 0.018
     for (const sz of [-1, 1] as const) {
-      boxTruss(
-        chordParts,
-        laceParts,
-        new Vector3(-d.half, d.roofCentre, sz * d.railZ),
-        new Vector3(d.half, d.roofCentre, sz * d.railZ),
-        config.bays,
-      )
-    }
-    for (const x of [-d.railX, ...d.ribX, d.railX]) {
-      boxTruss(
-        chordParts,
-        laceParts,
-        new Vector3(x, d.roofCentre, -d.halfDepth),
-        new Vector3(x, d.roofCentre, d.halfDepth),
-        d.depthBays,
-      )
-    }
-    // Corner couplers, where the perimeter's outermost chords cross. Real truss is bolted through a block
-    // here, and without one the crossing tubes read as an intersection error. They stay in the frame's own
-    // alloy, because a dark block on each corner punches holes in the roof's silhouette.
-    for (const sx of [-1, 1] as const) {
-      for (const sz of [-1, 1] as const) {
-        for (const y of [d.roofBottom, config.height]) {
-          const block = bevelBox(0.085, 0.085, 0.085, 0.010)
-          block.translate(sx * d.half, y, sz * d.halfDepth)
-          chordParts.push(block)
-        }
+      for (const x of [PLATE_X - 0.42, PLATE_X + 0.4]) {
+        hardware.push(bolt([x, deckTop, sz * 0.24], 0.015, 0.018, AXIS_Y))
       }
     }
   }
 
   /**
-   * A slung banner on the front run, framed on its own rails and hung from two straps. Deliberately short
-   * of the span and tucked hard under the truss: the open bay is the silhouette, and a full-width board
-   * across it turns the gantry back into a billboard on legs.
-   */
-  const buildBanner = (
-    fittingParts: BufferGeometry[],
-    d: ReturnType<typeof solve>,
-  ): BufferGeometry => {
-    const bannerW = config.span * 0.46
-    const bannerH = 0.38
-    const bannerTop = d.roofBottom - 0.08
-    const bannerBottom = bannerTop - bannerH
-    // Clear of the front chord's outer surface by more than the kit's minimum applied-layer gap (rule 8).
-    const bannerZ = d.halfDepth + CHORD + 0.018 + 0.014
-    const panel = bevelBox(bannerW, bannerH, 0.028, 0.006)
-    panel.translate(0, (bannerTop + bannerBottom) / 2, bannerZ)
-
-    const edges: Array<[Vector3, Vector3]> = [
-      [new Vector3(-bannerW / 2, bannerTop, bannerZ), new Vector3(bannerW / 2, bannerTop, bannerZ)],
-      [
-        new Vector3(-bannerW / 2, bannerBottom, bannerZ),
-        new Vector3(bannerW / 2, bannerBottom, bannerZ),
-      ],
-    ]
-    for (const sx of [-1, 1] as const) {
-      edges.push([
-        new Vector3((sx * bannerW) / 2, bannerBottom, bannerZ),
-        new Vector3((sx * bannerW) / 2, bannerTop, bannerZ),
-      ])
-    }
-    for (const [from, to] of edges) fittingParts.push(member(from, to, 0.020, 8))
-    for (const sx of [-1, 1] as const) {
-      fittingParts.push(member(
-        new Vector3((sx * bannerW) / 2, d.roofBottom, d.halfDepth),
-        new Vector3((sx * bannerW) / 2, bannerTop, bannerZ),
-        0.010,
-        6,
-      ))
-    }
-    return panel
-  }
-
-  /**
-   * Downlights clamped to the outer bottom chord of the front run, flanking the banner, where the light
-   * actually has to reach the car. Each one carries the hardware a truss clamp is recognised by: a collar
-   * round the chord, a bolted jaw under it, then the drop stem and the fixture.
+   * The wishbone: two splayed arms off the neck into a saddle under the boom.
    *
-   * They sit midway between rib lines rather than at a fraction of the span, so a clamp can never land on
-   * the coupler block where a rib crosses the rail, whatever span the consumer configures.
+   * The arms are what make a cantilever legible — they turn a bare right angle into a triangulated
+   * elbow, and the triangular void they leave is as much of the read as the arms themselves. Filling it
+   * with a spine would give back the solid post the reference does not have. The two arms differ in
+   * length and rake because the boom is not centred on the mast (rule 3).
    */
-  const buildLights = (fittingParts: BufferGeometry[], d: ReturnType<typeof solve>): void => {
-    const ribLines = [-d.railX, ...d.ribX, d.railX]
-    const midpoints = ribLines.slice(1).map((x, i) => (x + ribLines[i]!) / 2)
-    const z = d.halfDepth
-    const clampRadius = CHORD + 0.021
-    const jawHeight = 0.018
-
-    for (const x of [midpoints[0]!, midpoints[midpoints.length - 1]!]) {
-      fittingParts.push(tubeSection(clampRadius, 0.078, [x, d.roofBottom, z], AXIS_X, 12))
-      // The jaw bites 6 mm up into the collar, so the two parts are bolted together rather than stacked.
-      const jawY = d.roofBottom - clampRadius - jawHeight / 2 + 0.006
-      const jaw = bevelBox(0.078, jawHeight, 0.115, 0.004)
-      jaw.translate(x, jawY, z)
-      fittingParts.push(jaw)
-      const jawFace = jawY - jawHeight / 2
-      for (const bz of [-1, 1] as const) {
-        fittingParts.push(bolt([x, jawFace, z + bz * 0.04], 0.012, 0.018, [0, -1, 0]))
-      }
-      const stemEnd = jawFace - 0.095
-      fittingParts.push(member(
-        new Vector3(x, jawFace, z),
-        new Vector3(x, stemEnd, z),
-        0.014,
-        8,
-      ))
-      const bodyTop = stemEnd + 0.01
-      const body = new CylinderGeometry(0.07, 0.086, 0.15, 14)
-      body.translate(x, bodyTop - 0.075, z)
-      fittingParts.push(body)
-      const trim = bevelRing(0.084, 0.098, 0.014, 0.003, 22)
-      trim.rotateX(Math.PI / 2)
-      trim.translate(x, bodyTop - 0.145, z)
-      fittingParts.push(trim)
+  const buildWishbone = (body: BufferGeometry[], d: Solved): void => {
+    const armTop = config.height + 0.02
+    for (const [x0, x1] of [[-0.04, 0.46], [-0.13, -0.4]] as const) {
+      const from = new Vector3(x0, d.neckY - 0.1, 0)
+      const to = new Vector3(x1, armTop, 0)
+      const delta = to.clone().sub(from)
+      const arm = bevelBox(delta.length() + 0.11, 0.235, 0.3, 0.03)
+      arm.rotateZ(Math.atan2(delta.y, delta.x))
+      arm.translate((from.x + to.x) / 2, (from.y + to.y) / 2, 0)
+      body.push(arm)
     }
+
+    // Saddle under the boom, spanning both arm tops. It bites 17 mm up into the boom so the two read as
+    // one moulding rather than a rail resting on a block.
+    const saddle = loftRoundedBox(1.08, 0.125, 0.34, 0.05)
+    saddle.translate(0.0, config.height - 0.05, 0)
+    body.push(saddle)
+  }
+
+  /**
+   * The boom: one unbroken white rail with a dark fitting on each end.
+   *
+   * It carried a small-bore service tube on standoffs, copied off the reference, and that was a mistake:
+   * a second member marching along above the first reads as a ladder at any distance the prop is
+   * actually seen from, and a ladder is a truss. The detail was true and the impression it left was
+   * false, so the boom is now the single line its silhouette needs, and the loom that tube justified is
+   * simply clipped to the crown instead.
+   */
+  const buildBoom = (
+    body: BufferGeometry[], hardware: BufferGeometry[], d: Solved,
+  ): void => {
+    body.push(railBar(d.boomX0, d.boomX1, d.boomCy, 0, BOOM_H, BOOM_Z, BOOM_R))
+
+    for (const [x, sign] of [[d.boomX1, 1], [d.boomX0, -1]] as const) {
+      const cap = loftRoundedBox(BOOM_Z * 0.74, BOOM_H * 0.74, 0.1, 0.03)
+      cap.rotateY(Math.PI / 2)
+      cap.translate(x + sign * 0.03, d.boomCy, 0)
+      hardware.push(cap)
+    }
+  }
+
+  /**
+   * Recessed pods along the boom soffit, plus the hero pod at the elbow.
+   *
+   * The soffit pods are the working lights, so they sit on the underside where the light has to reach
+   * the car; `bays` is what a consumer turns down for a distant instance. The elbow pod is the reference
+   * photograph's most identifiable single object — a fat white teardrop on a short neck with a warm lens
+   * looking straight down at the car's nose — and it is worth its own geometry.
+   */
+  const buildPods = (
+    body: BufferGeometry[], lenses: BufferGeometry[], d: Solved,
+  ): void => {
+    const { height } = config
+    const first = 0.95
+    const last = Math.max(first + 0.2, d.boomX1 - 0.55)
+    for (let i = 0; i < config.bays; i++) {
+      const x = config.bays === 1 ? (first + last) / 2 : first + ((last - first) * i) / (config.bays - 1)
+      const housing = loftRoundedBox(0.34, 0.11, 0.17, 0.04)
+      housing.translate(x, height + 0.006 - 0.055, 0)
+      body.push(housing)
+      const lens = bevelBox(0.2, 0.014, 0.095, 0.003)
+      lens.translate(x, height - 0.107, 0)
+      lenses.push(lens)
+    }
+
+    const podX = 0.92
+    body.push(tubeSection(0.055, 0.12, [podX, height - 0.035, 0.02], AXIS_Y, 12))
+    const pod = loftRoundedBox(0.36, 0.22, 0.28, 0.10)
+    pod.translate(podX, height - 0.19, 0.02)
+    body.push(pod)
+    const podLens = bevelDisc(0.105, 0.02, 0.005, 24)
+    podLens.rotateX(Math.PI / 2)
+    podLens.translate(podX, height - 0.295, 0.02)
+    lenses.push(podLens)
+  }
+
+  /**
+   * The camera mast: a thin tube raked up and back off the elbow to a boxed head, with a stay.
+   *
+   * It reads at any distance because it is the only line in the model that leaves the two structural
+   * axes, and it is what tells you the prop belongs to a broadcast pit lane. The stay matters as much as
+   * the mast — an unbraced 1.7 m spike off a service boom would visibly wobble.
+   */
+  const buildCameraMast = (
+    body: BufferGeometry[], hardware: BufferGeometry[], lenses: BufferGeometry[], d: Solved,
+  ): void => {
+    const foot = new Vector3(0.2, d.boomTop - 0.04, -0.05)
+    const tip = new Vector3(-0.55, d.boomTop + 1.42, -0.28)
+    body.push(taperedTube(
+      [foot, new Vector3(-0.16, d.boomTop + 0.72, -0.17), tip], 0.024, 8,
+    ))
+
+    const head = loftRoundedBox(0.26, 0.22, 0.26, 0.05)
+    head.translate(tip.x - 0.02, tip.y + 0.08, tip.z)
+    body.push(head)
+    const cowl = bevelBox(0.09, 0.17, 0.2, 0.018)
+    cowl.translate(tip.x - 0.17, tip.y + 0.07, tip.z)
+    hardware.push(cowl)
+    const eye = bevelDisc(0.05, 0.016, 0.004, 18)
+    eye.rotateY(-Math.PI / 2)
+    eye.translate(tip.x - 0.215, tip.y + 0.07, tip.z)
+    lenses.push(eye)
+
+    hardware.push(member(
+      new Vector3(tip.x + 0.1, tip.y - 0.22, tip.z + 0.03),
+      new Vector3(Math.min(d.boomX1 - 0.4, 0.98), d.boomTop - 0.01, -0.02),
+      0.009,
+      6,
+    ))
+
+    // Service loom off the elbow and down the mast's raked front face. It hangs clear of the loft rather
+    // than tracing it, because a cable pulled tight to a curved flank reads as a moulded rib.
+    //
+    // It used to run the whole boom before dropping, which is truer to the photograph and wrong here: a
+    // dark line held parallel to the boom for four metres rebuilds the ladder the top rail was removed
+    // for, at a tenth of the diameter. Off the elbow it is a cable; along the boom it is a second chord.
+    hardware.push(taperedTube([
+      new Vector3(0.72, d.boomTop - 0.012, 0.05),
+      new Vector3(0.34, config.height - 0.22, 0.12),
+      new Vector3(0.4, d.mastY(0.6), 0.18),
+      new Vector3(0.38, d.mastY(0.22), 0.2),
+      new Vector3(0.22, PLATE_TOP + 0.05, 0.16),
+    ], 0.013, 6))
+  }
+
+  /**
+   * The umbilical: one continuous hi-vis run from a gland on the boom, down in a slack catenary, into a
+   * loose coil left on the tarmac, wrapped at intervals with black bands.
+   *
+   * It is modelled as a single curve so the drop and the coil cannot part company at the transition, and
+   * the coil is what stops the drop reading as a stiff rod hung off the boom. Sagging outboard on the
+   * way down and doubling back into the coil also puts the cable *across* the boom's line, which is what
+   * makes both objects legible in a single silhouette.
+   */
+  const buildUmbilical = (
+    cable: BufferGeometry[], bands: BufferGeometry[], d: Solved,
+  ): void => {
+    const { height } = config
+    const coilCx = d.dropX - 0.78
+    const coilCz = -0.55
+    const coil: Vector3[] = []
+    const turns = 31
+    for (let i = 0; i <= turns; i++) {
+      const k = i / turns
+      const a = 0.5 + k * Math.PI * 3.1
+      const r = 0.62 - k * 0.26
+      coil.push(new Vector3(
+        coilCx + Math.cos(a) * r,
+        0.052 + Math.sin(i * 0.9) * 0.006,
+        coilCz + Math.sin(a) * r * 0.86,
+      ))
+    }
+
+    const path: Vector3[] = [
+      new Vector3(d.dropX, height + 0.01, 0.02),
+      new Vector3(d.dropX + 0.13, height - 0.62, 0.1),
+      new Vector3(d.dropX + 0.26, height - 1.35, 0.16),
+      new Vector3(d.dropX + 0.22, Math.max(0.6, height - 2.05), 0.11),
+      new Vector3(d.dropX + 0.04, 0.42, -0.04),
+      ...coil,
+    ]
+    cable.push(taperedTube(path, CABLE_R, 8))
+
+    const curve = new CatmullRomCurve3(path)
+    for (const t of [0.05, 0.13, 0.22, 0.31, 0.40, 0.52, 0.64, 0.78, 0.9]) {
+      const p = curve.getPointAt(t)
+      const tangent = curve.getTangentAt(t)
+      bands.push(tubeSection(
+        BAND_R, 0.085, [p.x, p.y, p.z], [tangent.x, tangent.y, tangent.z], 10,
+      ))
+    }
+
+    // Gland on the boom, and the moulded boot on the free end lying in the coil.
+    bands.push(tubeSection(0.082, 0.11, [d.dropX, d.boomCy, 0], AXIS_X, 14))
+    const tail = coil[coil.length - 1]!
+    bands.push(tubeSection(0.058, 0.16, [tail.x - 0.07, tail.y + 0.005, tail.z], AXIS_X, 12))
   }
 
   const rebuild = (): void => {
     releaseGenerated()
     const d = solve()
 
-    const columnChords: BufferGeometry[] = []
-    const columnLaces: BufferGeometry[] = []
-    const roofChords: BufferGeometry[] = []
-    const roofLaces: BufferGeometry[] = []
-    const fittingParts: BufferGeometry[] = []
+    const mastBody: BufferGeometry[] = []
+    const mastHardware: BufferGeometry[] = []
+    const boomBody: BufferGeometry[] = []
+    const boomHardware: BufferGeometry[] = []
+    const boomLenses: BufferGeometry[] = []
+    const cable: BufferGeometry[] = []
+    const bands: BufferGeometry[] = []
 
-    buildColumns(columnChords, columnLaces, fittingParts, d)
-    buildRoof(roofChords, roofLaces, d)
-    const panel = buildBanner(fittingParts, d)
-    buildLights(fittingParts, d)
+    buildMast(mastBody, mastHardware, d)
+    buildWishbone(mastBody, d)
+    buildBoom(boomBody, boomHardware, d)
+    buildPods(boomBody, boomLenses, d)
+    buildCameraMast(boomBody, boomHardware, boomLenses, d)
+    buildUmbilical(cable, bands, d)
 
-    emit('post', mergeShaded(columnChords, columnLaces, 'columns'), posts, 'columns')
-    emit('post', mergeShaded(roofChords, roofLaces, 'roof-truss'), beam, 'roof-truss')
-    emit('banner', mergeParts([panel], 'banner'), banner, 'panel')
-    emit('fitting', mergeParts(fittingParts, 'fittings'), posts, 'fittings')
+    emit('post', mergeParts(mastBody, 'mast: body'), mast, 'body')
+    emit('fitting', mergeParts(mastHardware, 'mast: hardware'), mast, 'hardware')
+    emit('post', mergeParts(boomBody, 'boom: body'), boom, 'body')
+    emit('fitting', mergeParts(boomHardware, 'boom: hardware'), boom, 'hardware')
+    emit('lens', mergeParts(boomLenses, 'boom: lenses'), boom, 'lenses')
+    emit('banner', mergeParts(cable, 'umbilical: cable'), umbilical, 'cable')
+    emit('band', mergeParts(bands, 'umbilical: bands'), umbilical, 'bands')
   }
   rebuild()
 
   return {
     root,
-    parts: { posts, beam, banner },
+    parts: { mast, boom, umbilical },
     materials: materialSlots,
     getConfig: () => ({ ...config }),
     configure(patch) {
-      if (patch.span !== undefined) config.span = Math.max(2, patch.span)
-      if (patch.height !== undefined) config.height = Math.max(1.5, patch.height)
-      if (patch.bays !== undefined) config.bays = Math.max(3, Math.round(patch.bays))
+      if (patch.span !== undefined) config.span = Math.max(1.6, patch.span)
+      if (patch.height !== undefined) config.height = Math.max(1.8, patch.height)
+      if (patch.bays !== undefined) config.bays = Math.min(8, Math.max(1, Math.round(patch.bays)))
       rebuild()
     },
     setMaterial(slot, material) {
@@ -486,17 +600,16 @@ export function createModel(options: F1PitGantryOptions = {}): F1PitGantryInstan
 }
 
 export function createPreview({ aspect }: { aspect: number; time?: number }) {
-  // The reference is photographed from standing height, below the roof. That matters more than it sounds:
-  // seen from underneath, the far roof run projects above the near one, and the grid between them opens
-  // up. Level with the roof plane the whole thing collapses into a single band.
-  //
-  // The eye height sits just under the roof rather than halfway up the legs, which is where the reference
-  // photographer stood: from below the mid-point the columns rake away and read taller than they are.
+  // Framed the way the reference was shot: low, near the mast, with the boom running away across frame.
+  // The eye sits under the soffit, which is what opens the underside up and lets the wishbone's void and
+  // the soffit pods read at all — level with the boom they collapse into its own line. The camera stays
+  // off the mast's plane of symmetry so the mast reads as a wedge with depth rather than a flat blade.
   return createF1Preview(createModel(), {
     aspect,
-    target: [0, 1.5, 0],
-    distance: 8.6,
-    pitch: 0.08,
-    fov: 50,
+    target: [1.5, 1.95, 0],
+    distance: 8.3,
+    yaw: -0.6,
+    pitch: 0.05,
+    fov: 46,
   })
 }
