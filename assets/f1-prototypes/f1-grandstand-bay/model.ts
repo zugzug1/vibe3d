@@ -445,6 +445,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     generated.push(geometry)
     const mesh = new Mesh(geometry, material ?? materialSlots[slot])
     mesh.name = name
+    mesh.userData.topologyRole = name === 'seats' ? 'scatter' : name.includes('fascia') || name.includes('board') ? 'detail' : 'hull'
     mesh.castShadow = true
     mesh.receiveShadow = true
     meshesBySlot[slot].push(mesh)
