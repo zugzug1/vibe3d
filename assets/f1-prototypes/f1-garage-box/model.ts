@@ -259,6 +259,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
     generated.push(geometry)
     const mesh = new Mesh(geometry, material ?? materialSlots[slot])
     mesh.name = name
+    mesh.userData.topologyRole = name.startsWith('shutter') || name.startsWith('fascia') || name.includes('gear') || name.includes('trim') || name.includes('relief') || name.includes('coping') || name.includes('soffit') || name.includes('threshold') || name.includes('head-box') ? 'detail' : 'hull'
     mesh.castShadow = true
     mesh.receiveShadow = true
     meshesBySlot[slot].push(mesh)
