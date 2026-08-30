@@ -1,0 +1,84 @@
+import {
+  Color,
+  DirectionalLight,
+  Fog,
+  Group,
+  HemisphereLight,
+  PerspectiveCamera,
+  Scene,
+  Vector3,
+} from 'three/webgpu'
+
+import { disposeObjectTree } from '../core/dispose.ts'
+import type { Playground, PlaygroundOptions } from '../core/types.ts'
+import { createScene } from '../../assets/f1-prototypes/f1-kit-scene/kit-scene.ts'
+
+export function createF1KitPlayground(options: PlaygroundOptions): Playground {
+  const scene = new Scene()
+  scene.name = 'PLAYGROUND / F1 KIT SCENE'
+  scene.background = new Color(0x04070b)
+  scene.fog = new Fog(0x04070b, 140, 280)
+
+  const camera = new PerspectiveCamera(34, options.aspect, 0.4, 420)
+  camera.name = 'CAMERA / F1 STRAIGHT'
+  camera.position.set(16, 20, -40)
+
+  const focus = new Vector3(0, 1.0, 36)
+  camera.lookAt(focus)
+
+  const world = new Group()
+  world.name = 'WORLD'
+  scene.add(world)
+
+  const kit = createScene()
+  kit.update(0.38)
+  world.add(kit.root)
+
+  const sky = new HemisphereLight(0x91a4b0, 0x080b0f, 0.5)
+  sky.name = 'LIGHT / SKY'
+  scene.add(sky)
+
+  const key = new DirectionalLight(0xffeee0, 2.2)
+  key.name = 'LIGHT / KEY'
+  key.position.set(-36, 58, 28)
+  key.castShadow = true
+  key.shadow.mapSize.set(1024, 1024)
+  key.shadow.bias = -0.0005
+  key.shadow.camera.near = 8
+  key.shadow.camera.far = 240
+  key.shadow.camera.left = -95
+  key.shadow.camera.right = 55
+  key.shadow.camera.top = 120
+  key.shadow.camera.bottom = -100
+  key.target.position.set(-8, 0, 20)
+  scene.add(key.target)
+  scene.add(key)
+
+  const fill = new DirectionalLight(0x83a8be, 0.52)
+  fill.name = 'LIGHT / FILL'
+  fill.position.set(40, 16, 22)
+  scene.add(fill)
+
+  let last = 0
+  return {
+    id: 'f1-kit-scene',
+    label: 'F1 KIT // PIT STRAIGHT',
+    scene,
+    camera,
+    focus,
+    update(elapsedSeconds) {
+      const dt = last === 0 ? 0 : Math.max(0, elapsedSeconds - last)
+      last = elapsedSeconds
+      kit.update(dt > 0.25 ? 1 / 60 : dt)
+    },
+    resize(aspect) {
+      camera.aspect = aspect
+      camera.updateProjectionMatrix()
+    },
+    dispose() {
+      kit.dispose()
+      disposeObjectTree(scene)
+      scene.clear()
+    },
+  }
+}
