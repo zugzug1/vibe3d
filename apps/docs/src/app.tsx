@@ -2,12 +2,22 @@ import { ArrowRight, Box, Braces, PackageOpen, Palette, Terminal } from 'lucide-
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBlock, DocsLayout, Header, PageIntro } from './components.tsx'
-import { catalog, findModel } from './catalog.ts'
+import { catalog, findModel, f1Catalog, scifiCatalog } from './catalog.ts'
 import { ModelInstallation, ModelUsage } from './model-documentation.tsx'
 
 const ModelPreview = lazy(async () => {
   const module = await import('./model-preview.tsx')
   return { default: module.ModelPreview }
+})
+
+const F1PitInspectPage = lazy(async () => {
+  const module = await import('./f1-pit-inspect.tsx')
+  return { default: module.F1PitInspectPage }
+})
+
+const F1PitExplorePage = lazy(async () => {
+  const module = await import('./f1-pit-explore.tsx')
+  return { default: module.F1PitExplorePage }
 })
 
 const installOne = 'bunx vibe3d add @scifi-kit/pressure-gauge'
@@ -184,8 +194,47 @@ bunx vibe-model --force`}</CodeBlock>
 function ModelIndex() {
   const [params, setParams] = useSearchParams()
   const query = params.get('q') ?? ''
-  const filtered = catalog.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(query.toLowerCase()))
-  return <div className="catalog-page"><PageIntro eyebrow="Sci-Fi Kit · MIT licensed" title="Models ready to become yours."><p>Preview every prop in the browser. Install one file tree or bring in the complete kit.</p></PageIntro><label className="catalog-search"><Terminal /><input value={query} onChange={(event) => setParams(event.target.value ? { q: event.target.value } : {})} placeholder="Search models" /></label><div className="catalog-grid">{filtered.map((model) => <Link className="model-card" key={model.id} to={`/models/${model.id}`}><span>{model.category}</span><Box /><h2>{model.name}</h2><p>{model.description}</p><b>Open model <ArrowRight /></b></Link>)}</div></div>
+  const kit = params.get('kit')
+  const needle = query.toLowerCase()
+  const pool = kit === 'f1' ? f1Catalog : kit === 'scifi' ? scifiCatalog : catalog
+  const filtered = pool.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
+  const eyebrow = kit === 'f1' ? 'F1 Kit' : kit === 'scifi' ? 'Sci-Fi Kit' : 'Source kits · MIT licensed'
+  const title = kit === 'f1'
+    ? 'F1 Kit models.'
+    : kit === 'scifi'
+      ? 'Sci-Fi Kit models.'
+      : 'Models ready to become yours.'
+  return (
+    <div className="catalog-page">
+      <PageIntro eyebrow={eyebrow} title={title}>
+        <p>Preview every prop in the browser. Install one file tree or bring in a complete kit.</p>
+      </PageIntro>
+      <label className="catalog-search">
+        <Terminal />
+        <input
+          value={query}
+          onChange={(event) => {
+            const next = new URLSearchParams(params)
+            if (event.target.value) next.set('q', event.target.value)
+            else next.delete('q')
+            setParams(next)
+          }}
+          placeholder="Search models"
+        />
+      </label>
+      <div className="catalog-grid">
+        {filtered.map((model) => (
+          <Link className="model-card" key={model.id} to={`/models/${model.id}`}>
+            <span>{model.category}</span>
+            <Box />
+            <h2>{model.name}</h2>
+            <p>{model.description}</p>
+            <b>Open model <ArrowRight /></b>
+          </Link>
+        ))}
+      </div>
+    </div>
+  )
 }
 
 function ModelPage() {
@@ -195,8 +244,14 @@ function ModelPage() {
   return <article className="model-page"><div className="model-breadcrumb"><Link to="/models">Models</Link><span>/</span><span>{model.name}</span></div><header className="model-heading"><p className="eyebrow">{model.category}</p><h1>{model.name}</h1><p className="lead">{model.description}</p></header><section id="preview" className="reference-section preview-section"><h2>Preview</h2><Suspense fallback={<div className="model-preview" aria-hidden="true" />}><ModelPreview model={model} /></Suspense></section><ModelInstallation model={model} /><ModelUsage model={model} /></article>
 }
 
-function KitPage() {
-  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Sci-Fi Kit"><p>{catalog.length} procedural props and modular structures, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @scifi-kit'}</CodeBlock><div className="kit-stats"><div><b>{catalog.length}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models">Browse every model <ArrowRight /></Link></div>
+function SciFiKitPage() {
+  const count = scifiCatalog.length
+  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Sci-Fi Kit"><p>{count} procedural props and modular structures, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @scifi-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=scifi">Browse Sci-Fi models <ArrowRight /></Link></div>
+}
+
+function F1KitPage() {
+  const count = f1Catalog.length
+  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="F1 Kit"><p>{count} Formula 1 pit-lane and circuit props, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @f1-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=f1">Browse F1 models <ArrowRight /></Link></div>
 }
 
 function DocumentationShell() {
@@ -204,5 +259,42 @@ function DocumentationShell() {
 }
 
 export function App() {
-  return <Routes><Route path="/" element={<Home />} /><Route element={<DocumentationShell />}><Route path="/docs" element={<DocPage page="docs" />} /><Route path="/docs/installation" element={<DocPage page="installation" />} /><Route path="/docs/configuration" element={<DocPage page="configuration" />} /><Route path="/docs/materials" element={<DocPage page="materials" />} /><Route path="/docs/models" element={<DocPage page="models" />} /><Route path="/docs/registries" element={<DocPage page="registries" />} /><Route path="/docs/model-authoring" element={<ModelAuthoringPage />} /><Route path="/docs/terrain" element={<DocPage page="terrain" />} /><Route path="/docs/terrain-authoring" element={<DocPage page="terrainAuthoring" />} /><Route path="/models" element={<ModelIndex />} /><Route path="/models/:modelId" element={<ModelPage />} /><Route path="/kits/scifi-kit" element={<KitPage />} /></Route><Route path="*" element={<Navigate to="/" replace />} /></Routes>
+  return (
+    <Routes>
+      <Route path="/" element={<Home />} />
+      <Route
+        path="/scenes/f1-pit/explore"
+        element={
+          <Suspense fallback={<div className="pit-inspect-page pit-inspect-page--loading" aria-busy="true" />}>
+            <F1PitExplorePage />
+          </Suspense>
+        }
+      />
+      <Route
+        path="/scenes/f1-pit"
+        element={
+          <Suspense fallback={<div className="pit-inspect-page pit-inspect-page--loading" aria-busy="true" />}>
+            <F1PitInspectPage />
+          </Suspense>
+        }
+      />
+      <Route element={<DocumentationShell />}>
+        <Route path="/docs" element={<DocPage page="docs" />} />
+        <Route path="/docs/installation" element={<DocPage page="installation" />} />
+        <Route path="/docs/configuration" element={<DocPage page="configuration" />} />
+        <Route path="/docs/materials" element={<DocPage page="materials" />} />
+        <Route path="/docs/models" element={<DocPage page="models" />} />
+        <Route path="/docs/registries" element={<DocPage page="registries" />} />
+        <Route path="/docs/model-authoring" element={<ModelAuthoringPage />} />
+        <Route path="/docs/terrain" element={<DocPage page="terrain" />} />
+        <Route path="/docs/terrain-authoring" element={<DocPage page="terrainAuthoring" />} />
+        <Route path="/models" element={<ModelIndex />} />
+        <Route path="/models/:modelId" element={<ModelPage />} />
+        <Route path="/kits/scifi-kit" element={<SciFiKitPage />} />
+        <Route path="/kits/f1-kit" element={<F1KitPage />} />
+        <Route path="/kits/racing-kit" element={<Navigate to="/kits/f1-kit" replace />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
+  )
 }

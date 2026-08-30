@@ -1,8 +1,10 @@
+import { categoryFromId as f1CategoryFromId } from '../../../registries/f1-kit/src/categories.ts'
+
 export interface CatalogModel {
   id: string
   name: string
   category: string
-  kind: 'prototype' | 'terrain'
+  kind: 'prototype' | 'terrain' | 'f1'
   description: string
   load: () => Promise<ModelModule>
   loadSource: () => Promise<string>
@@ -25,6 +27,7 @@ const modules = {
   // Only standalone terrain assets belong in the model catalogue. Compound
   // evaluation scenes use *-scene.ts and are intentionally not matched here.
   ...import.meta.glob<ModelModule>('../../../assets/terrain/*/model.ts'),
+  ...import.meta.glob<ModelModule>('../../../assets/f1-prototypes/*/model.ts'),
 }
 const sources = {
   ...import.meta.glob<string>(
@@ -35,9 +38,16 @@ const sources = {
     '../../../assets/terrain/*/model.ts',
     { query: '?raw', import: 'default' },
   ),
+  ...import.meta.glob<string>(
+    '../../../assets/f1-prototypes/*/model.ts',
+    { query: '?raw', import: 'default' },
+  ),
 }
 
 const descriptions: Record<string, string> = {
+  'hot-wheels-loop': 'An exhibition-scale Hot Wheels vertical loop with procedural radius, offset, and colours.',
+  'hot-wheels-banked-turned': 'An exhibition-scale Hot Wheels banked U-turn with procedural bank pitch, radius, and colours.',
+
   'gantry-crane': 'A travelling industrial crane with a working hoist and a weathered structural frame.',
   'pressure-gauge': 'A compact analogue gauge for pipes, service walls, and machinery panels.',
   'industrial-toolbox': 'An armoured field case with a hinged lid and readable surface wear.',
@@ -105,6 +115,7 @@ const title = (id: string) => words(id).map((word) => word[0]?.toUpperCase() + w
 
 function categoryFor(id: string, kind: CatalogModel['kind']): string {
   if (kind === 'terrain') return 'Terrain'
+  if (kind === 'f1' || id.startsWith('f1-')) return f1CategoryFromId(id)
   if (cargoLogisticsIds.has(id)) return 'Cargo & Logistics'
   if (/wall|room|shell|roof|ceiling|floor|facade|column|door|window/.test(id)) return 'Architecture'
   if (/pipe|vent|duct|drain|gauge|generator|tank|pump/.test(id)) return 'Infrastructure'
@@ -115,10 +126,12 @@ function categoryFor(id: string, kind: CatalogModel['kind']): string {
 
 export const catalog = Object.entries(modules)
   .map(([path, load]) => {
-    const match = path.match(/assets\/(prototypes|terrain)\/([^/]+)\/model\.ts$/)
-    const kind: CatalogModel['kind'] = match?.[1] === 'terrain' ? 'terrain' : 'prototype'
+    const match = path.match(/assets\/(prototypes|terrain|f1-prototypes)\/([^/]+)\/model\.ts$/)
+    const folder = match?.[1]
     const id = match?.[2]
-    if (!id) throw new Error(`Unable to identify model at ${path}`)
+    if (!id || !folder) throw new Error(`Unable to identify model at ${path}`)
+    const kind: CatalogModel['kind'] =
+      folder === 'terrain' ? 'terrain' : folder === 'f1-prototypes' ? 'f1' : 'prototype'
     return {
       id,
       name: title(id),
@@ -130,6 +143,19 @@ export const catalog = Object.entries(modules)
     }
   })
   .sort((a, b) => a.name.localeCompare(b.name))
+
+export const scifiCatalog = catalog.filter((model) => model.kind !== 'f1')
+export const f1Catalog = catalog.filter((model) => model.kind === 'f1')
+
+/** Assembled F1 Kit pit — not a single model.ts; opens the inspect playground. */
+export const f1PitScene = {
+  id: 'f1-kit-scene',
+  name: 'Pit Straight',
+  category: 'Scenes',
+  description: 'Orbit the assembled F1 Kit. Click markers to inspect one prop at a time, then return to the overview.',
+  href: '/scenes/f1-pit',
+} as const
+
 
 export function findModel(id: string | undefined): CatalogModel | undefined {
   return catalog.find((model) => model.id === id)

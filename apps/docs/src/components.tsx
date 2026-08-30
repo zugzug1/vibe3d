@@ -1,7 +1,7 @@
 import { Check, ChevronRight, Clipboard, Menu, Search, X } from 'lucide-react'
 import { useState, type ReactNode } from 'react'
 import { Link, NavLink, useLocation } from 'react-router-dom'
-import { catalog } from './catalog.ts'
+import { f1Catalog, f1PitScene, scifiCatalog, type CatalogModel } from './catalog.ts'
 
 const navigation: ReadonlyArray<{
   label: string
@@ -38,6 +38,55 @@ const navigation: ReadonlyArray<{
   },
 ]
 
+function libraryCategories(models: readonly CatalogModel[]): string[] {
+  return [...new Set(models.map((model) => model.category))].sort()
+}
+
+function KitTree({
+  title,
+  overviewPath,
+  allModelsPath,
+  kitSlug,
+  models,
+  activeModel,
+  open,
+  extra,
+}: {
+  title: string
+  overviewPath: string
+  allModelsPath: string
+  kitSlug: 'scifi' | 'f1'
+  models: readonly CatalogModel[]
+  activeModel: CatalogModel | undefined
+  open: boolean
+  extra?: ReactNode
+}) {
+  const categories = libraryCategories(models)
+  return (
+    <details open={open || undefined}>
+      <summary><ChevronRight />{title}</summary>
+      <div className="sidebar-submenu">
+        <NavLink to={overviewPath}>Overview</NavLink>
+        <NavLink end={allModelsPath === '/models'} to={allModelsPath}>All models</NavLink>
+        {extra}
+        {categories.map((category) => (
+          <details key={category} open={activeModel?.category === category || undefined}>
+            <summary><ChevronRight />{category}</summary>
+            <div className="sidebar-submenu sidebar-submenu--models">
+              <Link to={`/models?kit=${kitSlug}&q=${encodeURIComponent(category)}`}>
+                View all {category.toLowerCase()}
+              </Link>
+              {models.filter((model) => model.category === category).map((model) => (
+                <NavLink key={model.id} to={`/models/${model.id}`}>{model.name}</NavLink>
+              ))}
+            </div>
+          </details>
+        ))}
+      </div>
+    </details>
+  )
+}
+
 export function Logo() {
   return <Link className="logo" to="/"><span>V</span> vibe3d</Link>
 }
@@ -53,6 +102,7 @@ export function Header() {
           <NavLink to="/models">Models</NavLink>
           <NavLink to="/docs/terrain">Terrain</NavLink>
           <NavLink to="/kits/scifi-kit">Sci-Fi Kit</NavLink>
+          <NavLink to="/kits/f1-kit">F1 Kit</NavLink>
         </nav>
         <div className="header-actions">
           <Link className="search-link" to="/models"><Search size={15} /> Search models</Link>
@@ -66,6 +116,7 @@ export function Header() {
         {navigation.flatMap((group) => group.items).map(([label, path]) => <NavLink key={path} to={path} onClick={() => setOpen(false)}>{label}</NavLink>)}
         <NavLink to="/models" onClick={() => setOpen(false)}>Model library</NavLink>
         <NavLink to="/kits/scifi-kit" onClick={() => setOpen(false)}>Sci-Fi Kit</NavLink>
+        <NavLink to="/kits/f1-kit" onClick={() => setOpen(false)}>F1 Kit</NavLink>
       </nav>}
     </header>
   )
@@ -76,8 +127,9 @@ export function DocsLayout({ children }: { children: ReactNode }) {
   const isArticle = pathname.startsWith('/docs')
   const isModelDetail = pathname.startsWith('/models/')
   const isWide = pathname === '/models'
-  const activeModel = catalog.find((model) => pathname === `/models/${model.id}`)
-  const categories = [...new Set(catalog.map((model) => model.category))].sort()
+  const activeModel = [...scifiCatalog, ...f1Catalog].find((model) => pathname === `/models/${model.id}`)
+  const f1Open = activeModel?.kind === 'f1' || pathname.startsWith('/kits/f1-kit') || pathname.startsWith('/scenes/f1-pit')
+  const scifiOpen = !f1Open
   return (
     <div className={`docs-shell${isArticle || isModelDetail ? ' docs-shell--article' : ''}${isWide ? ' docs-shell--wide' : ''}`}>
       <aside className="docs-sidebar">
@@ -89,20 +141,25 @@ export function DocsLayout({ children }: { children: ReactNode }) {
         <section className="sidebar-group">
           <p>Model Libraries</p>
           <nav className="sidebar-tree">
-            <details open>
-              <summary><ChevronRight />Sci-Fi Kit</summary>
-              <div className="sidebar-submenu">
-                <NavLink to="/kits/scifi-kit">Overview</NavLink>
-                <NavLink end to="/models">All models</NavLink>
-                {categories.map((category) => <details key={category} open={activeModel?.category === category || undefined}>
-                  <summary><ChevronRight />{category}</summary>
-                  <div className="sidebar-submenu sidebar-submenu--models">
-                    <Link to={`/models?q=${encodeURIComponent(category)}`}>View all {category.toLowerCase()}</Link>
-                    {catalog.filter((model) => model.category === category).map((model) => <NavLink key={model.id} to={`/models/${model.id}`}>{model.name}</NavLink>)}
-                  </div>
-                </details>)}
-              </div>
-            </details>
+            <KitTree
+              title="Sci-Fi Kit"
+              overviewPath="/kits/scifi-kit"
+              allModelsPath="/models?kit=scifi"
+              kitSlug="scifi"
+              models={scifiCatalog}
+              activeModel={activeModel?.kind !== 'f1' ? activeModel : undefined}
+              open={scifiOpen}
+            />
+            <KitTree
+              title="F1 Kit"
+              overviewPath="/kits/f1-kit"
+              allModelsPath="/models?kit=f1"
+              kitSlug="f1"
+              models={f1Catalog}
+              activeModel={activeModel?.kind === 'f1' ? activeModel : undefined}
+              open={f1Open}
+              extra={<NavLink to={f1PitScene.href}>{f1PitScene.name}</NavLink>}
+            />
           </nav>
         </section>
         <footer className="sidebar-footer"><span /> Registry connected</footer>
