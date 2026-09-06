@@ -49,6 +49,21 @@ export interface F1StartLightsConfig {
   color?: number
   /** Lamp rows per column. FIA TV unit is 4. */
   rows: number
+  /**
+   * Post-to-post span, in metres. The rig STRADDLES the racing surface, so this belongs to the
+   * circuit, not to the model: a consumer that knows its track width should pass it. Default 6.4 is
+   * the standalone display figure and is narrower than any real F1 start straight.
+   *
+   * The lamp panel is NOT scaled by this — it keeps its own FIA size, centred under the beam, which
+   * is how the real structure reads. Only the posts, the top chord and the beam follow the span.
+   */
+  span: number
+  /**
+   * Soffit height, in metres — underside of the beam above the road. Also a circuit dimension
+   * (FIA wants a minimum clearance over the racing surface), and `f1-start-gantry` already exposes
+   * its own `height` for the same reason. The lamp panel hangs from it via `panelYFor`.
+   */
+  height: number
 }
 
 export interface F1StartLightsOptions extends Partial<F1StartLightsConfig> {
@@ -67,7 +82,6 @@ export interface F1StartLightsInstance {
 }
 
 const FIA_START_RED = 0xc41820
-const defaults: F1StartLightsConfig = { lit: 5, sequence: false, mode: 'start', rows: 4 }
 const COLS = 5
 const PITCH = 0.36
 const MODULE_W = 0.29
@@ -77,9 +91,16 @@ const LAMP_R = 0.08
 const LENS_THICK = 0.012
 const WELL_DEPTH = 0.045
 const DOME_THICK = 0.004
-const HEIGHT = 5.6
-/** Panel centre Y — hung so housing top clears the soffit by ≥ 0.12 m. */
-const PANEL_Y = HEIGHT - MODULE_H / 2 - 0.28
+const DEFAULT_HEIGHT = 5.6
+/** Panel centre Y — hung so the housing top clears the soffit by >= 0.12 m. Derived, never typed. */
+const panelYFor = (height: number): number => height - MODULE_H / 2 - 0.28
+const DEFAULT_PANEL_Y = panelYFor(DEFAULT_HEIGHT)
+
+// Declared AFTER the dimension consts above, not beside FIA_START_RED: `const` is not hoisted, so
+// referencing DEFAULT_HEIGHT from here while it was still above would be a TDZ throw at module init.
+const defaults: F1StartLightsConfig = {
+  lit: 5, sequence: false, mode: 'start', rows: 4, span: 6.4, height: DEFAULT_HEIGHT,
+}
 
 function lampHex(mode: F1StartLightMode, color?: number): number {
   if (color !== undefined) return color
@@ -95,6 +116,8 @@ export function createModel(options: F1StartLightsOptions = {}): F1StartLightsIn
     mode: options.mode ?? defaults.mode,
     color: options.color,
     rows: Math.min(6, Math.max(1, Math.round(options.rows ?? defaults.rows))),
+    span: Math.max(4, options.span ?? defaults.span),
+    height: Math.max(3, options.height ?? defaults.height),
   }
   let elapsed = 0
 
@@ -188,29 +211,30 @@ export function createModel(options: F1StartLightsOptions = {}): F1StartLightsIn
   const rebuild = (): void => {
     releaseGenerated()
     const rows = config.rows
-    const span = 6.4
+    const { span, height } = config
+    const panelY = panelYFor(height)
     const half = span / 2
     const postParts: BufferGeometry[] = []
     for (const sx of [-1, 1] as const) {
-      postParts.push(member(new Vector3(sx * half, 0, 0), new Vector3(sx * half, HEIGHT, 0), 0.11, 12))
+      postParts.push(member(new Vector3(sx * half, 0, 0), new Vector3(sx * half, height, 0), 0.11, 12))
       const plate = bevelBox(0.55, 0.08, 0.55, 0.012)
       plate.translate(sx * half, 0.04, 0)
       postParts.push(plate)
       postParts.push(member(
         new Vector3(sx * half, 0.4, -0.18),
-        new Vector3(sx * half, HEIGHT - 0.4, 0.18),
+        new Vector3(sx * half, height - 0.4, 0.18),
         0.035,
         8,
       ))
     }
-    postParts.push(member(new Vector3(-half, HEIGHT, 0), new Vector3(half, HEIGHT, 0), 0.1, 12))
+    postParts.push(member(new Vector3(-half, height, 0), new Vector3(half, height, 0), 0.1, 12))
     const beam = bevelBox(span + 0.5, 0.28, 0.36, 0.02)
-    beam.translate(0, HEIGHT + 0.14, 0)
+    beam.translate(0, height + 0.14, 0)
     postParts.push(beam)
     for (const sx of [-1.2, 0, 1.2] as const) {
       postParts.push(member(
-        new Vector3(sx, HEIGHT, 0),
-        new Vector3(sx, PANEL_Y + MODULE_H / 2 + 0.04, 0.12),
+        new Vector3(sx, height, 0),
+        new Vector3(sx, panelY + MODULE_H / 2 + 0.04, 0.12),
         0.028,
         8,
       ))
@@ -220,15 +244,15 @@ export function createModel(options: F1StartLightsOptions = {}): F1StartLightsIn
     const panelW = (COLS - 1) * PITCH + MODULE_W
     const mountingParts: BufferGeometry[] = []
     const rail = bevelBox(panelW + 0.12, 0.1, 0.08, 0.012)
-    rail.translate(0, PANEL_Y + MODULE_H / 2 - 0.04, -0.07)
+    rail.translate(0, panelY + MODULE_H / 2 - 0.04, -0.07)
     mountingParts.push(rail)
     for (const sx of [-1, 1] as const) {
       const tab = bevelBox(0.1, 0.24, 0.07, 0.012)
-      tab.translate(sx * (panelW / 2 + 0.02), PANEL_Y + MODULE_H / 2 - 0.12, -0.07)
+      tab.translate(sx * (panelW / 2 + 0.02), panelY + MODULE_H / 2 - 0.12, -0.07)
       mountingParts.push(tab)
     }
     const board = bevelBox(panelW + 0.22, MODULE_H + 0.18, 0.05, 0.01)
-    board.translate(0, PANEL_Y, 0.02)
+    board.translate(0, panelY, 0.02)
     mountingParts.push(board)
     emit('housing', mergeParts(mountingParts, 'mounting-rail'), panel, 'mounting-rail')
 
@@ -245,7 +269,7 @@ export function createModel(options: F1StartLightsOptions = {}): F1StartLightsIn
     for (let c = 0; c < COLS; c++) {
       const x = (c - (COLS - 1) / 2) * PITCH
       const body = loftRoundedBox(MODULE_W, MODULE_H, MODULE_D, 0.045)
-      body.translate(x, PANEL_Y, faceZ)
+      body.translate(x, panelY, faceZ)
       housings.push(body)
     }
     emit('housing', mergeParts(housings, 'housings'), panel, 'housings')
@@ -256,7 +280,7 @@ export function createModel(options: F1StartLightsOptions = {}): F1StartLightsIn
       const on = c < config.lit
       const x = (c - (COLS - 1) / 2) * PITCH
       for (let r = 0; r < rows; r++) {
-        const y = PANEL_Y + ((rows - 1) / 2 - r) * rowPitch
+        const y = panelY + ((rows - 1) / 2 - r) * rowPitch
         const lamp = new CylinderGeometry(LAMP_R * 0.78, LAMP_R * 0.74, LENS_THICK, 18)
         lamp.rotateX(Math.PI / 2)
         applyPolarCapUVs(lamp)
@@ -291,6 +315,8 @@ export function createModel(options: F1StartLightsOptions = {}): F1StartLightsIn
       if (patch.lit !== undefined) config.lit = Math.min(5, Math.max(0, Math.round(patch.lit)))
       if (patch.sequence !== undefined) config.sequence = patch.sequence
       if (patch.rows !== undefined) config.rows = Math.min(6, Math.max(1, Math.round(patch.rows)))
+      if (patch.span !== undefined) config.span = Math.max(4, patch.span)
+      if (patch.height !== undefined) config.height = Math.max(3, patch.height)
       let dirtyLamps = false
       if (patch.mode !== undefined) {
         config.mode = patch.mode
@@ -338,7 +364,7 @@ export function createPreview({ aspect }: { aspect: number; time?: number }) {
   const lit = litFromEnv()
   return createF1Preview(createModel(lit !== undefined ? { lit } : {}), {
     aspect,
-    target: [0, PANEL_Y, 0.26],
+    target: [0, DEFAULT_PANEL_Y, 0.26],
     distance: 4.6,
     fov: 26,
     yaw: 0.12,
