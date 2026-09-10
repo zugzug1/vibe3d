@@ -1081,6 +1081,64 @@ describe('FIA 1:1 datums', () => {
     model.dispose()
   })
 
+  test('spectator bridge deckHeight defaults to the kit clearance and is byte-identical', () => {
+    // Same vertex totals whether `deckHeight` is omitted or passed explicitly at the old
+    // hard-coded constant: the option must not perturb the default build.
+    const totalVerts = (root: Object3D): number => {
+      let total = 0
+      root.traverse((object) => {
+        const mesh = object as Mesh
+        if (!mesh.isMesh) return
+        total += (mesh.geometry as BufferGeometry).getAttribute('position').count
+      })
+      return total
+    }
+    const omitted = createSpectatorBridge({ span: 10 })
+    const explicit = createSpectatorBridge({ span: 10, deckHeight: SPECTATOR_BRIDGE.deckHeight })
+    expect(omitted.getConfig().deckHeight).toBe(SPECTATOR_BRIDGE.deckHeight)
+    expect(totalVerts(omitted.root)).toBe(totalVerts(explicit.root))
+    omitted.root.updateMatrixWorld(true)
+    explicit.root.updateMatrixWorld(true)
+    expect(sizeOf(omitted.root).box.max.y).toBeCloseTo(sizeOf(explicit.root).box.max.y, 6)
+    omitted.dispose()
+    explicit.dispose()
+  })
+
+  test('spectator bridge deckHeight raises the deck, the piers and the stair towers', () => {
+    const low = createSpectatorBridge({ span: 10 })
+    const high = createSpectatorBridge({ span: 10, deckHeight: 6.5 })
+    low.root.updateMatrixWorld(true)
+    high.root.updateMatrixWorld(true)
+    const lowBox = sizeOf(low.root).box
+    const highBox = sizeOf(high.root).box
+    expect(highBox.max.y).toBeGreaterThanOrEqual(6.5)
+    expect(highBox.max.y).toBeGreaterThan(lowBox.max.y)
+    // The stairs and piers reach the deck rather than stopping short of it: the tower's own
+    // AABB (a proxy for pier + stair-tower height) grows with the deck, not just the deck slab.
+    const towerHeight = (root: Object3D): number =>
+      new Box3().setFromObject(root.getObjectByName('stairs')!).getSize(new Vector3()).y
+    expect(towerHeight(high.root)).toBeGreaterThan(towerHeight(low.root))
+    low.dispose()
+    high.dispose()
+  })
+
+  test('spectator bridge rejects a non-finite or too-low deckHeight', () => {
+    const fallback = createSpectatorBridge({ span: 10, deckHeight: Number.NaN })
+    expect(fallback.getConfig().deckHeight).toBe(SPECTATOR_BRIDGE.deckHeight)
+    fallback.dispose()
+
+    const tooLow = createSpectatorBridge({ span: 10, deckHeight: 1 })
+    expect(tooLow.getConfig().deckHeight).toBe(4)
+    tooLow.dispose()
+
+    const patched = createSpectatorBridge({ span: 10 })
+    patched.configure({ deckHeight: -2 })
+    expect(patched.getConfig().deckHeight).toBe(4)
+    patched.configure({ deckHeight: Number.POSITIVE_INFINITY })
+    expect(patched.getConfig().deckHeight).toBe(4)
+    patched.dispose()
+  })
+
   test('start/finish defaults to a thin timing line; SF uses 1 m tiles', () => {
     const line = createStartFinishLine()
     expect(line.getConfig().kind).toBe('LINE')
