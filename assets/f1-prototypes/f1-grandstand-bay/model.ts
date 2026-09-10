@@ -90,6 +90,21 @@
 // reaches it, and leaving it out is what keeps the proxy cheap and stops the canopy's cantilever from
 // inflating an AABB out over the track. The group is NOT parented to `root` (so it can never reach the
 // visual/compile path); `createModel({ debug: { collision: true } })` parents it for a capture.
+//
+// TODO(collision-as-config, Miguel 2026-09-11 — "make that into config as part of the vibe3d model; this
+// is going to be more important over time"): promote the proxy from a hand-built side group to a
+// first-class, PROCEDURAL config contract shared by every kit model, to land in the upstream PR:
+//   1. `collision: { mode: 'volumes' | 'hull' | 'aabb' | 'none', parts?: Record<part, boolean> }` on the
+//      model config — `volumes` = the convex list above, derived from the SAME layout numbers the visual
+//      is built from (never a second set of typed dimensions), `hull` = the compiled .vtopo hull,
+//      `aabb` = today's fallback, `none` = props that must never collide (roof, flags, banners).
+//   2. Per-part opt-in so a model can say "bowl + supports + stairs collide, roof does not" in data,
+//      and so `f1-kit-core/compile.ts` can emit the volume list into the .vtopo sidecar PER CONFIG
+//      SIGNATURE (a 3-tier bay and a 1-tier bay are different colliders of the same id).
+//   3. A single reader on the consumer side (devlo-racing `attachKitCollider`) that prefers
+//      `getCollisionVolumes()` over the sidecar hull over the AABB, so the game gets cheap convex
+//      colliders the day `kitAllowsBarrierCollider` stops being a blanket false.
+//   Stays a TODO until the stand + garage-box models are accepted upstream.
 
 import {
   BufferGeometry,
