@@ -1,6 +1,6 @@
 // f1-grandstand-bay — one Silverstone-style seating bay: a raked bowl on an elevated deck, tip-up seat
 // shells on standards, a hoarding-and-debris-fence frontage, and a tensioned membrane roof carried on
-// slender front columns. configure({ rows, width }).
+// slender front columns. configure({ rows, width, tiers }).
 //
 // Datums read off the Silverstone reference: 0.44 m rise on a 0.80 m tread, a 1.10 m promenade sitting
 // 0.95 m above ground, row 1 stepped a further 0.75 m up so it clears the hoarding, columns and rafters
@@ -8,6 +8,13 @@
 // back up, so the canopy opens toward the track instead of shutting down onto it. `width` is the tiling
 // module and nothing overhangs it, so a run of bays reads as one continuous stand. The red leading-edge
 // fascia and the amber nosings are the catalogue tells — not a grey shed.
+//
+// `tiers` (1-4) stacks whole bowls, like Madring's S/F stand: tier k's promenade sits at tier k-1's
+// bowlTop + ROOF_CLEAR (headroom for the concourse under it) and tier k's front sits at tier k-1's rear
+// edge — stepped straight back and up, no cantilever overlap. Each tier below the top gets its own
+// frontage (fascia/hoarding/guard-rail) and a rear wall stretched to close the gap under the tier above
+// (no see-through void). ONE roof — the existing membrane/rafter/column system — rides the TOP tier
+// only; lower tiers are uncovered. `tiers: 1` is untouched: same single bowl, same geometry as before.
 
 import {
   BufferGeometry,
@@ -40,6 +47,8 @@ type Slot = 'structure' | 'deck' | 'seat' | 'roof' | 'fascia'
 export interface F1GrandstandBayConfig {
   rows: number
   width: number
+  /** Stacked bowls, 1-4. `tiers: 1` (the default) is the original single bowl, unchanged. */
+  tiers: number
 }
 
 export interface F1GrandstandBayOptions extends Partial<F1GrandstandBayConfig> {
@@ -57,7 +66,9 @@ export interface F1GrandstandBayInstance {
   dispose(): void
 }
 
-const defaults: F1GrandstandBayConfig = { rows: 8, width: 10 }
+const defaults: F1GrandstandBayConfig = { rows: 8, width: 10, tiers: 1 }
+const MIN_TIERS = 1
+const MAX_TIERS = 4
 
 const RISE = 0.44
 const TREAD = 0.8
@@ -368,6 +379,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   const config: F1GrandstandBayConfig = {
     rows: Math.max(4, Math.round(options.rows ?? defaults.rows)),
     width: Math.max(4, options.width ?? defaults.width),
+    tiers: Math.min(MAX_TIERS, Math.max(MIN_TIERS, Math.round(options.tiers ?? defaults.tiers))),
   }
 
   const bundle = acquireF1Materials()
@@ -457,6 +469,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     geometry: BufferGeometry,
     matrices: readonly Matrix4[],
     name: string,
+    group: Group,
   ): void => {
     generated.push(geometry)
     const mesh = new InstancedMesh(geometry, materialSlots[slot], matrices.length)
@@ -466,11 +479,16 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     for (let i = 0; i < matrices.length; i++) mesh.setMatrixAt(i, matrices[i]!)
     mesh.instanceMatrix.needsUpdate = true
     meshesBySlot[slot].push(mesh)
-    bowl.add(mesh)
+    group.add(mesh)
   }
 
-  /** The raked mass: front skirt, promenade, tiers, rear return — one closed section swept across. */
-  const buildBowl = (layout: Layout): void => {
+  /**
+   * The raked mass: front skirt, promenade, tiers, rear return — one closed section swept across.
+   * `wallTop` overrides the rear-wall height (local, this tier's own origin) — used to stretch a
+   * non-top tier's rear wall up to the tier stacked above it, so the concourse void underneath is
+   * closed rather than see-through. Left undefined (the top/only tier) it is the original parapet.
+   */
+  const buildBowl = (layout: Layout, group: Group, wallTop?: number): void => {
     const profile: Array<readonly [number, number]> = [
       [layout.halfD, 0],
       [layout.halfD, DECK - 0.12],
@@ -484,15 +502,15 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       profile.push([back, y], [back, y + RISE])
     }
     profile.push([-layout.halfD, layout.bowlTop], [-layout.halfD, 0])
-    emit('deck', loftAlongX(profile, layout.width, { closed: true }), bowl, 'bowl')
+    emit('deck', loftAlongX(profile, layout.width, { closed: true }), group, 'bowl')
 
-    const wallH = layout.bowlTop + 0.62
+    const wallH = wallTop ?? layout.bowlTop + 0.62
     const rear = bevelBox(layout.width, wallH, 0.5, 0.03)
     rear.translate(0, wallH / 2, -layout.halfD - 0.24)
-    emit('deck', rear, bowl, 'rear-wall')
+    emit('deck', rear, group, 'rear-wall')
   }
 
-  const buildSeating = (layout: Layout): void => {
+  const buildSeating = (layout: Layout, group: Group): void => {
     const across = Math.max(6, Math.floor(layout.width / SEAT_PITCH))
     const pitch = layout.width / across
     const matrices: Matrix4[] = []
@@ -505,12 +523,12 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         matrices.push(new Matrix4().makeTranslation(x, y, z))
       }
     }
-    instance('seat', seatShell(), matrices, 'seats')
-    instance('structure', seatFrame(), matrices, 'seat-frames')
+    instance('seat', seatShell(), matrices, 'seats', group)
+    instance('structure', seatFrame(), matrices, 'seat-frames', group)
   }
 
   /** Centre flight: half-tier pads make a 0.44 m tier walkable at 0.22 m a step. */
-  const buildAisle = (layout: Layout): void => {
+  const buildAisle = (layout: Layout, group: Group): void => {
     const steps: BufferGeometry[] = []
     for (let r = 0; r < layout.rows; r++) {
       const pad = bevelBox(AISLE, RISE / 2 + 0.02, TREAD / 2, 0.012)
@@ -527,7 +545,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     const landing = bevelBox(AISLE, 0.06, WALK, 0.012)
     landing.translate(0, DECK + 0.02, layout.halfD - WALK / 2)
     steps.push(landing)
-    emit('deck', mergeParts(steps, 'f1-grandstand-bay: aisle steps'), bowl, 'aisle-steps')
+    emit('deck', mergeParts(steps, 'f1-grandstand-bay: aisle steps'), group, 'aisle-steps')
 
     const rails: BufferGeometry[] = []
     const foot = new Vector3(0, DECK + 1.06, layout.halfD - WALK + 0.2)
@@ -543,11 +561,11 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         rails.push(member(new Vector3(x, surfaceY(layout, z) - 0.04, z), new Vector3(x, y, z), 0.022, 6))
       }
     }
-    emit('structure', mergeParts(rails, 'f1-grandstand-bay: gangway'), bowl, 'central-gangway')
+    emit('structure', mergeParts(rails, 'f1-grandstand-bay: gangway'), group, 'central-gangway')
   }
 
   /** Amber step marking on every tier edge and every aisle half-step. */
-  const buildNosings = (layout: Layout): void => {
+  const buildNosings = (layout: Layout, group: Group): void => {
     const parts: BufferGeometry[] = []
     for (let r = 0; r < layout.rows; r++) {
       const y = treadY(r)
@@ -566,7 +584,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     const lip = bevelBox(layout.width, 0.026, 0.08, 0.007)
     lip.translate(0, DECK + 0.01, layout.halfD - 0.17)
     parts.push(lip)
-    emit('structure', mergeParts(parts, 'f1-grandstand-bay: nosings'), bowl, 'nosings', kit.amber)
+    emit('structure', mergeParts(parts, 'f1-grandstand-bay: nosings'), group, 'nosings', kit.amber)
   }
 
   /**
@@ -576,7 +594,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
    * a band, the void above it puts the walk strip and the row-1 riser on show, so the frontage carries
    * promenade depth instead of a face.
    */
-  const buildFrontage = (layout: Layout): void => {
+  const buildFrontage = (layout: Layout, group: Group): void => {
     const z = layout.halfD + 0.07
     const base = DECK + 0.09
     const top = base + HOARD_H
@@ -612,7 +630,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     // void reads as a gap in a face instead of a walkway seen behind a rail.
     const strip = bevelBox(layout.width - 0.16, 0.05, WALK - 0.42, 0.012)
     strip.translate(0, DECK + 0.02, layout.halfD - WALK / 2 - 0.04)
-    emit('deck', strip, bowl, 'promenade-strip', kit.graphite)
+    emit('deck', strip, group, 'promenade-strip', kit.graphite)
 
     // Fence posts sit mid-bay so a tiled run never doubles one up on a seam.
     const fenceTop = railHead + 1.55
@@ -631,15 +649,15 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       ))
     }
 
-    emit('structure', mergeParts(frame, 'f1-grandstand-bay: frontage'), bowl, 'frontage')
-    emit('structure', mergeParts(panels, 'f1-grandstand-bay: hoarding'), bowl, 'hoarding', kit.ink)
+    emit('structure', mergeParts(frame, 'f1-grandstand-bay: frontage'), group, 'frontage')
+    emit('structure', mergeParts(panels, 'f1-grandstand-bay: hoarding'), group, 'hoarding', kit.ink)
   }
 
   /**
    * Scalloped membrane bays clamped between arched rafters that stand proud of the fabric, each one over
    * its own tension web. One lofted slab is what made this read as a shed.
    */
-  const buildRoof = (layout: Layout): void => {
+  const buildRoof = (layout: Layout, group: Group): void => {
     const membrane: BufferGeometry[] = []
     const frame: BufferGeometry[] = []
     for (let b = 0; b < layout.columns.length - 1; b++) {
@@ -650,12 +668,12 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     }
     frame.push(...roofRafters(layout), ...roofEdges(layout))
 
-    emit('roof', mergeParts(membrane, 'f1-grandstand-bay: membrane'), roof, 'roof')
-    emit('structure', mergeParts(frame, 'f1-grandstand-bay: roof frames'), roof, 'roof-frames')
+    emit('roof', mergeParts(membrane, 'f1-grandstand-bay: membrane'), group, 'roof')
+    emit('structure', mergeParts(frame, 'f1-grandstand-bay: roof frames'), group, 'roof-frames')
   }
 
   /** The slender front columns that carry the cantilever — the reference's strongest vertical rhythm. */
-  const buildColumns = (layout: Layout): void => {
+  const buildColumns = (layout: Layout, group: Group): void => {
     const front = rafterAt(layout, 1)
     const knee = rafterAt(layout, 0.76)
     const z = front.z - 0.07
@@ -677,7 +695,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         6,
       ))
     }
-    emit('structure', mergeParts(parts, 'f1-grandstand-bay: columns'), roof, 'columns')
+    emit('structure', mergeParts(parts, 'f1-grandstand-bay: columns'), group, 'columns')
   }
 
   /**
@@ -685,7 +703,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
    * a metre below it. Set proud of the tip it becomes the silhouette; set back, it is depth trim under a
    * canopy edge that leads.
    */
-  const buildFascia = (layout: Layout): void => {
+  const buildFascia = (layout: Layout, group: Group): void => {
     const front = rafterAt(layout, 1)
     const z = front.z - 0.34
     const top = front.y - EDGE_HEAD - 0.04
@@ -718,21 +736,61 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       faces.push(face)
     }
 
-    emit('structure', mergeParts(frame, 'f1-grandstand-bay: fascia frame'), roof, 'fascia-frame')
-    emit('fascia', mergeParts(faces, 'f1-grandstand-bay: fascia'), roof, 'fascia-board')
+    emit('structure', mergeParts(frame, 'f1-grandstand-bay: fascia frame'), group, 'fascia-frame')
+    emit('fascia', mergeParts(faces, 'f1-grandstand-bay: fascia'), group, 'fascia-board')
   }
 
+  /**
+   * Stacks `config.tiers` bowls. Tier 0 emits straight into the `bowl`/`roof` groups exactly as the
+   * single-bowl model always has (identity transform) — that's what keeps `tiers: 1` byte-identical.
+   * Tier k>=1 gets its own subgroup, translated by the running (oy, oz) origin derived from the SAME
+   * constants `layoutOf` already uses: the y-step is the headroom a tier needs above the one below
+   * (`bowlTop - DECK + ROOF_CLEAR`, i.e. NOSE + rows*RISE + ROOF_CLEAR — the promenade rule from the
+   * header comment), and the z-step is one full bowl depth back (`2 * halfD` — tier k's front is tier
+   * k-1's rear, and `halfD` is already half that depth by construction). Only the TOP tier gets a roof;
+   * every non-top tier's rear wall is stretched to `wallTopStacked` so it closes flush against the
+   * underside of the tier above (no see-through gap into the concourse).
+   */
   const rebuild = (): void => {
     releaseGenerated()
     const layout = layoutOf(config)
-    buildBowl(layout)
-    buildSeating(layout)
-    buildAisle(layout)
-    buildNosings(layout)
-    buildFrontage(layout)
-    buildRoof(layout)
-    buildColumns(layout)
-    buildFascia(layout)
+    const tierStep = { y: layout.bowlTop - DECK + ROOF_CLEAR, z: 2 * layout.halfD }
+    const wallTopStacked = layout.bowlTop + (ROOF_CLEAR - DECK)
+
+    let oy = 0
+    let oz = 0
+    for (let tier = 0; tier < config.tiers; tier++) {
+      const isTop = tier === config.tiers - 1
+      const bowlGroup = tier === 0 ? bowl : (() => {
+        const g = new Group()
+        g.name = `tier-${tier}`
+        g.position.set(0, oy, oz)
+        bowl.add(g)
+        return g
+      })()
+
+      buildBowl(layout, bowlGroup, isTop ? undefined : wallTopStacked)
+      buildSeating(layout, bowlGroup)
+      buildAisle(layout, bowlGroup)
+      buildNosings(layout, bowlGroup)
+      buildFrontage(layout, bowlGroup)
+
+      if (isTop) {
+        const roofGroup = tier === 0 ? roof : (() => {
+          const g = new Group()
+          g.name = `tier-${tier}`
+          g.position.set(0, oy, oz)
+          roof.add(g)
+          return g
+        })()
+        buildRoof(layout, roofGroup)
+        buildColumns(layout, roofGroup)
+        buildFascia(layout, roofGroup)
+      }
+
+      oy += tierStep.y
+      oz -= tierStep.z
+    }
   }
   rebuild()
 
@@ -744,6 +802,9 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     configure(patch) {
       if (patch.rows !== undefined) config.rows = Math.max(4, Math.round(patch.rows))
       if (patch.width !== undefined) config.width = Math.max(4, patch.width)
+      if (patch.tiers !== undefined) {
+        config.tiers = Math.min(MAX_TIERS, Math.max(MIN_TIERS, Math.round(patch.tiers)))
+      }
       rebuild()
     },
     setMaterial(slot, material) {
