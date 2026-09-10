@@ -1158,7 +1158,7 @@ describe('FIA 1:1 datums', () => {
     // Also byte-identical when the default tierSpec is given explicitly, not just omitted.
     const explicit = createGrandstandBay({
       rows: 8, width: 10, tiers: 1,
-      tierSpec: [{ plinth: 0.95, support: 'columns', rearSupport: 'columns', stairs: false, roof: true }],
+      tierSpec: [{ plinth: 0.95, support: 'columns', rearSupport: 'columns', stairSide: 'none', roof: true }],
     })
     explicit.root.updateMatrixWorld(true)
     expect(hashOf(explicit.root)).toBe(omittedHash)
@@ -1170,11 +1170,12 @@ describe('FIA 1:1 datums', () => {
     model.root.updateMatrixWorld(true)
     const names: string[] = []
     model.root.traverse((object) => { if ((object as Mesh).isMesh) names.push(object.name) })
-    // One front/rear support and one stair per tier above the bottom (tiers 1 and 2 of 3).
+    // One front/rear support per tier above the bottom (tiers 1 and 2 of 3), but ONE stair cage for the
+    // whole stack — tier k's head landing is tier k+1's foot landing, so the tower is shared, not stacked.
     expect(names.filter((n) => n === 'front-support').length).toBe(2)
     expect(names.filter((n) => n === 'rear-support').length).toBe(2)
-    expect(names.filter((n) => n === 'stairs').length).toBe(2)
-    expect(names.filter((n) => n === 'stair-rail').length).toBe(2)
+    expect(names.filter((n) => n === 'stairs').length).toBe(1)
+    expect(names.filter((n) => n === 'stair-rail').length).toBe(1)
     // Every rear support's foot lands at TRUE ground (y=0), never mid-air.
     let rearSupportCount = 0
     model.root.traverse((object) => {
@@ -1236,34 +1237,149 @@ describe('FIA 1:1 datums', () => {
     moreRows.dispose()
   })
 
-  test('grandstand-bay inter-tier stairs stay inside width, folding into a switchback when a straight flight would not fit', () => {
-    // 8 rows / 3 tiers at the default width (10 m) needs a run longer than the bay is wide, so the acceptance
-    // config folds — this proves the fold, not just the straight case.
+  test('grandstand-bay stairs are SIDE stair towers: on the end face, outside the seating, along Z', () => {
+    // Miguel's review on the previous cut: "the stairs are on the front side right now — we need those
+    // stairs along the side." This is that gate. A tower travels along Z (parallel to the rake) on the
+    // bay's END face; nothing about it may cross the bowl.
     const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
     model.root.updateMatrixWorld(true)
     const halfW = 10 / 2
-    let stairMeshes = 0
-    model.root.traverse((object) => {
-      if (object.name !== 'stairs' && object.name !== 'stair-rail') return
-      stairMeshes += 1
-      const box = new Box3().setFromObject(object)
-      expect(box.min.x).toBeGreaterThanOrEqual(-halfW)
-      expect(box.max.x).toBeLessThanOrEqual(halfW + 1e-6)
-    })
-    expect(stairMeshes).toBe(4) // 2 tiers × (stairs + stair-rail)
-    model.dispose()
+    const footprint = model.getFootprint()
+    expect(footprint.width).toBe(10)
+    expect(footprint.left).toBe(0)
+    expect(footprint.right).toBeGreaterThan(0)
+    expect(footprint.totalWidth).toBeCloseTo(10 + footprint.right, 6)
 
-    // A shallow single-tier climb (small lift) stays a straight flight and still fits.
-    const straight = createGrandstandBay({
-      rows: 8, width: 10, tiers: 2, tierSpec: [{}, { lift: 0, overlapRows: 3 }],
+    // ONE cage for the stack, not one per tier — the tiers share their landings.
+    const names: string[] = []
+    model.root.traverse((object) => { if ((object as Mesh).isMesh) names.push(object.name) })
+    expect(names.filter((n) => n === 'stairs').length).toBe(1)
+    expect(names.filter((n) => n === 'stair-frame').length).toBe(1)
+    expect(names.filter((n) => n === 'stair-gate').length).toBe(1)
+
+    let checked = 0
+    model.root.traverse((object) => {
+      if (!['stairs', 'stair-frame', 'stair-rail'].includes(object.name)) return
+      checked += 1
+      const box = new Box3().setFromObject(object)
+      // Never INSIDE the seating width — the failure mode being locked out is a flight across the bowl.
+      // A level landing decks right up to the end face (x = halfW) so there is no gap to step over, so
+      // this abuts rather than clears; nothing may cross it.
+      expect(box.min.x).toBeGreaterThanOrEqual(halfW - 1e-6)
+      // ...and wholly INSIDE what getFootprint() promises an emitter tiling a run of bays.
+      expect(box.max.x).toBeLessThanOrEqual(halfW + footprint.right + 1e-6)
+      // Direction of travel is Z: the tower is far longer front-to-back than it is wide.
+      expect(box.max.z - box.min.z).toBeGreaterThan((box.max.x - box.min.x) * 3)
+      // It starts at tier 0's promenade (0.95 m) or the ground pads under it, not up in the air.
+      expect(box.min.y).toBeLessThan(1.2)
     })
-    straight.root.updateMatrixWorld(true)
-    const stairs = straight.root.getObjectByName('stairs')
-    expect(stairs).toBeDefined()
-    const box = new Box3().setFromObject(stairs!)
-    expect(box.min.x).toBeGreaterThanOrEqual(-halfW)
-    expect(box.max.x).toBeLessThanOrEqual(halfW + 1e-6)
-    straight.dispose()
+    expect(checked).toBe(3)
+
+    // The flights climb promenade to promenade: the treads reach tier 2's walking level (13.99 m) and
+    // stop there, rather than running on up past the top tier.
+    const stairs = model.root.getObjectByName('stairs')!
+    const treadBox = new Box3().setFromObject(stairs)
+    expect(treadBox.max.y).toBeGreaterThan(13.9)
+    expect(treadBox.max.y).toBeLessThan(14.3)
+    model.dispose()
+  })
+
+  test('grandstand-bay stairSide picks the end face — "both" mirrors the tower, "none" removes it', () => {
+    const both = createGrandstandBay({
+      rows: 8, width: 10, tiers: 3, tierSpec: [{}, { stairSide: 'both' }, { stairSide: 'both' }],
+    })
+    both.root.updateMatrixWorld(true)
+    const bothNames: string[] = []
+    both.root.traverse((object) => { if ((object as Mesh).isMesh) bothNames.push(object.name) })
+    expect(bothNames.filter((n) => n === 'stairs').length).toBe(2)
+    const mirrored = both.getFootprint()
+    expect(mirrored.left).toBeCloseTo(mirrored.right, 6)
+    expect(mirrored.totalWidth).toBeCloseTo(10 + mirrored.left + mirrored.right, 6)
+    both.dispose()
+
+    // A bay in the MIDDLE of a tiled run passes 'none' and is back to the bare tiling module.
+    const none = createGrandstandBay({
+      rows: 8, width: 10, tiers: 3, tierSpec: [{}, { stairSide: 'none' }, { stairSide: 'none' }],
+    })
+    none.root.updateMatrixWorld(true)
+    expect(none.root.getObjectByName('stairs')).toBeUndefined()
+    expect(none.root.getObjectByName('stair-frame')).toBeUndefined()
+    expect(none.root.getObjectByName('stair-gate')).toBeUndefined()
+    expect(none.getFootprint()).toEqual({ width: 10, totalWidth: 10, left: 0, right: 0 })
+    // 0.18 m is the pre-existing frontage/column overhang the tiling module has always carried; the
+    // point of the assertion is that removing the tower removes ALL of the tower's 3.2 m.
+    const box = new Box3().setFromObject(none.root)
+    expect(box.min.x).toBeGreaterThan(-5.2)
+    expect(box.max.x).toBeLessThan(5.2)
+    none.dispose()
+
+    // A wider flight widens the tower and the reported footprint with it.
+    const nominal = createGrandstandBay({ rows: 8, width: 10, tiers: 2 })
+    const nominalRight = nominal.getFootprint().right
+    nominal.dispose()
+    const wide = createGrandstandBay({
+      rows: 8, width: 10, tiers: 2, tierSpec: [{}, { stairWidth: 2.2 }],
+    })
+    expect(wide.getFootprint().right).toBeGreaterThan(nominalRight)
+    wide.dispose()
+  })
+
+  test('grandstand-bay collision proxy: convex volumes per tier, roof excluded, detached from root', () => {
+    const one = createGrandstandBay({ rows: 8, width: 10, tiers: 1 })
+    // A single bowl is a single prism, and the proxy never reaches the visual/compile path unaided.
+    expect(one.getCollisionVolumes().length).toBe(1)
+    expect(one.parts.collision.parent).toBeNull()
+    expect(one.root.getObjectByName('collision-bowl-0')).toBeUndefined()
+    one.dispose()
+
+    const three = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    three.root.updateMatrixWorld(true)
+    const volumes = three.getCollisionVolumes()
+    // 3 bowl prisms + 2 front support lines + 2 rear support lines + 1 stair tower.
+    expect(volumes.length).toBe(8)
+    expect(volumes.filter((v) => v.part === 'bowl').length).toBe(3)
+    expect(volumes.filter((v) => v.part === 'front-support').length).toBe(2)
+    expect(volumes.filter((v) => v.part === 'rear-support').length).toBe(2)
+    expect(volumes.filter((v) => v.part === 'stair-tower').length).toBe(1)
+    for (const volume of volumes) {
+      expect(volume.points.length).toBeGreaterThanOrEqual(8)
+      for (let axis = 0; axis < 3; axis++) {
+        expect(volume.max[axis]!).toBeGreaterThan(volume.min[axis]!)
+      }
+    }
+
+    // The roof is excluded BY DESIGN — a whole-model box is what put an invisible wall over the racing
+    // line. So the proxy must stop well below the canopy and never reach past its cantilever tip.
+    const visual = new Box3().setFromObject(three.root)
+    let top = -Infinity
+    let front = -Infinity
+    for (const volume of volumes) {
+      top = Math.max(top, volume.max[1]!)
+      front = Math.max(front, volume.max[2]!)
+    }
+    expect(top).toBeLessThan(visual.max.y - 1)
+    expect(front).toBeLessThanOrEqual(visual.max.z + 1e-6)
+    three.dispose()
+
+    const both = createGrandstandBay({
+      rows: 8, width: 10, tiers: 3, tierSpec: [{}, { stairSide: 'both' }, { stairSide: 'both' }],
+    })
+    expect(both.getCollisionVolumes().filter((v) => v.part === 'stair-tower').length).toBe(2)
+    expect(both.getCollisionVolumes().length).toBe(9)
+    both.dispose()
+
+    const none = createGrandstandBay({
+      rows: 8, width: 10, tiers: 3, tierSpec: [{}, { stairSide: 'none' }, { stairSide: 'none' }],
+    })
+    expect(none.getCollisionVolumes().length).toBe(7)
+    none.dispose()
+
+    // DEV flag is the only thing that parents the proxy, and it marks it excluded from export.
+    const debug = createGrandstandBay({ rows: 8, width: 10, tiers: 2, debug: { collision: true } })
+    expect(debug.parts.collision.parent).toBe(debug.root)
+    expect(debug.parts.collision.visible).toBe(true)
+    expect(debug.parts.collision.userData.excludeFromExport).toBe(true)
+    debug.dispose()
   })
 
   test('grandstand-bay tiers given directly as the tierSpec array sets tiers = array.length', () => {

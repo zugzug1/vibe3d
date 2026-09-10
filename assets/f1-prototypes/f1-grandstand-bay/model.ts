@@ -6,8 +6,9 @@
 // 0.95 m above ground, row 1 stepped a further 0.75 m up so it clears the hoarding, columns and rafters
 // on a ~2.6 m bay pitch, and a roof that falls only 0.45 m across the span before its cantilever curls
 // back up, so the canopy opens toward the track instead of shutting down onto it. `width` is the tiling
-// module and nothing overhangs it, so a run of bays reads as one continuous stand. The red leading-edge
-// fascia and the amber nosings are the catalogue tells — not a grey shed.
+// module and the SEATING never overhangs it, so a run of bays reads as one continuous stand — the one
+// thing that deliberately does overhang is an end stair tower, which is why `getFootprint()` exists (see
+// TILING below). The red leading-edge fascia and the amber nosings are the catalogue tells — not a shed.
 //
 // `tiers` (1-4) stacks whole bowls, like Madring's S/F stand: tier k's promenade sits at tier k-1's
 // bowlTop + ROOF_CLEAR (headroom for the concourse under it), and tier k's front CANTILEVERS
@@ -43,17 +44,36 @@
 //     from TRUE GROUND up to this tier's own rear-wall height, at the rear face. Every tier above ground
 //     gets its own rear tower rather than one member spanning past intermediate tiers, because each tier
 //     steps further back as it stacks (see `tierStep.z` below), so the towers never collide.
-//   - `stairs` (default `true` for tiers ≥1) — one straight flight (or, past the point it fits inside
-//     `width`, a folded switchback) from the tier below's promenade to this tier's promenade, tucked
-//     against the +X end of the bay. See {@link buildStairs}.
+//   - `stairSide` (`'left' | 'right' | 'both' | 'none'`; default `'right'` for tiers ≥1, `'none'` for
+//     tier 0) — which END face carries this tier's access stair. The stair is NOT across the front of
+//     the bowl: it is a stair TOWER bolted to the bay's end face (x = ±halfW), travelling along Z and
+//     climbing from the tier below's promenade to this tier's, exactly as a temporary-stand scaffold
+//     tower does (Madring IMG_2437). See {@link buildStairTower}.
+//   - `stairWidth` (default 1.4 m — f1-stairs' own flight width) — the flight width of that tower.
+//     A folded tower is two lanes wide (`2 × stairWidth + STAIR_GAP`); a straight one is one lane.
 //   - `roof` (default: top tier only) — lets a non-top tier carry its own membrane roof too, gated by a
 //     thrown clearance check against the tier stacked above it.
 // Any field left out of a given tier's (partial) entry falls back to the default above, so `tiers: 3`
 // alone still builds a complete, fully-supported stack. `tiers` may also be given directly as the
 // `tierSpec` array (`tiers: [{...}, {...}, {...}]`), in which case `tiers = tiers.length`.
+//
+// TILING. `width` is the module and the SEATING never leaves it, but a stair tower deliberately does —
+// it hangs off the end face. {@link F1GrandstandBayInstance.getFootprint} reports both numbers so an
+// emitter tiling a run of bays can place towers only at the ends: **bays in the middle of a run should
+// pass `stairSide: 'none'`**, the two end bays keep (or widen to) a tower, and the run's overall width
+// is `getFootprint().totalWidth` on those end bays, `width` in between.
+//
+// COLLISION. {@link F1GrandstandBayInstance.getCollisionVolumes} / `parts.collision` are a first cut at
+// what a physics engine should be given for one placed stand: a handful of CONVEX volumes (one prism per
+// tier's bowl mass, one box per support line, one box per stair tower) instead of the whole visual
+// trimesh or one fat whole-model AABB. The roof is deliberately excluded — nothing that collides ever
+// reaches it, and leaving it out is what keeps the proxy cheap and stops the canopy's cantilever from
+// inflating an AABB out over the track. The group is NOT parented to `root` (so it can never reach the
+// visual/compile path); `createModel({ debug: { collision: true } })` parents it for a capture.
 
 import {
   BufferGeometry,
+  DoubleSide,
   Group,
   InstancedMesh,
   Matrix4,
@@ -65,6 +85,7 @@ import {
 import { LoftGeometry } from 'three/examples/jsm/geometries/LoftGeometry.js'
 
 import {
+  STAIRS,
   TOKEN,
   acquireF1Materials,
   bevelBox,
@@ -77,11 +98,18 @@ import {
   mergeParts,
   shade,
 } from '../f1-kit-core/index.ts'
+// The stair tower is built from f1-stairs' OWN tread pan and channel stringer at f1-stairs' OWN pitch
+// (STAIRS.rise / STAIRS.run), so the stand's access stair and the catalogue's FIA flight are one part.
+import { channelStringer, gratingTread, stringerStations } from '../f1-stairs/model.ts'
 
 type Slot = 'structure' | 'deck' | 'seat' | 'roof' | 'fascia'
 
 /** What carries a tier at the edge in question: real columns, a solid panel, or nothing at all. */
 export type TierSupport = 'columns' | 'wall' | 'none'
+
+export const STAIR_SIDES = ['none', 'left', 'right', 'both'] as const
+/** Which END face (x = ±halfW) carries a tier's access stair tower. Never the front of the bowl. */
+export type StairSide = (typeof STAIR_SIDES)[number]
 
 /** Per-tier overrides. Every field is optional on input — see the header comment for each default. */
 export interface TierSpec {
@@ -94,8 +122,38 @@ export interface TierSpec {
   overlapRows: number
   support: TierSupport
   rearSupport: TierSupport
-  stairs: boolean
+  /** Which end face this tier's stair tower is mounted on. `'none'` for a bay mid-run. */
+  stairSide: StairSide
+  /** Flight width of that tower, metres (f1-stairs' own clamp: 0.9–2.8). */
+  stairWidth: number
   roof: boolean
+}
+
+/**
+ * What a bay actually occupies across the run direction. `width` is the tiling module the SEATING is
+ * held inside; `totalWidth` includes the stair towers, which deliberately hang off the end faces.
+ */
+export interface F1GrandstandBayFootprint {
+  /** Tiling module — the pitch a run of bays butts at. */
+  readonly width: number
+  /** `width` + both stair-tower overhangs. */
+  readonly totalWidth: number
+  /** Overhang past `-width/2`, metres (0 when no tower is mounted on that end). */
+  readonly left: number
+  /** Overhang past `+width/2`, metres. */
+  readonly right: number
+}
+
+/** One convex volume of the physics proxy — a prism (bowl) or a box (support line / stair tower). */
+export interface F1GrandstandBayCollisionVolume {
+  readonly part: 'bowl' | 'front-support' | 'rear-support' | 'stair-tower'
+  /** Owning tier, or -1 for a stair tower (one cage serves every tier it reaches). */
+  readonly tier: number
+  readonly kind: 'wedge' | 'box'
+  /** Convex corners in the model's own local frame, metres. */
+  readonly points: ReadonlyArray<readonly [number, number, number]>
+  readonly min: readonly [number, number, number]
+  readonly max: readonly [number, number, number]
 }
 
 export interface F1GrandstandBayConfig {
@@ -116,13 +174,24 @@ export type F1GrandstandBayPatch = Partial<Omit<F1GrandstandBayConfig, 'tiers'>>
 
 export interface F1GrandstandBayOptions extends F1GrandstandBayPatch {
   materials?: Partial<Record<Slot, Material>>
+  /**
+   * DEV only. `collision: true` parents the (normally detached) collision-proxy group under `root` and
+   * makes it visible, so a preview can capture the proxy over the model. Never on in a shipped build:
+   * the group carries `userData.excludeFromExport`, and off by default it cannot reach the compile path.
+   */
+  debug?: { collision?: boolean }
 }
 
 export interface F1GrandstandBayInstance {
   readonly root: Group
-  readonly parts: { bowl: Group; roof: Group }
+  /** `collision` is a proxy group, NOT parented to `root` unless `debug.collision` was passed. */
+  readonly parts: { bowl: Group; roof: Group; collision: Group }
   readonly materials: Readonly<Record<Slot, Material>>
   getConfig(): Readonly<F1GrandstandBayConfig>
+  /** Seating module vs. total width including stair towers. Recomputed on every `configure`. */
+  getFootprint(): F1GrandstandBayFootprint
+  /** Convex physics volumes for one placed instance. Roof excluded by design. */
+  getCollisionVolumes(): readonly F1GrandstandBayCollisionVolume[]
   configure(patch: F1GrandstandBayPatch): void
   setMaterial(slot: Slot, material: Material): void
   update(deltaSeconds: number): void
@@ -195,13 +264,44 @@ const BRACE_R = 0.03
 /** Solid-panel support thickness, front or rear. */
 const WALL_SUPPORT_T = 0.18
 
-/** Walkway width of the inter-tier stair flight. */
-const STAIR_WIDTH = 1.3
-/** How far in front of the tier's own leading edge the stair pocket sits — it "may sit outside the
- *  bowl" (per the design brief), so this is unconstrained by `width` on the Z axis. */
-const STAIR_MARGIN = 0.5
+/**
+ * Access-stair pitch. NOT the bowl's own 0.44/0.80 rake — a stair a spectator climbs between tiers is
+ * a stair, and the kit already has one: f1-stairs' FIA 180/280 flight. Same numbers, same tread pan,
+ * same channel stringer, so the tower and the catalogue flight are one product.
+ */
+const TOWER_RISE = STAIRS.rise
+const TOWER_RUN = STAIRS.run
+/** Landing at every promenade the tower serves and at each switchback turn — f1-stairs' own. */
+const TOWER_LANDING = STAIRS.landing
+/** Default flight width — f1-stairs' own default. */
+const STAIR_WIDTH = 1.4
+/** Clear gap between the bay's end face and the tower's inner post line. */
+const TOWER_GAP = 0.12
 /** Clear gap between the two lanes of a folded switchback. */
 const STAIR_GAP = 0.3
+/** Scaffold gauges for the tower cage: standard, ledger, diagonal brace. */
+const TOWER_POST_R = 0.06
+const TOWER_LEDGER_R = 0.032
+const TOWER_BRACE_R = 0.024
+/** Lift height — the vertical pitch the cage's ledgers and braces repeat at. */
+const TOWER_LIFT = 2.0
+/**
+ * Base plate under each standard. The post lines are inset by half of it (plus a hair), so the PLATES —
+ * not the tube centres — are what sit flush inside the width `getFootprint()` reports: an emitter that
+ * trusts that number must not find a steel plate 80 mm outside it.
+ */
+const TOWER_PAD = 0.34
+/**
+ * How far a flight actually stands proud of its NOMINAL width: f1-stairs' channel stringer sits 50 mm
+ * inside the flight edge and its flanges are `stringerT + 55 mm` across, so the steel reaches ~7.5 mm
+ * outside the number. Measured off those constants rather than guessed, because it is the difference
+ * between `getFootprint()` being a promise and being an approximation.
+ */
+const FLIGHT_PROUD = (STAIRS.stringerT + 0.055) / 2 - 0.05 + 0.005
+/** Headroom the cage's own top rail stands above the highest flight it carries. */
+const TOWER_HEAD = 0.25
+/** Standard-to-standard bay module along the run — the pitch the cage lattice keeps. */
+const TOWER_BAY = 2.6
 
 interface Layout {
   readonly rows: number
@@ -471,6 +571,12 @@ const seatFrame = (): BufferGeometry => {
 const clampTierSupport = (value: TierSupport | undefined): TierSupport =>
   value === 'wall' || value === 'none' ? value : 'columns'
 
+/** Tier 0 stands on the ground and needs no tower; every tier above it gets one on the +X end. */
+const clampStairSide = (value: StairSide | undefined, tier: number): StairSide =>
+  value !== undefined && (STAIR_SIDES as readonly string[]).includes(value)
+    ? value
+    : (tier >= 1 ? 'right' : 'none')
+
 /** Fills in every field of one tier's spec from its (possibly empty) partial input. */
 const resolveTierSpec = (
   tier: number, rowsDefault: number, isTop: boolean, partial: Partial<TierSpec> | undefined,
@@ -481,9 +587,42 @@ const resolveTierSpec = (
   overlapRows: Math.max(0, Math.round(partial?.overlapRows ?? OVERLAP_ROWS)),
   support: clampTierSupport(partial?.support),
   rearSupport: clampTierSupport(partial?.rearSupport),
-  stairs: partial?.stairs ?? tier >= 1,
+  stairSide: clampStairSide(partial?.stairSide, tier),
+  // f1-stairs' own flight-width clamp, so a tower is never narrower than the flight it is built from.
+  stairWidth: Math.min(2.8, Math.max(0.9, partial?.stairWidth ?? STAIR_WIDTH)),
   roof: partial?.roof ?? isTop,
 })
+
+/** Whether `side` (-1 = left / −X, +1 = right / +X) carries this tier's tower. */
+const towerOnSide = (spec: TierSpec, side: -1 | 1): boolean =>
+  spec.stairSide === 'both' || spec.stairSide === (side === 1 ? 'right' : 'left')
+
+/**
+ * Monotone-chain 2D convex hull, CCW. The collision proxy's bowl prism is the hull of a handful of
+ * measured profile points (front skirt, promenade lip, last-row corner, rear wall) rather than a
+ * hand-ordered polygon — a physics engine needs CONVEX, and hulling it is how that is guaranteed
+ * instead of asserted, whatever `rows`/`plinth`/`wallTop` do to the profile.
+ */
+const convexHull2D = (
+  input: ReadonlyArray<readonly [number, number]>,
+): Array<readonly [number, number]> => {
+  const points = [...input].sort((a, b) => (a[0] - b[0]) || (a[1] - b[1]))
+  const cross = (
+    o: readonly [number, number], a: readonly [number, number], b: readonly [number, number],
+  ): number => (a[0] - o[0]) * (b[1] - o[1]) - (a[1] - o[1]) * (b[0] - o[0])
+  const half = (source: ReadonlyArray<readonly [number, number]>): Array<readonly [number, number]> => {
+    const out: Array<readonly [number, number]> = []
+    for (const point of source) {
+      while (out.length >= 2 && cross(out[out.length - 2]!, out[out.length - 1]!, point) <= 1e-9) {
+        out.pop()
+      }
+      out.push(point)
+    }
+    out.pop()
+    return out
+  }
+  return [...half(points), ...half([...points].reverse())]
+}
 
 const resolveTiers = (config: F1GrandstandBayConfig): TierSpec[] => {
   const specs: TierSpec[] = []
@@ -506,6 +645,305 @@ const resolveTiersInput = (
   }
   const count = Math.min(MAX_TIERS, Math.max(MIN_TIERS, tiers.length))
   return { tiers: count, tierSpec: (explicitTierSpec ?? tiers).slice(0, count) }
+}
+
+/** One promenade the tower reaches — a tier's own walking level, in the model's local frame. */
+interface TowerLevel {
+  readonly tier: number
+  readonly y: number
+  readonly z: number
+}
+
+/**
+ * One flight between two consecutive levels. STRAIGHT while the promenade-to-promenade step back is long
+ * enough to swallow the run; FOLDED into two lanes about a turn landing otherwise — which is what a real
+ * scaffold tower does the moment a tier step is taller than it is deep.
+ *
+ * The lane runs are not free. With the foot landing pinned to one promenade and the head landing to the
+ * next, `runA - runB` is exactly the step back less one landing and `runA + runB` is the nominal run at
+ * the FIA going, which fixes BOTH runs. So the free variable is the step SPLIT, chosen to keep each
+ * lane's derived going as near f1-stairs' 280 mm as the geometry allows — rather than forcing 280 mm and
+ * letting the tower miss the promenade it is supposed to land on. Rise stays uniform across both lanes.
+ */
+interface FlightPlan {
+  readonly from: TowerLevel
+  readonly to: TowerLevel
+  readonly rise: number
+  readonly folded: boolean
+  readonly stepsA: number
+  readonly goingA: number
+  readonly runA: number
+  readonly stepsB: number
+  readonly goingB: number
+  readonly runB: number
+  /** Turn-landing centre (folded only; equals the head landing centre when straight). */
+  readonly zTurn: number
+  readonly zFront: number
+  readonly zRear: number
+}
+
+const planFlight = (from: TowerLevel, to: TowerLevel): FlightPlan => {
+  const dy = to.y - from.y
+  const span = from.z - to.z
+  if (dy <= 0) {
+    throw new Error(
+      `f1-grandstand-bay: stair tower flight to tier ${to.tier} does not climb `
+      + `(${from.y.toFixed(3)}m -> ${to.y.toFixed(3)}m)`,
+    )
+  }
+  if (span <= TOWER_LANDING) {
+    throw new Error(
+      `f1-grandstand-bay: stair tower flight to tier ${to.tier} has ${span.toFixed(3)}m of step-back to `
+      + `land in, less than one landing (${TOWER_LANDING}m) — reduce overlapRows or add rows below`,
+    )
+  }
+  const steps = Math.max(2, Math.ceil(dy / TOWER_RISE))
+  const rise = dy / steps
+  const nominal = steps * TOWER_RUN
+  const straightRun = span - TOWER_LANDING
+  // Fold only when it buys at least one going — otherwise the return lane is a single stranded step.
+  if (nominal <= straightRun + TOWER_RUN) {
+    return {
+      from,
+      to,
+      rise,
+      folded: false,
+      stepsA: steps,
+      goingA: straightRun / steps,
+      runA: straightRun,
+      stepsB: 0,
+      goingB: 0,
+      runB: 0,
+      zTurn: to.z,
+      zFront: from.z + TOWER_LANDING / 2,
+      zRear: to.z - TOWER_LANDING / 2,
+    }
+  }
+  const runA = (nominal + straightRun) / 2
+  const runB = nominal - runA
+  let stepsA = 1
+  let best = Infinity
+  for (let k = 1; k < steps; k++) {
+    const error = Math.max(Math.abs(runA / k - TOWER_RUN), Math.abs(runB / (steps - k) - TOWER_RUN))
+    if (error < best) {
+      best = error
+      stepsA = k
+    }
+  }
+  const stepsB = steps - stepsA
+  const zTurn = from.z - TOWER_LANDING - runA
+  return {
+    from,
+    to,
+    rise,
+    folded: true,
+    stepsA,
+    goingA: runA / stepsA,
+    runA,
+    stepsB,
+    goingB: runB / stepsB,
+    runB,
+    zTurn,
+    zFront: from.z + TOWER_LANDING / 2,
+    zRear: zTurn - TOWER_LANDING / 2,
+  }
+}
+
+/** The cage: ONE per end face, serving every level any tier asked it to reach. */
+interface TowerPlan {
+  readonly side: -1 | 1
+  readonly flightWidth: number
+  readonly towerWidth: number
+  /** The bay's own end face — where a landing has to reach, not where the cage starts. */
+  readonly xFace: number
+  readonly xInner: number
+  readonly xOuter: number
+  /** Lane against the bay (the straight lane, and a fold's upper lane, so its head lands at the gate). */
+  readonly laneInnerX: number
+  /** Outboard lane — a fold's lower, longer flight. */
+  readonly laneOuterX: number
+  readonly levels: readonly TowerLevel[]
+  readonly flights: readonly FlightPlan[]
+  readonly zFront: number
+  readonly zRear: number
+  readonly topY: number
+  /** Walking height at `z`, or `null` where the cage carries nothing — what sets each standard's head. */
+  readonly envelopeY: (z: number) => number | null
+}
+
+const planTower = (
+  side: -1 | 1, flightWidth: number, levels: readonly TowerLevel[], halfW: number,
+): TowerPlan => {
+  const flights: FlightPlan[] = []
+  for (let i = 1; i < levels.length; i++) flights.push(planFlight(levels[i - 1]!, levels[i]!))
+  const folded = flights.some((flight) => flight.folded)
+  // The lane's true envelope, not its nominal width — see FLIGHT_PROUD.
+  const lane = flightWidth + 2 * FLIGHT_PROUD
+  const towerWidth = folded ? 2 * lane + STAIR_GAP : lane
+  const xInner = side * (halfW + TOWER_GAP)
+  const xOuter = xInner + side * towerWidth
+
+  const segments: Array<{ z0: number; z1: number; y0: number; y1: number }> = []
+  const add = (za: number, ya: number, zb: number, yb: number): void => {
+    segments.push(za <= zb ? { z0: za, z1: zb, y0: ya, y1: yb } : { z0: zb, z1: za, y0: yb, y1: ya })
+  }
+  for (const level of levels) {
+    add(level.z - TOWER_LANDING / 2, level.y, level.z + TOWER_LANDING / 2, level.y)
+  }
+  for (const flight of flights) {
+    const footZ = flight.from.z - TOWER_LANDING / 2
+    const turnY = flight.from.y + flight.stepsA * flight.rise
+    add(footZ, flight.from.y, footZ - flight.runA, turnY)
+    if (flight.folded) {
+      add(flight.zTurn - TOWER_LANDING / 2, turnY, flight.zTurn + TOWER_LANDING / 2, turnY)
+      add(flight.zTurn + TOWER_LANDING / 2, turnY, flight.to.z + TOWER_LANDING / 2, flight.to.y)
+    }
+  }
+
+  let zFront = -Infinity
+  let zRear = Infinity
+  for (const segment of segments) {
+    zFront = Math.max(zFront, segment.z1)
+    zRear = Math.min(zRear, segment.z0)
+  }
+  let topWalk = -Infinity
+  for (const level of levels) topWalk = Math.max(topWalk, level.y)
+
+  return {
+    side,
+    flightWidth,
+    towerWidth,
+    xFace: side * halfW,
+    xInner,
+    xOuter,
+    laneInnerX: xInner + (side * lane) / 2,
+    laneOuterX: xOuter - (side * lane) / 2,
+    levels,
+    flights,
+    zFront,
+    zRear,
+    topY: topWalk + STAIRS.railH + TOWER_HEAD,
+    envelopeY: (z: number): number | null => {
+      let best: number | null = null
+      for (const segment of segments) {
+        if (z < segment.z0 - 1e-6 || z > segment.z1 + 1e-6) continue
+        const t = segment.z1 - segment.z0 < 1e-9
+          ? 0
+          : (z - segment.z0) / (segment.z1 - segment.z0)
+        const y = segment.y0 + (segment.y1 - segment.y0) * t
+        best = best === null ? y : Math.max(best, y)
+      }
+      return best
+    },
+  }
+}
+
+/**
+ * One flight in a LOCAL frame: origin on the bottom landing's surface, travelling +Z and climbing. Built
+ * from f1-stairs' OWN tread pan, stringer stations and channel stringer at this flight's derived going,
+ * so the stand's access stair and the catalogue's FIA flight are literally the same part.
+ *
+ * Guarding follows f1-stairs exactly — top rail, midrail, posts, toe board AND its three pickets per post
+ * bay. A first cut dropped the pickets on a triangle budget; against the reference that was the wrong
+ * trade. A real stair's raking edge is nearly solid (close-pitched balusters or perforated mesh), and it
+ * is that dense bright band, not the tube, that keeps the flight's silhouette off the bowl behind it.
+ */
+const flightGeometry = (
+  steps: number, going: number, rise: number, width: number,
+): {
+  readonly treads: BufferGeometry[]
+  readonly frame: BufferGeometry[]
+  readonly rails: BufferGeometry[]
+} => {
+  const treads: BufferGeometry[] = []
+  const frame: BufferGeometry[] = []
+  const rails: BufferGeometry[] = []
+  const runLen = steps * going
+  const riseH = steps * rise
+  const hyp = Math.hypot(going, rise) * steps
+  const ang = Math.atan2(rise, going)
+  const hz = width / 2
+
+  for (let i = 0; i < steps; i++) {
+    const z = (i + 0.5) * going
+    const y = (i + 0.5) * rise
+    treads.push(...gratingTread(width - 0.08, y, z))
+    const kick = bevelBox(width - 0.14, 0.038, 0.018, 0.003)
+    kick.translate(0, y - rise / 2 + 0.028, z + going / 2 - 0.03)
+    treads.push(kick)
+  }
+
+  for (const sx of stringerStations(width)) {
+    frame.push(...channelStringer(sx, hyp, ang, riseH, runLen))
+    // f1-stairs' 220 mm channel is sized for a catalogue flight of a couple of metres. A tower flight
+    // here spans seven or eight, and at that length the channel alone reads as a ladder stringer rather
+    // than as something carrying a stair — so each stringer gets a raking bottom chord and a web between
+    // the two, which is how a long scaffold flight is actually made up.
+    const drop = STAIRS.stringer + 0.24
+    frame.push(member(
+      new Vector3(sx, -drop, 0.06),
+      new Vector3(sx, riseH - drop, runLen - 0.06),
+      0.042,
+      8,
+    ))
+    const panels = Math.max(2, Math.round(runLen / 1.6))
+    for (let p = 0; p <= panels; p++) {
+      const t = p / panels
+      const z = 0.06 + t * (runLen - 0.12)
+      const chord = t * riseH - drop
+      const web = t * riseH - STAIRS.stringer / 2 - 0.03
+      frame.push(member(new Vector3(sx, chord, z), new Vector3(sx, web, z), 0.024, 6))
+      if (p >= panels) continue
+      const t1 = (p + 1) / panels
+      frame.push(member(
+        new Vector3(sx, chord, z),
+        new Vector3(sx, t1 * riseH - STAIRS.stringer / 2 - 0.03, 0.06 + t1 * (runLen - 0.12)),
+        0.019,
+        6,
+      ))
+    }
+  }
+
+  const posts = Math.max(3, Math.ceil(runLen / 1.5))
+  for (const sx of [-hz + 0.03, hz - 0.03] as const) {
+    for (const [height, radius] of [[STAIRS.railH, 0.024], [STAIRS.midH, 0.016]] as const) {
+      rails.push(member(
+        new Vector3(sx, rise / 2 + height, 0.04),
+        new Vector3(sx, riseH - rise / 2 + height, runLen - 0.04),
+        radius,
+        8,
+      ))
+    }
+    for (let p = 0; p <= posts; p++) {
+      const t = p / posts
+      const z = 0.04 + t * (runLen - 0.08)
+      const yTread = rise / 2 + t * (riseH - rise)
+      rails.push(member(
+        new Vector3(sx, yTread + 0.02, z),
+        new Vector3(sx, yTread + STAIRS.railH, z),
+        STAIRS.post / 2,
+        6,
+      ))
+      if (p >= posts) continue
+      for (let k = 1; k <= 3; k++) {
+        const tk = t + (k / 4) * (1 / posts)
+        const zk = 0.04 + tk * (runLen - 0.08)
+        const yk = rise / 2 + tk * (riseH - rise)
+        rails.push(member(
+          new Vector3(sx, yk + STAIRS.midH, zk),
+          new Vector3(sx, yk + STAIRS.railH - 0.02, zk),
+          0.007,
+          6,
+        ))
+      }
+    }
+    const toe = bevelBox(0.024, STAIRS.toe, hyp - 0.12, 0.003)
+    toe.rotateX(-ang)
+    toe.translate(sx, riseH / 2 + STAIRS.toe / 2, runLen / 2)
+    frame.push(toe)
+  }
+
+  return { treads, frame, rails }
 }
 
 export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandBayInstance {
@@ -564,11 +1002,42 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     fascia: options.materials?.fascia ?? kit.red,
   }
 
+  /**
+   * The proxy's own skin — never a consumer slot, because the proxy is not part of the model's look. Held
+   * translucent and unlit-bright so a debug capture shows the volume THROUGH the geometry it stands for;
+   * `depthWrite: false` keeps it from punching holes in the model it is overlaid on.
+   */
+  const proxy = own(new MeshStandardMaterial({
+    name: 'f1-kit / grandstand collision proxy',
+    color: TOKEN.CYAN_400,
+    emissive: shade(TOKEN.CYAN_400, -0.45),
+    emissiveIntensity: 0.9,
+    roughness: 1,
+    metalness: 0,
+    transparent: true,
+    opacity: 0.34,
+    depthWrite: false,
+    // Both faces: a volume seen from behind the geometry it stands for has only back faces facing the
+    // camera, and single-sided it would silently disappear on exactly the tiers furthest from the lens.
+    side: DoubleSide,
+  }))
+
   const root = new Group()
   root.name = 'f1-grandstand-bay'
   const bowl = new Group(); bowl.name = 'bowl'
   const roof = new Group(); roof.name = 'roof'
   root.add(bowl, roof)
+  // Detached by default — see {@link buildCollision}. `debug.collision` is what parents it.
+  const collision = new Group()
+  collision.name = 'collision'
+  collision.visible = false
+  collision.userData.topologyRole = 'detail'
+  collision.userData.excludeFromExport = true
+
+  let footprint: F1GrandstandBayFootprint = {
+    width: config.width, totalWidth: config.width, left: 0, right: 0,
+  }
+  let collisionVolumes: readonly F1GrandstandBayCollisionVolume[] = []
 
   const generated: BufferGeometry[] = []
   const meshesBySlot: Record<Slot, Mesh[]> = {
@@ -576,7 +1045,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   }
 
   const releaseGenerated = (): void => {
-    for (const group of [bowl, roof]) group.clear()
+    for (const group of [bowl, roof, collision]) group.clear()
     for (const geometry of generated) geometry.dispose()
     generated.length = 0
     for (const slot of Object.keys(meshesBySlot) as Slot[]) meshesBySlot[slot].length = 0
@@ -997,100 +1466,473 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   }
 
   /**
-   * One straight flight — or, past the point its run no longer fits inside `width`, a folded switchback
-   * (two half-flights and a landing) — from the lower tier's promenade to this tier's promenade, tucked
-   * against the +X end of the bay so it never overhangs the tiling module (it MAY run past the bowl's own
-   * depth on Z though — nothing tiles against a neighbour bay in that direction). Steps are solid stacked
-   * blocks, like the model's own row risers, so the flight is self-supporting rather than a floating
-   * tread run. Riser/tread is this model's own RISE/TREAD (0.44 m / 0.8 m) — this is part of the STAND,
-   * not the FIA circuit-stairs catalogue module.
+   * The access tower on ONE end face (x = ±halfW): a scaffold cage bolted to the bay's end, its flights
+   * travelling ALONG Z — parallel to the rake, climbing promenade to promenade — exactly like a temporary
+   * stand's stair tower (Madring IMG_2437). It is deliberately OUTSIDE the seating width, which is why
+   * {@link F1GrandstandBayInstance.getFootprint} reports the overhang and why a bay in the middle of a
+   * tiled run must pass `stairSide: 'none'`.
+   *
+   * ONE cage serves every level rather than one cage per tier. Successive tiers step BACK as they stack,
+   * so per-tier cages would interleave their standards through the same volume; and a shared cage makes
+   * tier k's head landing and tier k+1's foot landing the SAME landing — which is what they are in a real
+   * stand, and what stops two coincident slabs z-fighting on the promenade they share.
    */
-  const buildStairs = (
-    layout: Layout, oy: number, oz: number,
-    lower: { readonly layout: Layout; readonly oy: number; readonly oz: number },
-    width: number, group: Group,
-  ): { readonly steps: number; readonly switchback: boolean } => {
-    const footY = lower.oy + lower.layout.base
-    const headY = oy + layout.base
-    if (headY <= footY) {
-      throw new Error(
-        `f1-grandstand-bay: stairs head (${headY.toFixed(3)}m) is not above their foot `
-        + `(${footY.toFixed(3)}m)`,
-      )
-    }
-    const dy = headY - footY
-    const halfW = width / 2
-    // The guard rail's own top-rail member (radius 0.028) stands proud of whatever x it's centred on, so
-    // the flight's outer edge is pulled in by more than that radius — the rail is what would otherwise
-    // overhang the tiling module, not the tread blocks (which are already inset by their own margin).
-    const edge = halfW - 0.05
-    const steps = Math.max(1, Math.ceil(dy / RISE))
-    const run = steps * TREAD
-    const maxRun = width - STAIR_WIDTH - STAIR_MARGIN
-    const switchback = run > maxRun
-
+  const buildStairTower = (
+    plan: TowerPlan,
+    layouts: readonly Layout[],
+    origins: ReadonlyArray<{ oy: number; oz: number }>,
+    group: Group,
+  ): void => {
+    if (plan.flights.length === 0) return
     const treads: BufferGeometry[] = []
+    const frame: BufferGeometry[] = []
     const rails: BufferGeometry[] = []
-    const z0 = oz + layout.halfD + STAIR_MARGIN
 
-    const flight = (x0: number, x1: number, y0: number, y1: number, z: number, count: number): void => {
-      const stepRun = (x1 - x0) / count
-      for (let i = 0; i < count; i++) {
-        const xa = x0 + i * stepRun
-        const xb = x0 + (i + 1) * stepRun
-        const y = y0 + ((y1 - y0) * (i + 1)) / count
-        const block = bevelBox(Math.max(0.05, Math.abs(stepRun) - 0.02), Math.max(0.05, y - y0), STAIR_WIDTH, 0.02)
-        block.translate((xa + xb) / 2, y0 + (y - y0) / 2, z)
-        treads.push(block)
+    const place = (
+      parts: readonly BufferGeometry[], x: number, y: number, z: number, rearward: boolean,
+    ): void => {
+      for (const part of parts) {
+        // A lane climbing toward -Z is the same flight turned about Y; the flight is symmetric across its
+        // own centre line, so the half-turn costs nothing but the travel direction.
+        if (rearward) part.rotateY(Math.PI)
+        part.translate(x, y, z)
       }
-      rails.push(...buildRail(
-        new Vector3(x0, y0 + RAIL_H, z - STAIR_WIDTH / 2 + 0.06),
-        new Vector3(x1, y1 + RAIL_H, z - STAIR_WIDTH / 2 + 0.06),
-        Math.max(3, count),
-        (t) => y0 + (y1 - y0) * t,
+    }
+
+    /** f1-stairs' double rail plus a toe board along one straight landing edge. */
+    const guardRun = (x0: number, x1: number, z0: number, z1: number, y: number): void => {
+      const length = Math.hypot(x1 - x0, z1 - z0)
+      if (length < 0.25) return
+      for (const [height, radius] of [[STAIRS.railH, 0.024], [STAIRS.midH, 0.016]] as const) {
+        rails.push(member(
+          new Vector3(x0, y + height, z0), new Vector3(x1, y + height, z1), radius, 8,
+        ))
+      }
+      const posts = Math.max(1, Math.round(length / 1.1))
+      for (let p = 0; p <= posts; p++) {
+        const t = p / posts
+        const x = x0 + (x1 - x0) * t
+        const z = z0 + (z1 - z0) * t
+        rails.push(member(
+          new Vector3(x, y, z), new Vector3(x, y + STAIRS.railH, z), STAIRS.post / 2, 6,
+        ))
+      }
+      const alongX = Math.abs(x1 - x0) > Math.abs(z1 - z0)
+      const toe = bevelBox(alongX ? length : 0.04, STAIRS.toe, alongX ? 0.04 : length, 0.004)
+      toe.translate((x0 + x1) / 2, y + STAIRS.toe / 2, (z0 + z1) / 2)
+      frame.push(toe)
+    }
+
+    /** Guard one landing edge, leaving `openings` (spans in the edge's own varying axis) unguarded. */
+    const guardEdge = (
+      lo: number, hi: number, openings: ReadonlyArray<readonly [number, number]>, y: number,
+      point: (value: number) => readonly [number, number],
+    ): void => {
+      let cursor = lo
+      for (const [from, to] of [...openings].sort((a, b) => a[0] - b[0])) {
+        if (from > cursor) {
+          const [ax, az] = point(cursor)
+          const [bx, bz] = point(Math.min(from, hi))
+          guardRun(ax, bx, az, bz, y)
+        }
+        cursor = Math.max(cursor, to)
+      }
+      if (cursor < hi) {
+        const [ax, az] = point(cursor)
+        const [bx, bz] = point(hi)
+        guardRun(ax, bx, az, bz, y)
+      }
+    }
+
+    /** The x-span one lane occupies where it meets a landing edge, plus a little rail clearance. */
+    const laneSpan = (centre: number): readonly [number, number] => [
+      centre - plan.flightWidth / 2 - 0.12,
+      centre + plan.flightWidth / 2 + 0.12,
+    ]
+
+    /**
+     * A platform across the cage, top flush with the walking level.
+     *
+     * A LEVEL landing is decked all the way in to the bay's own end face (`xFace`), not just to the cage
+     * line — the cage stands off by TOWER_GAP so its standards clear the bowl, and decking only to the
+     * standards would leave a hand's width of daylight exactly where a spectator steps off the promenade.
+     *
+     * Every edge is guarded (double rail + toe board) EXCEPT where something actually connects: the
+     * spans a flight arrives or leaves on, and — on a level landing — the whole inner edge, which is the
+     * gate onto the promenade. That single deliberate gap is what makes the gate read as a gate instead
+     * of as missing handrail, and it is the reason the openings are computed rather than assumed.
+     */
+    const landing = (
+      y: number,
+      z: number,
+      toFace: boolean,
+      openings: { front: ReadonlyArray<readonly [number, number]>; rear: ReadonlyArray<readonly [number, number]> },
+    ): void => {
+      const x0 = toFace ? plan.xFace : plan.xInner
+      const width = Math.abs(plan.xOuter - x0)
+      const cx = (x0 + plan.xOuter) / 2
+      const slab = bevelBox(width, 0.08, TOWER_LANDING, 0.02)
+      slab.translate(cx, y - 0.04, z)
+      treads.push(slab)
+      for (let i = 0; i < 5; i++) {
+        const bar = bevelBox(width - 0.14, 0.016, 0.03, 0.002)
+        bar.translate(cx, y + 0.008, z - TOWER_LANDING / 2 + 0.14 + i * ((TOWER_LANDING - 0.28) / 4))
+        treads.push(bar)
+      }
+
+      const lo = Math.min(x0, plan.xOuter) + 0.04
+      const hi = Math.max(x0, plan.xOuter) - 0.04
+      const zFront = z + TOWER_LANDING / 2 - 0.05
+      const zRear = z - TOWER_LANDING / 2 + 0.05
+      guardEdge(lo, hi, openings.front, y, (v) => [v, zFront])
+      guardEdge(lo, hi, openings.rear, y, (v) => [v, zRear])
+      const outerX = plan.xOuter - plan.side * 0.05
+      guardRun(outerX, outerX, zRear, zFront, y)
+      // The inner edge of a TURN landing faces the bowl across the cage gap and has to be guarded; the
+      // inner edge of a LEVEL landing is the gate.
+      if (!toFace) {
+        const innerX = plan.xInner + plan.side * 0.05
+        guardRun(innerX, innerX, zRear, zFront, y)
+      }
+    }
+
+    // Which spans of which level landing a flight connects to — a prepass, because a landing is guarded
+    // as it is built and one level landing can carry both the flight arriving at it and the next leaving.
+    const levelOpenings = new Map<number, {
+      front: Array<readonly [number, number]>
+      rear: Array<readonly [number, number]>
+    }>()
+    const openingsFor = (tier: number): { front: Array<readonly [number, number]>; rear: Array<readonly [number, number]> } => {
+      let entry = levelOpenings.get(tier)
+      if (!entry) {
+        entry = { front: [], rear: [] }
+        levelOpenings.set(tier, entry)
+      }
+      return entry
+    }
+    for (const flight of plan.flights) {
+      // The lower lane leaves the FOOT landing's rear edge; the upper lane arrives at the HEAD landing's
+      // front edge, and is always the inner lane so its head lands next to the gate.
+      openingsFor(flight.from.tier).rear.push(laneSpan(flight.folded ? plan.laneOuterX : plan.laneInnerX))
+      openingsFor(flight.to.tier).front.push(laneSpan(plan.laneInnerX))
+    }
+
+    for (const level of plan.levels) {
+      const openings = levelOpenings.get(level.tier) ?? { front: [], rear: [] }
+      landing(level.y, level.z, true, openings)
+    }
+
+    for (const flight of plan.flights) {
+      const footZ = flight.from.z - TOWER_LANDING / 2
+      const turnY = flight.from.y + flight.stepsA * flight.rise
+      const lower = flightGeometry(flight.stepsA, flight.goingA, flight.rise, plan.flightWidth)
+      const lowerX = flight.folded ? plan.laneOuterX : plan.laneInnerX
+      place(lower.treads, lowerX, flight.from.y, footZ, true)
+      place(lower.frame, lowerX, flight.from.y, footZ, true)
+      place(lower.rails, lowerX, flight.from.y, footZ, true)
+      treads.push(...lower.treads)
+      frame.push(...lower.frame)
+      rails.push(...lower.rails)
+
+      if (!flight.folded) continue
+      // Both lanes meet the turn landing on its FRONT edge — the lower one arriving, the upper leaving —
+      // so that edge is open over both lane columns and the other three are solid guard.
+      landing(turnY, flight.zTurn, false, {
+        front: [laneSpan(plan.laneOuterX), laneSpan(plan.laneInnerX)],
+        rear: [],
+      })
+      const upper = flightGeometry(flight.stepsB, flight.goingB, flight.rise, plan.flightWidth)
+      const upperZ = flight.zTurn + TOWER_LANDING / 2
+      place(upper.treads, plan.laneInnerX, turnY, upperZ, false)
+      place(upper.frame, plan.laneInnerX, turnY, upperZ, false)
+      place(upper.rails, plan.laneInnerX, turnY, upperZ, false)
+      treads.push(...upper.treads)
+      frame.push(...upper.frame)
+      rails.push(...upper.rails)
+    }
+
+    // Standards stand at every landing edge — deduped, so a shared level/turn edge never doubles one up.
+    const edges: number[] = []
+    const edge = (z: number): void => {
+      if (!edges.some((existing) => Math.abs(existing - z) < 0.09)) edges.push(z)
+    }
+    for (const level of plan.levels) {
+      edge(level.z - TOWER_LANDING / 2)
+      edge(level.z + TOWER_LANDING / 2)
+    }
+    for (const flight of plan.flights) {
+      if (!flight.folded) continue
+      edge(flight.zTurn - TOWER_LANDING / 2)
+      edge(flight.zTurn + TOWER_LANDING / 2)
+    }
+    edges.sort((a, b) => a - b)
+    // Landing edges alone leave five-metre clear bays, and a five-metre bay reads as structural steel
+    // rather than as tube. Split anything longer than the bay module so the lattice keeps its pitch.
+    const stations: number[] = []
+    for (let i = 0; i < edges.length; i++) {
+      stations.push(edges[i]!)
+      const next = edges[i + 1]
+      if (next === undefined) continue
+      const gap = next - edges[i]!
+      const splits = Math.max(0, Math.ceil(gap / TOWER_BAY) - 1)
+      for (let s = 1; s <= splits; s++) stations.push(edges[i]! + (gap * s) / (splits + 1))
+    }
+    stations.sort((a, b) => a - b)
+
+    const inset = TOWER_PAD / 2 + 0.01
+    const xLines = [plan.xInner + plan.side * inset, plan.xOuter - plan.side * inset] as const
+    // Each standard is cut to what it actually carries at its own z, not to the cage's overall top — a
+    // tower whose front posts run to the head of the back ones reads as a box, not as a raking stair.
+    const heads = new Map<number, number>()
+    for (const z of stations) {
+      const walk = plan.envelopeY(z)
+      if (walk === null) continue
+      heads.set(z, walk + STAIRS.railH + TOWER_HEAD)
+    }
+    const ordered = [...heads.keys()]
+    if (ordered.length === 0) return
+    for (const z of ordered) {
+      for (const x of xLines) {
+        frame.push(member(new Vector3(x, 0, z), new Vector3(x, heads.get(z)!, z), TOWER_POST_R, 8))
+        frame.push(groundPad([TOWER_PAD, TOWER_PAD], [x, 0, z], 0.035))
+      }
+    }
+    // Ledgers every lift, plus one diagonal per bay per lift alternating up the cage — the brace pattern
+    // is what makes a cage of tubes read as scaffold instead of as a fence.
+    for (let i = 0; i < ordered.length - 1; i++) {
+      const z0 = ordered[i]!
+      const z1 = ordered[i + 1]!
+      const top = Math.min(heads.get(z0)!, heads.get(z1)!)
+      // Base ledger just above the plates. Without it the lift below the first landing is a row of bare
+      // standards, and a scaffold is braced continuously to the ground whether or not it carries a stair
+      // there — an unbraced bottom lift is what makes the cage's lower third read as an empty shaft.
+      for (const x of xLines) {
+        frame.push(member(new Vector3(x, 0.3, z0), new Vector3(x, 0.3, z1), TOWER_LEDGER_R, 6))
+      }
+      let lift = 0
+      for (let y = TOWER_LIFT; y <= top + 1e-6; y += TOWER_LIFT) {
+        for (const x of xLines) {
+          frame.push(member(new Vector3(x, y, z0), new Vector3(x, y, z1), TOWER_LEDGER_R, 6))
+        }
+        // Alternate on BOTH the bay and the lift, so neighbouring panels mirror instead of marching in
+        // step — a wall of parallel diagonals is the tell of generated bracing (rule 3). Both long faces
+        // get a diagonal, mirrored against each other, so the cage is triangulated from either side
+        // rather than only from outboard.
+        const up = (i + lift) % 2 === 0
+        for (const [index, x] of xLines.entries()) {
+          const rising = index === 0 ? !up : up
+          frame.push(member(
+            new Vector3(x, rising ? y - TOWER_LIFT : y, z0),
+            new Vector3(x, rising ? y : y - TOWER_LIFT, z1),
+            TOWER_BRACE_R,
+            6,
+          ))
+        }
+        lift += 1
+      }
+    }
+    /** Is the bay's own mass behind the cage at this height and station — i.e. is there anything to tie to? */
+    const bayBehind = (y: number, z: number): boolean => {
+      for (let tier = 0; tier < layouts.length; tier++) {
+        const layout = layouts[tier]
+        const origin = origins[tier]
+        if (!layout || !origin) continue
+        if (z > origin.oz + layout.halfD || z < origin.oz - layout.halfD - 0.5) continue
+        if (y > origin.oy + 0.3 && y < origin.oy + layout.bowlTop + 0.5) return true
+      }
+      return false
+    }
+    // Transoms across the cage at every standard, every lift — and where the bay's own mass stands behind
+    // it, the transom runs ON THROUGH the gap and ties into the end face. Untied, a 15 m cage 3 m wide is
+    // a 5:1 free-standing shaft; a real stair tower is restrained by the thing it serves at every lift,
+    // and those ties are what stop the cage reading as a separate object parked next to the stand.
+    for (const z of ordered) {
+      for (let y = TOWER_LIFT; y <= heads.get(z)! + 1e-6; y += TOWER_LIFT) {
+        const inner = bayBehind(y, z) ? plan.xFace : xLines[0]!
+        frame.push(member(new Vector3(inner, y, z), new Vector3(xLines[1]!, y, z), TOWER_LEDGER_R, 6))
+      }
+    }
+    // End-face bracing front and back, so the cage is triangulated on three planes instead of only the
+    // outer one — a plane braced in one direction only still racks in the other.
+    for (const [index, z] of [ordered[0]!, ordered[ordered.length - 1]!].entries()) {
+      let lift = 0
+      for (let y = TOWER_LIFT; y <= heads.get(z)! + 1e-6; y += TOWER_LIFT) {
+        const up = (index + lift) % 2 === 0
+        frame.push(member(
+          new Vector3(xLines[0]!, up ? y - TOWER_LIFT : y, z),
+          new Vector3(xLines[1]!, up ? y : y - TOWER_LIFT, z),
+          TOWER_BRACE_R,
+          6,
+        ))
+        lift += 1
+      }
+    }
+
+
+    // The end guard rail the landings open through. It runs the RAKED part of the end face and stops at
+    // the promenade, so the gap where the tower arrives is the gate. A stand's open end has to be guarded
+    // anyway; leaving exactly the landing's width unguarded is what makes the arrival read as a way in.
+    const gates: BufferGeometry[] = []
+    for (const level of plan.levels) {
+      const layout = layouts[level.tier]
+      const origin = origins[level.tier]
+      if (!layout || !origin) continue
+      const x = plan.side * (layout.halfW - 0.06)
+      const zNear = origin.oz + layout.halfD - WALK
+      const zFar = origin.oz - layout.halfD + 0.12
+      const floorAt = (z: number): number => origin.oy + surfaceY(layout, z - origin.oz)
+      gates.push(...buildRail(
+        new Vector3(x, floorAt(zNear) + RAIL_H, zNear),
+        new Vector3(x, floorAt(zFar) + RAIL_H, zFar),
+        Math.max(3, Math.ceil(layout.rows / 2)),
+        (t) => floorAt(zNear + (zFar - zNear) * t),
       ))
     }
 
-    if (!switchback) {
-      const x0 = edge - run
-      if (x0 < -halfW) {
-        throw new Error(
-          `f1-grandstand-bay: stairs run (${run.toFixed(2)}m) does not fit inside width (${width}m)`,
-        )
+    emit('deck', mergeParts(treads, 'f1-grandstand-bay: stair treads'), group, 'stairs')
+    emit('structure', mergeParts(frame, 'f1-grandstand-bay: stair frame'), group, 'stair-frame')
+    emit('structure', mergeParts(rails, 'f1-grandstand-bay: stair rail'), group, 'stair-rail')
+    if (gates.length) {
+      emit('structure', mergeParts(gates, 'f1-grandstand-bay: end guard rail'), group, 'stair-gate')
+    }
+  }
+
+  /**
+   * The physics proxy — a FIRST CUT at what a consumer should attach for one placed stand instead of the
+   * whole visual trimesh (expensive) or one whole-model AABB (an invisible wall out over the track, which
+   * is exactly why devlo-racing's `kitAllowsBarrierCollider` is a blanket `false` today).
+   *
+   * Every volume is CONVEX and named, so the consumer picks its own level of solidity: the bowl prisms
+   * alone stop a car; add the support lines and the tower box and the undercroft is closed too. The ROOF
+   * is excluded on purpose — nothing that collides ever reaches it, and its cantilever is precisely the
+   * part that would push a whole-model box out over the racing line.
+   *
+   * The group is NOT parented to `root`: it can never reach the visual merge, the `.vtopo` compile or the
+   * model's own Box3 unless `debug.collision` asks for it, so `tiers: 1` stays byte-identical.
+   */
+  const buildCollision = (
+    tierSpecs: readonly TierSpec[],
+    layouts: readonly Layout[],
+    origins: ReadonlyArray<{ oy: number; oz: number }>,
+    wallTops: readonly number[],
+    towers: readonly TowerPlan[],
+  ): void => {
+    const volumes: F1GrandstandBayCollisionVolume[] = []
+
+    const pushVolume = (
+      part: F1GrandstandBayCollisionVolume['part'],
+      tier: number,
+      kind: F1GrandstandBayCollisionVolume['kind'],
+      points: ReadonlyArray<readonly [number, number, number]>,
+      geometry: BufferGeometry,
+    ): void => {
+      const min: [number, number, number] = [Infinity, Infinity, Infinity]
+      const max: [number, number, number] = [-Infinity, -Infinity, -Infinity]
+      for (const point of points) {
+        for (let axis = 0; axis < 3; axis++) {
+          min[axis] = Math.min(min[axis]!, point[axis]!)
+          max[axis] = Math.max(max[axis]!, point[axis]!)
+        }
       }
-      flight(x0, edge, footY, headY, z0, steps)
-    } else {
-      const steps1 = Math.ceil(steps / 2)
-      const steps2 = steps - steps1
-      const landingY = footY + (dy * steps1) / steps
-      const run1 = steps1 * TREAD
-      const run2 = steps2 * TREAD
-      const x0 = edge - Math.max(run1, run2)
-      if (x0 < -halfW) {
-        throw new Error(
-          `f1-grandstand-bay: switchback stair run (${Math.max(run1, run2).toFixed(2)}m) does not fit `
-          + `inside width (${width}m) even folded`,
-        )
-      }
-      const z1 = z0
-      const z2 = z0 + STAIR_WIDTH + STAIR_GAP
-      flight(edge - run1, edge, footY, landingY, z1, steps1)
-      flight(edge, edge - run2, landingY, headY, z2, steps2)
-      const landing = bevelBox(STAIR_WIDTH, 0.08, STAIR_WIDTH * 2 + STAIR_GAP, 0.02)
-      landing.translate(edge - STAIR_WIDTH / 2, landingY + 0.02, z0 + (STAIR_WIDTH + STAIR_GAP) / 2)
-      treads.push(landing)
+      volumes.push({ part, tier, kind, points, min, max })
+      generated.push(geometry)
+      const mesh = new Mesh(geometry, proxy)
+      mesh.name = tier >= 0 ? `collision-${part}-${tier}` : `collision-${part}`
+      // 'detail' is the only role the compiler recognises that it also EXCLUDES from both the hull and
+      // the visual AABB (see f1-kit-core/topology.ts) — 'collision' is not a TopologyRole and would be
+      // read as untagged, i.e. folded straight back into the compiled shape.
+      mesh.userData.topologyRole = 'detail'
+      mesh.userData.collisionPart = part
+      mesh.userData.excludeFromExport = true
+      collision.add(mesh)
     }
 
-    // Same local/world conversion as `buildFrontSupport` — foot/head were computed in world space
-    // because they cross into `lower`'s own (differently-offset) group.
-    emit('deck', mergeParts(treads, 'f1-grandstand-bay: stairs').translate(0, -oy, -oz), group, 'stairs')
-    emit(
-      'structure',
-      mergeParts(rails, 'f1-grandstand-bay: stair-rail').translate(0, -oy, -oz),
-      group,
-      'stair-rail',
-    )
-    return { steps, switchback }
+    const boxVolume = (
+      part: F1GrandstandBayCollisionVolume['part'],
+      tier: number,
+      centre: readonly [number, number, number],
+      size: readonly [number, number, number],
+    ): void => {
+      const points: Array<readonly [number, number, number]> = []
+      for (const dx of [-1, 1] as const) {
+        for (const dy of [-1, 1] as const) {
+          for (const dz of [-1, 1] as const) {
+            points.push([
+              centre[0] + (dx * size[0]) / 2,
+              centre[1] + (dy * size[1]) / 2,
+              centre[2] + (dz * size[2]) / 2,
+            ])
+          }
+        }
+      }
+      const geometry = bevelBox(size[0], size[1], size[2], 0)
+      geometry.translate(centre[0], centre[1], centre[2])
+      pushVolume(part, tier, 'box', points, geometry)
+    }
+
+    for (let tier = 0; tier < tierSpecs.length; tier++) {
+      const spec = tierSpecs[tier]!
+      const layout = layouts[tier]!
+      const origin = origins[tier]!
+      const rearBackZ = -layout.halfD - 0.49
+      // The measured corners of the tier's own mass: front skirt, promenade lip, the last row's own
+      // corner (which the whole rake lies on, exactly), the parapet and the rear wall's back face.
+      const profile = convexHull2D([
+        [layout.halfD, 0],
+        [layout.halfD, layout.base],
+        [layout.halfD - WALK, layout.base + NOSE],
+        [-layout.halfD + REAR, layout.bowlTop],
+        [-layout.halfD, layout.bowlTop],
+        [rearBackZ, wallTops[tier]!],
+        [rearBackZ, 0],
+      ])
+      const geometry = loftAlongX(profile, layout.width, { closed: true })
+      geometry.translate(0, origin.oy, origin.oz)
+      const points: Array<readonly [number, number, number]> = []
+      for (const sx of [-layout.halfW, layout.halfW] as const) {
+        for (const [z, y] of profile) points.push([sx, y + origin.oy, z + origin.oz])
+      }
+      pushVolume('bowl', tier, 'wedge', points, geometry)
+
+      if (tier === 0) continue
+      const lower = layouts[tier - 1]!
+      const lowerOrigin = origins[tier - 1]!
+      if (spec.support !== 'none') {
+        const z = origin.oz + layout.halfD - SUPPORT_INSET
+        const footY = lowerOrigin.oy + surfaceY(lower, z - lowerOrigin.oz)
+        boxVolume(
+          'front-support',
+          tier,
+          [0, (footY + origin.oy) / 2, z],
+          [layout.width, origin.oy - footY, spec.support === 'wall' ? WALL_SUPPORT_T : SUPPORT_R * 2],
+        )
+      }
+      if (spec.rearSupport !== 'none') {
+        const z = rearBackZ + origin.oz - SUPPORT_INSET
+        const headY = origin.oy + wallTops[tier]!
+        boxVolume(
+          'rear-support',
+          tier,
+          [0, headY / 2, z],
+          [layout.width, headY, spec.rearSupport === 'wall' ? WALL_SUPPORT_T : SUPPORT_R * 2],
+        )
+      }
+    }
+
+    for (const tower of towers) {
+      // From the bay's own end face, not from the cage line: the landings deck across TOWER_GAP, so
+      // starting at `xInner` would leave a 120 mm slot of nothing between this box and the bowl prism.
+      const x0 = Math.min(tower.xFace, tower.xOuter)
+      const x1 = Math.max(tower.xFace, tower.xOuter)
+      boxVolume(
+        'stair-tower',
+        -1,
+        [(x0 + x1) / 2, tower.topY / 2, (tower.zFront + tower.zRear) / 2],
+        [x1 - x0, tower.topY, tower.zFront - tower.zRear],
+      )
+    }
+
+    collisionVolumes = volumes
   }
 
   /**
@@ -1114,6 +1956,8 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     )
 
     const origins: Array<{ oy: number; oz: number }> = [{ oy: 0, oz: 0 }]
+    /** Each tier's own rear-wall height, recorded as it is built — the collision prism's rear datum. */
+    const wallTops: number[] = []
     for (let tier = 1; tier < tierSpecs.length; tier++) {
       const spec = tierSpecs[tier]!
       const lower = layouts[tier - 1]!
@@ -1155,6 +1999,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       })()
 
       const wallH = isTop ? layout.bowlTop + 0.62 : origins[tier + 1]!.oy - origin.oy
+      wallTops.push(wallH)
       buildBowl(layout, bowlGroup, isTop ? undefined : wallH)
       buildSeating(layout, bowlGroup)
       buildAisle(layout, bowlGroup)
@@ -1165,7 +2010,6 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         const lower = { layout: layouts[tier - 1]!, oy: origins[tier - 1]!.oy, oz: origins[tier - 1]!.oz }
         buildFrontSupport(spec, layout, origin.oy, origin.oz, wallH, lower, bowlGroup)
         buildRearSupport(spec, layout, origin.oy, origin.oz, wallH, bowlGroup)
-        if (spec.stairs) buildStairs(layout, origin.oy, origin.oz, lower, config.width, bowlGroup)
       }
 
       if (spec.roof) {
@@ -1196,14 +2040,53 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         buildFascia(layout, roofGroup)
       }
     }
+
+    // Towers LAST, and outside the tier loop: a cage belongs to no single tier — it spans them, and its
+    // landings are shared between the tier below and the tier above. Emitted into the root-level `bowl`
+    // group, in the model's own frame, so nothing has to be un-offset. At `tiers: 1` no tier can ask for
+    // one, nothing is emitted, and the build stays byte-identical.
+    const towers: TowerPlan[] = []
+    let left = 0
+    let right = 0
+    for (const side of [-1, 1] as const) {
+      const served = new Set<number>()
+      let flightWidth = 0
+      for (let tier = 1; tier < tierSpecs.length; tier++) {
+        if (!towerOnSide(tierSpecs[tier]!, side)) continue
+        served.add(tier - 1)
+        served.add(tier)
+        flightWidth = Math.max(flightWidth, tierSpecs[tier]!.stairWidth)
+      }
+      if (served.size < 2) continue
+      const levels = [...served].sort((a, b) => a - b).map((tier) => ({
+        tier,
+        y: origins[tier]!.oy + layouts[tier]!.base,
+        z: origins[tier]!.oz + layouts[tier]!.halfD - WALK / 2,
+      }))
+      const plan = planTower(side, flightWidth, levels, config.width / 2)
+      towers.push(plan)
+      buildStairTower(plan, layouts, origins, bowl)
+      const overhang = TOWER_GAP + plan.towerWidth
+      if (side === -1) left = overhang
+      else right = overhang
+    }
+    footprint = { width: config.width, totalWidth: config.width + left + right, left, right }
+
+    buildCollision(tierSpecs, layouts, origins, wallTops, towers)
   }
   rebuild()
+  if (options.debug?.collision) {
+    collision.visible = true
+    root.add(collision)
+  }
 
   return {
     root,
-    parts: { bowl, roof },
+    parts: { bowl, roof, collision },
     materials: materialSlots,
     getConfig: () => ({ ...config }),
+    getFootprint: () => ({ ...footprint }),
+    getCollisionVolumes: () => collisionVolumes,
     configure(patch) {
       if (patch.rows !== undefined) config.rows = Math.max(4, Math.round(patch.rows))
       if (patch.width !== undefined) config.width = Math.max(4, patch.width)
