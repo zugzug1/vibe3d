@@ -681,10 +681,14 @@ describe('procedural knobs', () => {
 
   test('garage fascia number and legend round-trip', () => {
     const model = createGarageBox({ count: 2, number: '4', legend: 'BOX' })
-    expect(model.getConfig()).toEqual({ count: 2, number: '4', legend: 'BOX', style: 'stamp', open: 0 })
+    expect(model.getConfig()).toEqual({
+      count: 2, number: '4', legend: 'BOX', style: 'stamp', open: 0, floors: 1, tower: false,
+    })
     expect(model.parts.fascia.children.length).toBe(2)
     model.configure({ count: 1, number: '9', legend: 'PIT', style: 'fia' })
-    expect(model.getConfig()).toEqual({ count: 1, number: '9', legend: 'PIT', style: 'fia', open: 0 })
+    expect(model.getConfig()).toEqual({
+      count: 1, number: '9', legend: 'PIT', style: 'fia', open: 0, floors: 1, tower: false,
+    })
     expect(model.parts.fascia.children.length).toBe(1)
     model.dispose()
   })
@@ -869,6 +873,95 @@ describe('FIA 1:1 datums', () => {
     // The head must stay under the fascia beam soffit, barrel and all.
     expect(GARAGE.head).toBeLessThan(GARAGE.height - GARAGE.fascia)
     model.dispose()
+  })
+
+  test('garage floors defaults to 1 and is byte-identical to the plain box', () => {
+    // `floors`/`tower` must not perturb the default build: same vertex/triangle totals and AABB whether
+    // omitted or passed explicitly at their defaults.
+    const totalVerts = (root: Object3D): number => {
+      let total = 0
+      root.traverse((object) => {
+        const mesh = object as Mesh
+        if (!mesh.isMesh) return
+        total += (mesh.geometry as BufferGeometry).getAttribute('position').count
+      })
+      return total
+    }
+    const totalTriangles = (root: Object3D): number => {
+      let total = 0
+      root.traverse((object) => {
+        const mesh = object as Mesh
+        if (!mesh.isMesh) return
+        const index = (mesh.geometry as BufferGeometry).getIndex()
+        total += index ? index.count / 3 : mesh.geometry.getAttribute('position').count / 3
+      })
+      return total
+    }
+    const plain = createGarageBox({ count: 2 })
+    const explicit = createGarageBox({ count: 2, floors: 1, tower: false })
+    expect(explicit.getConfig()).toEqual(plain.getConfig())
+    expect(totalVerts(explicit.root)).toBe(totalVerts(plain.root))
+    expect(totalTriangles(explicit.root)).toBe(totalTriangles(plain.root))
+    plain.root.updateMatrixWorld(true)
+    explicit.root.updateMatrixWorld(true)
+    const plainBox = sizeOf(plain.root).box
+    const explicitBox = sizeOf(explicit.root).box
+    expect(explicitBox.min.toArray()).toEqual(plainBox.min.toArray())
+    expect(explicitBox.max.toArray()).toEqual(plainBox.max.toArray())
+    // No upper-storey or tower geometry leaks into the default box.
+    plain.root.traverse((object) => {
+      expect(object.name.startsWith('floor-slab-')).toBe(false)
+      expect(object.name.startsWith('floor-core-')).toBe(false)
+      expect(object.name.startsWith('tower-')).toBe(false)
+    })
+    plain.dispose()
+    explicit.dispose()
+  })
+
+  test('garage floors 2-3 stack glazed Paddock Club storeys toward the 18.5 m official max', () => {
+    const one = createGarageBox({ count: 4, floors: 1 })
+    const three = createGarageBox({ count: 4, floors: 3 })
+    one.root.updateMatrixWorld(true)
+    three.root.updateMatrixWorld(true)
+    const oneTop = sizeOf(one.root).box.max.y
+    const threeTop = sizeOf(three.root).box.max.y
+    expect(threeTop).toBeGreaterThan(oneTop)
+    // floors:3 caps close under the official 18.5 m max height. estimate:official-max-height.
+    expect(threeTop).toBeGreaterThan(17)
+    expect(threeTop).toBeLessThanOrEqual(18.5 + 0.5)
+    expect(three.root.getObjectByName('floor-glazing-0')).toBeDefined()
+    expect(three.root.getObjectByName('floor-glazing-1')).toBeDefined()
+    expect(three.root.getObjectByName('terrace-fascia-0')).toBeDefined()
+    expect(three.root.getObjectByName('terrace-fascia-1')).toBeDefined()
+    expect(three.root.getObjectByName('floors-roof-slab')).toBeDefined()
+    expect(three.root.getObjectByName('floors-parapet')).toBeDefined()
+    // Storeys stay the full run wide — nothing overhangs the bay width so bays keep tiling.
+    const glazing = three.root.getObjectByName('floor-glazing-0')!
+    expect(new Box3().setFromObject(glazing).getSize(new Vector3()).x)
+      .toBeLessThanOrEqual(4 * GARAGE.pitch + 1e-6)
+    one.dispose()
+    three.dispose()
+  })
+
+  test('garage tower adds a one-bay glazed shaft at the -X end; floors clamps to 1-3', () => {
+    const base = createGarageBox({ count: 2, floors: 3 })
+    const towered = createGarageBox({ count: 2, floors: 3, tower: true })
+    base.root.updateMatrixWorld(true)
+    towered.root.updateMatrixWorld(true)
+    expect(towered.getConfig().tower).toBe(true)
+    expect(sizeOf(towered.root).box.min.x).toBeLessThan(sizeOf(base.root).box.min.x)
+    expect(sizeOf(towered.root).box.max.y).toBeGreaterThan(sizeOf(base.root).box.max.y)
+    expect(towered.root.getObjectByName('tower-glazing')).toBeDefined()
+    expect(towered.root.getObjectByName('tower-posts')).toBeDefined()
+    base.dispose()
+    towered.dispose()
+
+    const low = createGarageBox({ floors: 0 })
+    expect(low.getConfig().floors).toBe(1)
+    low.dispose()
+    const high = createGarageBox({ floors: 9 })
+    expect(high.getConfig().floors).toBe(3)
+    high.dispose()
   })
 
   test('pit wall is 1.0 m deep and 2.2 m overall', () => {
