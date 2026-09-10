@@ -1,6 +1,21 @@
 // f1-grandstand-bay — one Silverstone-style seating bay: a raked bowl on an elevated deck, tip-up seat
 // shells on standards, a hoarding-and-debris-fence frontage, and a tensioned membrane roof carried on
-// slender front columns. configure({ rows, width, tiers }).
+// slender front columns. configure({ rows, width, tiers, roof, stairs }).
+//
+// THE TWO TOP-LEVEL SWITCHES — the ones an emitter tiling a run of bays reaches for:
+//
+//   createModel({
+//     rows: 8, width: 10, tiers: 3,
+//     roof: 'full',   // 'full' (default) ONE canopy over the WHOLE section | 'top' top tier only
+//                     // | 'none' no canopy at all | 'per-tier' obey tierSpec[k].roof
+//     stairs: 'none', // 'none' (default) no end towers, so bays butt at `width` | 'left' | 'right'
+//   })                // | 'both' | 'ends' (documented alias for 'both': a run end on both sides)
+//
+// PRECEDENCE. `roof` wins outright: `tierSpec[k].roof` is read ONLY when `roof === 'per-tier'`, so the
+// per-tier field is an explicit opt-in rather than a hidden override. `stairs` is the opposite way round
+// — it is only the DEFAULT each tier's `stairSide` falls back to, so a tier that sets `stairSide`
+// explicitly wins for that tier. {@link F1GrandstandBayInstance.getFootprint} always reports the
+// RESOLVED stairs, whichever of the two decided them.
 //
 // Datums read off the Silverstone reference: 0.44 m rise on a 0.80 m tread, a 1.10 m promenade sitting
 // 0.95 m above ground, row 1 stepped a further 0.75 m up so it clears the hoarding, columns and rafters
@@ -19,9 +34,11 @@
 // soffit over the covered rows below — no separate soffit geometry needed. Each tier below the top still
 // gets its own frontage (fascia/hoarding/guard-rail), landing right at the overhang's leading edge like a
 // real balcony front, and a rear wall stretched to close the gap under the tier above (no see-through
-// void). ONE roof — the existing membrane/rafter/column system — rides the TOP tier only by default;
-// lower tiers are uncovered except where the tier above overhangs them. `tiers: 1` is untouched: same
-// single bowl, same geometry as before.
+// void). ONE roof — the existing membrane/rafter/column system — carries the stand, and by default
+// (`roof: 'full'`) it spans the WHOLE section: rear tie at the top tier's own rear wall line, leading
+// edge out over TIER 0's promenade, so a stack reads with the same profile as a rows-24 single-tier bay
+// rather than a small lid parked on the top deck. `tiers: 1` is untouched: same single bowl, same
+// canopy, same geometry as before, byte for byte.
 //
 // `tierSpec` (indexed by tier, 0 = bottom) makes every one of those per-tier decisions configurable, so a
 // stack is never left floating with no visible means of support:
@@ -44,24 +61,27 @@
 //     from TRUE GROUND up to this tier's own rear-wall height, at the rear face. Every tier above ground
 //     gets its own rear tower rather than one member spanning past intermediate tiers, because each tier
 //     steps further back as it stacks (see `tierStep.z` below), so the towers never collide.
-//   - `stairSide` (`'left' | 'right' | 'both' | 'none'`; default `'right'` for tiers ≥1, `'none'` for
-//     tier 0) — which END face carries this tier's access stair. The stair is NOT across the front of
-//     the bowl: it is a stair TOWER bolted to the bay's end face (x = ±halfW), travelling along Z and
-//     climbing from the tier below's promenade to this tier's, exactly as a temporary-stand scaffold
-//     tower does (Madring IMG_2437). See {@link buildStairTower}.
+//   - `stairSide` (`'left' | 'right' | 'both' | 'none'`; defaults to the top-level `stairs` for tiers ≥1,
+//     `'none'` for tier 0) — which END face carries this tier's access stair. The stair is NOT across
+//     the front of the bowl: it is a stair TOWER bolted to the bay's end face (x = ±halfW), travelling
+//     along Z and climbing from the tier below's promenade to this tier's, exactly as a
+//     temporary-stand scaffold tower does (Madring IMG_2437). See {@link buildStairTower}.
 //   - `stairWidth` (default 1.4 m — f1-stairs' own flight width) — the flight width of that tower.
 //     A folded tower is two lanes wide (`2 × stairWidth + STAIR_GAP`); a straight one is one lane.
 //   - `roof` (default: top tier only) — lets a non-top tier carry its own membrane roof too, gated by a
-//     thrown clearance check against the tier stacked above it.
+//     thrown clearance check against the tier stacked above it. IGNORED unless the top-level
+//     `roof: 'per-tier'` asks for it (see PRECEDENCE above).
 // Any field left out of a given tier's (partial) entry falls back to the default above, so `tiers: 3`
 // alone still builds a complete, fully-supported stack. `tiers` may also be given directly as the
 // `tierSpec` array (`tiers: [{...}, {...}, {...}]`), in which case `tiers = tiers.length`.
 //
 // TILING. `width` is the module and the SEATING never leaves it, but a stair tower deliberately does —
 // it hangs off the end face. {@link F1GrandstandBayInstance.getFootprint} reports both numbers so an
-// emitter tiling a run of bays can place towers only at the ends: **bays in the middle of a run should
-// pass `stairSide: 'none'`**, the two end bays keep (or widen to) a tower, and the run's overall width
-// is `getFootprint().totalWidth` on those end bays, `width` in between.
+// emitter tiling a run of bays can place towers only at the ends. That is why the top-level `stairs`
+// DEFAULTS to `'none'`: a bay squeezes against its neighbours at exactly `width` unless asked otherwise,
+// and the EMITTER decides which bay gets a tower — the two end bays pass `stairs: 'ends'` (or `'left'` /
+// `'right'` for the outward face only) and the run's overall width is `getFootprint().totalWidth` on
+// those, `width` in between.
 //
 // COLLISION. {@link F1GrandstandBayInstance.getCollisionVolumes} / `parts.collision` are a first cut at
 // what a physics engine should be given for one placed stand: a handful of CONVEX volumes (one prism per
@@ -110,6 +130,27 @@ export type TierSupport = 'columns' | 'wall' | 'none'
 export const STAIR_SIDES = ['none', 'left', 'right', 'both'] as const
 /** Which END face (x = ±halfW) carries a tier's access stair tower. Never the front of the bowl. */
 export type StairSide = (typeof STAIR_SIDES)[number]
+
+export const ROOF_MODES = ['full', 'top', 'none', 'per-tier'] as const
+/**
+ * Top-level canopy switch (`F1GrandstandBayConfig.roof`, default `'full'`).
+ * - `'full'` — ONE membrane spanning the whole SECTION: rear tie at the top tier's own rear wall line,
+ *   leading edge out over tier 0's promenade. At `tiers: 1` that IS the single-tier roof, byte for byte.
+ * - `'top'` — the top tier only, which is what a stack used to build.
+ * - `'none'` — no canopy: membrane, rafters, columns and fascia all gone.
+ * - `'per-tier'` — the ONLY value that reads `tierSpec[k].roof`. Under every other value that per-tier
+ *   field is ignored, so the precedence is explicit rather than magic.
+ */
+export type RoofMode = (typeof ROOF_MODES)[number]
+
+export const STAIRS_MODES = ['none', 'left', 'right', 'both', 'ends'] as const
+/**
+ * Top-level access-tower switch (`F1GrandstandBayConfig.stairs`, default `'none'`) — which END faces of
+ * THIS bay carry a tower. `'ends'` is a documented alias for `'both'`, meaning "this bay is a run end on
+ * both sides". Unlike {@link RoofMode} this is only the DEFAULT a tier's `stairSide` falls back to: a
+ * tier that sets `tierSpec[k].stairSide` explicitly wins for that tier.
+ */
+export type StairsMode = (typeof STAIRS_MODES)[number]
 
 /** Per-tier overrides. Every field is optional on input — see the header comment for each default. */
 export interface TierSpec {
@@ -161,6 +202,10 @@ export interface F1GrandstandBayConfig {
   width: number
   /** Stacked bowls, 1-4. `tiers: 1` (the default) is the original single bowl, unchanged. */
   tiers: number
+  /** Canopy switch — see {@link RoofMode}. Default `'full'`: one canopy over the whole section. */
+  roof: RoofMode
+  /** Access-tower switch — see {@link StairsMode}. Default `'none'`: bays tile flush at `width`. */
+  stairs: StairsMode
   /** Per-tier overrides, indexed by tier (0 = bottom). Missing fields/entries fall back to defaults. */
   tierSpec?: ReadonlyArray<Partial<TierSpec>>
 }
@@ -198,7 +243,9 @@ export interface F1GrandstandBayInstance {
   dispose(): void
 }
 
-const defaults: F1GrandstandBayConfig = { rows: 8, width: 10, tiers: 1 }
+const defaults: F1GrandstandBayConfig = {
+  rows: 8, width: 10, tiers: 1, roof: 'full', stairs: 'none',
+}
 const MIN_TIERS = 1
 const MAX_TIERS = 4
 
@@ -263,6 +310,17 @@ const SUPPORT_INSET = SUPPORT_R + 0.05
 const BRACE_R = 0.03
 /** Solid-panel support thickness, front or rear. */
 const WALL_SUPPORT_T = 0.18
+
+/**
+ * Where a section-spanning canopy's intermediate prop stands on a lower tier's promenade, measured back
+ * from that tier's leading edge. Held against the front lip rather than mid-walk: the promenade is only
+ * WALK (1.10 m) deep and a prop in the middle of it is a prop in the middle of the circulation.
+ */
+const PROP_INSET = 0.32
+/** Clear the rafter's own 0.072 m chord radius, so a prop head meets the rafter underside, not its axis. */
+const PROP_HEAD = 0.1
+/** Stations sampled along each tier's exposed depth when solving the canopy's clearance. */
+const CLEAR_SAMPLES = 24
 
 /**
  * Access-stair pitch. NOT the bowl's own 0.44/0.80 rake — a stair a spectator climbs between tiers is
@@ -352,6 +410,17 @@ const surfaceY = (layout: Layout, z: number): number => {
   if (z > layout.halfD - WALK) return layout.base
   const r = Math.floor((layout.halfD - WALK - z) / TREAD)
   return treadY(layout, Math.min(Math.max(r, 0), layout.rows - 1))
+}
+
+/**
+ * Top of the bowl MASS at local `z` — what a canopy overhead has to clear. Not `surfaceY`: that is a
+ * WALKING-surface query and deliberately clamps the rear circulation strip to the last row's tread, one
+ * rise below the `bowlTop` the loft profile actually reaches there (see {@link buildBowl}'s profile).
+ */
+const bowlMassTopAt = (layout: Layout, z: number): number => {
+  if (z >= layout.halfD - WALK) return layout.base
+  const r = Math.floor((layout.halfD - WALK - z) / TREAD)
+  return r >= layout.rows ? layout.bowlTop : treadY(layout, r)
 }
 
 /** Rafter top chord at `u`: 0 at the rear tie, 1 at the leading edge. */
@@ -571,15 +640,30 @@ const seatFrame = (): BufferGeometry => {
 const clampTierSupport = (value: TierSupport | undefined): TierSupport =>
   value === 'wall' || value === 'none' ? value : 'columns'
 
-/** Tier 0 stands on the ground and needs no tower; every tier above it gets one on the +X end. */
-const clampStairSide = (value: StairSide | undefined, tier: number): StairSide =>
+const clampRoofMode = (value: RoofMode | undefined): RoofMode =>
+  value !== undefined && (ROOF_MODES as readonly string[]).includes(value) ? value : 'full'
+
+const clampStairsMode = (value: StairsMode | undefined): StairsMode =>
+  value !== undefined && (STAIRS_MODES as readonly string[]).includes(value) ? value : 'none'
+
+/** `'ends'` is the documented alias — a bay that is a run end on BOTH sides carries both towers. */
+const stairsModeToSide = (mode: StairsMode): StairSide => (mode === 'ends' ? 'both' : mode)
+
+/**
+ * Tier 0 stands on the ground and needs no tower; every tier above it falls back to `fallback` — the
+ * resolved top-level `stairs` — unless this tier named a side of its own, which always wins.
+ */
+const clampStairSide = (
+  value: StairSide | undefined, tier: number, fallback: StairSide,
+): StairSide =>
   value !== undefined && (STAIR_SIDES as readonly string[]).includes(value)
     ? value
-    : (tier >= 1 ? 'right' : 'none')
+    : (tier >= 1 ? fallback : 'none')
 
 /** Fills in every field of one tier's spec from its (possibly empty) partial input. */
 const resolveTierSpec = (
   tier: number, rowsDefault: number, isTop: boolean, partial: Partial<TierSpec> | undefined,
+  stairsFallback: StairSide,
 ): TierSpec => ({
   rows: Math.max(4, Math.round(partial?.rows ?? rowsDefault)),
   plinth: Math.max(0, partial?.plinth ?? DECK),
@@ -587,7 +671,7 @@ const resolveTierSpec = (
   overlapRows: Math.max(0, Math.round(partial?.overlapRows ?? OVERLAP_ROWS)),
   support: clampTierSupport(partial?.support),
   rearSupport: clampTierSupport(partial?.rearSupport),
-  stairSide: clampStairSide(partial?.stairSide, tier),
+  stairSide: clampStairSide(partial?.stairSide, tier, stairsFallback),
   // f1-stairs' own flight-width clamp, so a tower is never narrower than the flight it is built from.
   stairWidth: Math.min(2.8, Math.max(0.9, partial?.stairWidth ?? STAIR_WIDTH)),
   roof: partial?.roof ?? isTop,
@@ -625,9 +709,12 @@ const convexHull2D = (
 }
 
 const resolveTiers = (config: F1GrandstandBayConfig): TierSpec[] => {
+  const stairsFallback = stairsModeToSide(config.stairs)
   const specs: TierSpec[] = []
   for (let tier = 0; tier < config.tiers; tier++) {
-    specs.push(resolveTierSpec(tier, config.rows, tier === config.tiers - 1, config.tierSpec?.[tier]))
+    specs.push(resolveTierSpec(
+      tier, config.rows, tier === config.tiers - 1, config.tierSpec?.[tier], stairsFallback,
+    ))
   }
   return specs
 }
@@ -952,6 +1039,8 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     rows: Math.max(4, Math.round(options.rows ?? defaults.rows)),
     width: Math.max(4, options.width ?? defaults.width),
     tiers: tiersInput.tiers,
+    roof: clampRoofMode(options.roof),
+    stairs: clampStairsMode(options.stairs),
     tierSpec: tiersInput.tierSpec,
   }
 
@@ -1295,16 +1384,30 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     emit('structure', mergeParts(frame, 'f1-grandstand-bay: roof frames'), group, 'roof-frames')
   }
 
-  /** The slender front columns that carry the cantilever — the reference's strongest vertical rhythm. */
-  const buildColumns = (layout: Layout, group: Group): void => {
+  /**
+   * The slender front columns that carry the cantilever — the reference's strongest vertical rhythm.
+   *
+   * `frame` only exists for the section-spanning canopy ({@link buildFullCanopy}), whose group sits at
+   * the TOP tier's origin while its columns still stand on true ground in front of TIER 0 and still tie
+   * back to TIER 0's promenade. Omitted — every single-tier and per-tier roof — the three values are the
+   * literals this function always used, so nothing about that path moves a bit.
+   */
+  const buildColumns = (
+    layout: Layout,
+    group: Group,
+    frame?: { readonly groundY: number; readonly tieY: number; readonly tieZ: number },
+  ): void => {
     const front = rafterAt(layout, 1)
     const knee = rafterAt(layout, 0.76)
     const z = front.z - 0.07
+    const groundY = frame?.groundY ?? 0
+    const tieY = frame?.tieY ?? layout.base + 0.92
+    const tieZ = frame?.tieZ ?? layout.halfD
     const parts: BufferGeometry[] = []
     for (const x of layout.columns) {
       const head = front.y - EDGE_HEAD
-      parts.push(member(new Vector3(x, 0, z), new Vector3(x, head, z), 0.095, 10))
-      parts.push(groundPad([0.36, 0.36], [x, 0, z], 0.035))
+      parts.push(member(new Vector3(x, groundY, z), new Vector3(x, head, z), 0.095, 10))
+      parts.push(groundPad([0.36, 0.36], [x, groundY, z], 0.035))
       parts.push(member(
         new Vector3(x, head - 1.4, z),
         new Vector3(x, knee.y - 0.22, knee.z),
@@ -1312,8 +1415,8 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         6,
       ))
       parts.push(member(
-        new Vector3(x, layout.base + 0.92, z),
-        new Vector3(x, layout.base + 0.92, layout.halfD),
+        new Vector3(x, tieY, z),
+        new Vector3(x, tieY, tieZ),
         0.04,
         6,
       ))
@@ -1361,6 +1464,171 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
 
     emit('structure', mergeParts(frame, 'f1-grandstand-bay: fascia frame'), group, 'fascia-frame')
     emit('fascia', mergeParts(faces, 'f1-grandstand-bay: fascia'), group, 'fascia-board')
+  }
+
+  /**
+   * Intermediate props under a section-spanning canopy. The leading-edge column line alone would leave a
+   * whole-section rafter unsupported across its middle — twenty metres of span on one pair of ties — so
+   * every tier BELOW the top carries a column line of its own, standing on THAT tier's promenade, on the
+   * roof's own BAY pitch (so a prop lands under a rafter rather than between two) and reaching the
+   * rafter's underside above it.
+   *
+   * Every foot is COMPUTED through `surfaceY` and asserted to be the promenade, exactly as a tier
+   * support's is — a prop is never assumed to land on something. The central-gangway stations are skipped
+   * on the same clear-width test `buildSeating` keeps seats out of the aisle with: a prop planted in the
+   * gangway is a prop planted in the only way out.
+   *
+   * Emitted in the model's OWN frame into `roof` (which is at identity), because a prop line spans from
+   * one tier's deck to another tier's canopy and belongs to neither group.
+   */
+  const buildCanopyProps = (
+    canopy: Layout,
+    origin: { readonly oy: number; readonly oz: number },
+    layouts: readonly Layout[],
+    origins: ReadonlyArray<{ readonly oy: number; readonly oz: number }>,
+  ): void => {
+    const parts: BufferGeometry[] = []
+    const span = canopy.zFront - canopy.zBack
+    for (let tier = 0; tier < layouts.length - 1; tier++) {
+      const layout = layouts[tier]!
+      const lower = origins[tier]!
+      const zLocal = layout.halfD - PROP_INSET
+      const footY = lower.oy + surfaceY(layout, zLocal)
+      if (Math.abs(footY - (lower.oy + layout.base)) > 1e-9) {
+        throw new Error(
+          `f1-grandstand-bay: canopy prop for tier ${tier} landed at ${footY.toFixed(3)}m, not on that `
+          + `tier's promenade (${(lower.oy + layout.base).toFixed(3)}m)`,
+        )
+      }
+      const zWorld = lower.oz + zLocal
+      const u = (zWorld - (origin.oz + canopy.zBack)) / span
+      if (u <= 0 || u >= 1) {
+        throw new Error(
+          `f1-grandstand-bay: canopy prop for tier ${tier} stands at z=${zWorld.toFixed(3)}m, outside the `
+          + `canopy's own span`,
+        )
+      }
+      const headY = origin.oy + rafterAt(canopy, u).y - PROP_HEAD
+      if (headY <= footY) {
+        throw new Error(
+          `f1-grandstand-bay: canopy prop for tier ${tier} does not reach up `
+          + `(${footY.toFixed(3)}m -> ${headY.toFixed(3)}m)`,
+        )
+      }
+      const heads: Vector3[] = []
+      for (const x of canopy.columns) {
+        if (Math.abs(x) < AISLE / 2 + 0.04) continue
+        parts.push(member(new Vector3(x, footY, zWorld), new Vector3(x, headY, zWorld), 0.095, 10))
+        parts.push(groundPad([0.36, 0.36], [x, footY, zWorld], 0.035))
+        heads.push(new Vector3(x, headY, zWorld))
+      }
+      // Head chord tying the line together — the same gauge the leading edge's own tip beam runs at.
+      for (let i = 0; i < heads.length - 1; i++) parts.push(member(heads[i]!, heads[i + 1]!, 0.048, 10))
+    }
+    if (parts.length === 0) return
+    emit('structure', mergeParts(parts, 'f1-grandstand-bay: canopy props'), roof, 'canopy-props')
+  }
+
+  /**
+   * The SECTION-spanning canopy — `roof: 'full'`, the default, and the fix for "the canopy up top doesn't
+   * extend over the whole section like it does for rows 24 tiers 1".
+   *
+   * ONE membrane for the whole stand: the rear tie stays exactly where the top tier's own roof tied it
+   * (that tier's `bowlTop + ROOF_CLEAR`, at `zBack`), and the leading edge runs all the way out to TIER
+   * 0's `halfD + ROOF_FRONT` — the same line a single-tier bay's roof leads at. So the profile reads as
+   * one rafter falling ROOF_FALL from the rear tie to the front, then the TIP_U curl opening the canopy
+   * out over the track, which is the rows-24 single-tier silhouette at three-tier height.
+   *
+   * NOTHING is forked to do it. `rafterAt` / `membranePanel` / `bayWeb` / `roofRafters` / `roofEdges` /
+   * `buildRoof` / `buildColumns` / `buildFascia` are all parameterised by the layout's
+   * `zBack`/`zFront`/`yBack`/`yFront`, so the canopy is literally the TOP tier's layout with `zFront`
+   * pushed forward. `tiers: 1` takes the early return — today's three calls on today's layout object, in
+   * today's order — which is what keeps a single-tier bay byte-identical.
+   *
+   * CLEARANCE. A longer span is a longer chance to dip: the straight rafter line is checked against every
+   * tier's exposed mass top (`bowlMassTopAt`) at CLEAR_SAMPLES stations across the depth that tier
+   * actually shows to the sky, and `yFront` is RAISED until the whole line clears `ROOF_CLEAR`. Raising
+   * the front only opens the canopy further toward the track, so ROOF_FALL/TIP_U/ROOF_LIFT semantics
+   * survive; a solve that would push the leading edge ABOVE its own rear tie means the stack is wrong,
+   * not the roof, and throws.
+   */
+  const buildFullCanopy = (
+    layouts: readonly Layout[],
+    origins: ReadonlyArray<{ readonly oy: number; readonly oz: number }>,
+  ): void => {
+    const top = layouts.length - 1
+    const topLayout = layouts[top]!
+    if (top === 0) {
+      buildRoof(topLayout, roof)
+      buildColumns(topLayout, roof)
+      buildFascia(topLayout, roof)
+      return
+    }
+
+    const origin = origins[top]!
+    const zBackWorld = origin.oz + topLayout.zBack
+    const zFrontWorld = origins[0]!.oz + layouts[0]!.halfD + ROOF_FRONT
+    const yBackWorld = origin.oy + topLayout.yBack
+    const span = zFrontWorld - zBackWorld
+
+    // The rafter's own shape term (arch + tip curl) at `u`, isolated by evaluating the REAL rafter with
+    // its front tie held level with the rear one, so the solve can never drift from the curve the
+    // geometry is actually built on.
+    const level: Layout = { ...topLayout, yFront: topLayout.yBack }
+    const shapeAt = (u: number): number => rafterAt(level, u).y - topLayout.yBack
+
+    let front = origin.oy + topLayout.yFront
+    let binding = -1
+    for (let tier = 0; tier <= top; tier++) {
+      const layout = layouts[tier]!
+      const at = origins[tier]!
+      // A tier below the top only shows to the sky from the FRONT EDGE of the tier above it forward;
+      // behind that it is roofed by the cantilever, which `rebuild`'s own headroom check already gates.
+      const zNose = at.oz + layout.halfD
+      const zTail = tier === top
+        ? at.oz - layout.halfD
+        : origins[tier + 1]!.oz + layouts[tier + 1]!.halfD
+      for (let i = 0; i <= CLEAR_SAMPLES; i++) {
+        const z = zTail + ((zNose - zTail) * i) / CLEAR_SAMPLES
+        const u = (z - zBackWorld) / span
+        if (u <= 1e-6 || u > 1) continue
+        const need = at.oy + bowlMassTopAt(layout, z - at.oz) + ROOF_CLEAR
+        const lift = yBackWorld + (need - yBackWorld - shapeAt(u)) / u
+        if (lift > front) {
+          front = lift
+          binding = tier
+        }
+      }
+    }
+    if (front > yBackWorld) {
+      throw new Error(
+        `f1-grandstand-bay: a section-spanning canopy cannot clear tier ${binding} by ROOF_CLEAR `
+        + `(${ROOF_CLEAR}m) without lifting its leading edge to ${front.toFixed(3)}m — above its own rear `
+        + `tie (${yBackWorld.toFixed(3)}m), which is a canopy shutting down onto the track rather than `
+        + `opening toward it. Reduce a lower tier's rows, or ask for roof: 'top'.`,
+      )
+    }
+
+    const canopy: Layout = {
+      ...topLayout,
+      zFront: zFrontWorld - origin.oz,
+      yFront: front - origin.oy,
+    }
+    const group = new Group()
+    group.name = 'canopy'
+    group.position.set(0, origin.oy, origin.oz)
+    roof.add(group)
+
+    buildRoof(canopy, group)
+    // The leading-edge columns still stand on TRUE ground in front of tier 0 and still tie back to tier
+    // 0's promenade lip — expressed in this group's own (top-tier) frame.
+    buildColumns(canopy, group, {
+      groundY: -origin.oy,
+      tieY: origins[0]!.oy + layouts[0]!.base + 0.92 - origin.oy,
+      tieZ: origins[0]!.oz + layouts[0]!.halfD - origin.oz,
+    })
+    buildFascia(canopy, group)
+    buildCanopyProps(canopy, origin, layouts, origins)
   }
 
   /**
@@ -2012,7 +2280,12 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         buildRearSupport(spec, layout, origin.oy, origin.oz, wallH, bowlGroup)
       }
 
-      if (spec.roof) {
+      // `config.roof` decides; `tierSpec[k].roof` is read ONLY under 'per-tier' — see {@link RoofMode}.
+      // 'full' builds nothing here: one canopy for the whole section follows the loop.
+      const ownRoof = config.roof === 'per-tier'
+        ? spec.roof
+        : config.roof === 'top' ? isTop : false
+      if (ownRoof) {
         const roofGroup = tier === 0 ? roof : (() => {
           const g = new Group()
           g.name = `tier-${tier}`
@@ -2040,6 +2313,8 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         buildFascia(layout, roofGroup)
       }
     }
+
+    if (config.roof === 'full') buildFullCanopy(layouts, origins)
 
     // Towers LAST, and outside the tier loop: a cage belongs to no single tier — it spans them, and its
     // landings are shared between the tier below and the tier above. Emitted into the root-level `bowl`
@@ -2090,6 +2365,8 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     configure(patch) {
       if (patch.rows !== undefined) config.rows = Math.max(4, Math.round(patch.rows))
       if (patch.width !== undefined) config.width = Math.max(4, patch.width)
+      if (patch.roof !== undefined) config.roof = clampRoofMode(patch.roof)
+      if (patch.stairs !== undefined) config.stairs = clampStairsMode(patch.stairs)
       if (patch.tiers !== undefined) {
         const resolved = resolveTiersInput(patch.tiers, patch.tierSpec)
         config.tiers = resolved.tiers

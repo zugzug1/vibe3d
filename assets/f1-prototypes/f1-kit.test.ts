@@ -1166,7 +1166,8 @@ describe('FIA 1:1 datums', () => {
   })
 
   test('grandstand-bay tiers default to a fully supported stack, nothing left floating', () => {
-    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    // `stairs` is asked for explicitly: the top-level default is 'none' so a tiled run butts flush.
+    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'right' })
     model.root.updateMatrixWorld(true)
     const names: string[] = []
     model.root.traverse((object) => { if ((object as Mesh).isMesh) names.push(object.name) })
@@ -1241,7 +1242,7 @@ describe('FIA 1:1 datums', () => {
     // Miguel's review on the previous cut: "the stairs are on the front side right now — we need those
     // stairs along the side." This is that gate. A tower travels along Z (parallel to the rake) on the
     // bay's END face; nothing about it may cross the bowl.
-    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'right' })
     model.root.updateMatrixWorld(true)
     const halfW = 10 / 2
     const footprint = model.getFootprint()
@@ -1314,11 +1315,11 @@ describe('FIA 1:1 datums', () => {
     none.dispose()
 
     // A wider flight widens the tower and the reported footprint with it.
-    const nominal = createGrandstandBay({ rows: 8, width: 10, tiers: 2 })
+    const nominal = createGrandstandBay({ rows: 8, width: 10, tiers: 2, stairs: 'right' })
     const nominalRight = nominal.getFootprint().right
     nominal.dispose()
     const wide = createGrandstandBay({
-      rows: 8, width: 10, tiers: 2, tierSpec: [{}, { stairWidth: 2.2 }],
+      rows: 8, width: 10, tiers: 2, stairs: 'right', tierSpec: [{}, { stairWidth: 2.2 }],
     })
     expect(wide.getFootprint().right).toBeGreaterThan(nominalRight)
     wide.dispose()
@@ -1332,7 +1333,7 @@ describe('FIA 1:1 datums', () => {
     expect(one.root.getObjectByName('collision-bowl-0')).toBeUndefined()
     one.dispose()
 
-    const three = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    const three = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'right' })
     three.root.updateMatrixWorld(true)
     const volumes = three.getCollisionVolumes()
     // 3 bowl prisms + 2 front support lines + 2 rear support lines + 1 stair tower.
@@ -1401,6 +1402,224 @@ describe('FIA 1:1 datums', () => {
     model.dispose()
   })
 
+  test('grandstand-bay roof: "full" spans the WHOLE section, not just the top tier', () => {
+    // Miguel's review on 8r-3t: "the canopy up top doesn't extend over the whole section like it does
+    // for rows 24 tiers 1." This is that gate — the default canopy's leading edge has to reach exactly
+    // as far forward as a SINGLE-tier bay's does, over tier 0's promenade, not stop at the top deck.
+    const single = createGrandstandBay({ rows: 8, width: 10 })
+    single.root.updateMatrixWorld(true)
+    const singleRoof = new Box3().setFromObject(single.parts.roof)
+
+    const full = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    full.root.updateMatrixWorld(true)
+    const fullRoof = new Box3().setFromObject(full.parts.roof)
+
+    // Same leading edge, to the millimetre: the canopy leads where a one-tier bay's roof leads.
+    expect(fullRoof.max.z).toBeCloseTo(singleRoof.max.z, 6)
+    // ...and ties back at the TOP tier's rear wall line, two tier-steps further back.
+    expect(fullRoof.min.z).toBeCloseTo(singleRoof.min.z - 2 * (2 * 4 - 3 * 0.8), 6)
+    // So the section canopy is more than twice the single-tier roof's depth.
+    const fullDepth = fullRoof.max.z - fullRoof.min.z
+    expect(fullDepth).toBeGreaterThan(2 * (singleRoof.max.z - singleRoof.min.z))
+    expect(fullDepth).toBeCloseTo(20.88, 2)
+
+    // Intermediate props: one column line per LOWER tier's promenade, so a 20 m rafter is carried.
+    const props = full.root.getObjectByName('canopy-props')
+    expect(props).toBeDefined()
+    const propBox = new Box3().setFromObject(props!)
+    // They stand on tier 0's promenade (0.95 m) and reach the rafter twenty metres up.
+    expect(propBox.min.y).toBeLessThan(1.1)
+    expect(propBox.max.y).toBeGreaterThan(19)
+    // ...and stay inside the tiling module's own long-standing 0.18 m pad overhang, so a tiled run is
+    // unaffected by them (the same bound the stairs-'none' footprint test holds the whole model to).
+    expect(propBox.min.x).toBeGreaterThan(-5.2)
+    expect(propBox.max.x).toBeLessThan(5.2)
+
+    // CLEARANCE. Measured off the membrane's own underside, per tier, over that tier's own depth. The
+    // design datum is the rafter CHORD at bowlTop + ROOF_CLEAR; the fabric hangs a little below it, so
+    // the honest gate is that a three-tier section is no tighter than the single-tier bay already is.
+    const clearanceOf = (model: ReturnType<typeof createGrandstandBay>): number[] => {
+      model.root.updateMatrixWorld(true)
+      const under = new Map<number, number>()
+      const v = new Vector3()
+      model.parts.roof.traverse((object) => {
+        const mesh = object as Mesh
+        if (!mesh.isMesh || mesh.name !== 'roof') return
+        const pos = (mesh.geometry as BufferGeometry).getAttribute('position')
+        for (let i = 0; i < pos.count; i++) {
+          v.fromBufferAttribute(pos as never, i).applyMatrix4(mesh.matrixWorld)
+          const key = Math.round(v.z * 2) / 2
+          const cur = under.get(key)
+          if (cur === undefined || v.y < cur) under.set(key, v.y)
+        }
+      })
+      const out: number[] = []
+      model.parts.bowl.traverse((object) => {
+        if (!(object as Mesh).isMesh || object.name !== 'bowl') return
+        const bowl = new Box3().setFromObject(object)
+        let worst = Infinity
+        for (const [z, y] of under) {
+          if (z < bowl.min.z - 0.25 || z > bowl.max.z + 0.25) continue
+          worst = Math.min(worst, y - bowl.max.y)
+        }
+        out.push(worst)
+      })
+      return out
+    }
+    const singleClear = clearanceOf(single)[0]!
+    const fullClear = clearanceOf(full)
+    expect(fullClear).toHaveLength(3)
+    // The top tier is the binding one, and it is no tighter than today's single-tier bay.
+    expect(fullClear[2]!).toBeGreaterThanOrEqual(singleClear)
+    // The two tiers below it are wide open under the same canopy — this is a section roof, not a lid.
+    expect(fullClear[0]!).toBeGreaterThan(10)
+    expect(fullClear[1]!).toBeGreaterThan(5)
+
+    single.dispose()
+    full.dispose()
+  })
+
+  test('grandstand-bay roof: "none" removes every roof mesh, "top" is the old top-tier-only canopy', () => {
+    const none = createGrandstandBay({ rows: 8, width: 10, tiers: 3, roof: 'none' })
+    none.root.updateMatrixWorld(true)
+    let roofMeshes = 0
+    none.parts.roof.traverse((object) => { if ((object as Mesh).isMesh) roofMeshes += 1 })
+    expect(roofMeshes).toBe(0)
+    // ('roof' itself is the GROUP's name, so it is checked by the mesh count above, not by lookup.)
+    for (const name of ['roof-frames', 'columns', 'fascia-frame', 'fascia-board', 'canopy-props']) {
+      expect(none.root.getObjectByName(name)).toBeUndefined()
+    }
+    // A single-tier bay obeys it too — `roof` is a top-level switch, not a tiers>1 special case.
+    const bare = createGrandstandBay({ rows: 8, width: 10, roof: 'none' })
+    expect(bare.root.getObjectByName('roof-frames')).toBeUndefined()
+    expect(bare.root.getObjectByName('columns')).toBeUndefined()
+    bare.dispose()
+
+    // 'top' reproduces the previous behaviour exactly: one canopy, sized to the TOP tier alone.
+    const top = createGrandstandBay({ rows: 8, width: 10, tiers: 3, roof: 'top' })
+    top.root.updateMatrixWorld(true)
+    const topRoof = new Box3().setFromObject(top.parts.roof)
+    const single = createGrandstandBay({ rows: 8, width: 10 })
+    single.root.updateMatrixWorld(true)
+    const singleRoof = new Box3().setFromObject(single.parts.roof)
+    // Same depth as a one-tier bay's roof (the top tier has the same rows), just lifted and stepped back.
+    expect(topRoof.max.z - topRoof.min.z).toBeCloseTo(singleRoof.max.z - singleRoof.min.z, 6)
+    expect(topRoof.max.z).toBeLessThan(0)
+    // No props: nothing spans down to a lower tier under a top-only canopy.
+    expect(top.root.getObjectByName('canopy-props')).toBeUndefined()
+
+    none.dispose()
+    top.dispose()
+    single.dispose()
+  })
+
+  test('grandstand-bay roof: "per-tier" is the ONLY value that reads tierSpec[k].roof', () => {
+    // `lift` buys tier 0 the ROOF_CLEAR headroom its own canopy needs under tier 1 — the pre-existing
+    // per-tier gate. Same config either side, so only the `roof` value is under test.
+    const spec = [{ roof: true }, { roof: false, lift: 4 }] as const
+
+    // Under the default 'full' the per-tier field is ignored — one section canopy, no second roof.
+    const ignored = createGrandstandBay({
+      rows: 8, width: 10, tiers: 2, tierSpec: [...spec],
+    })
+    ignored.root.updateMatrixWorld(true)
+    let membranes = 0
+    ignored.parts.roof.traverse((object) => {
+      if ((object as Mesh).isMesh && object.name === 'roof') membranes += 1
+    })
+    expect(membranes).toBe(1)
+    expect(new Box3().setFromObject(ignored.parts.roof).max.z).toBeCloseTo(5.06, 2)
+    ignored.dispose()
+
+    // Asked for explicitly, the per-tier field decides: tier 0 carries its own roof, the top tier does not.
+    const perTier = createGrandstandBay({
+      rows: 8, width: 10, tiers: 2, roof: 'per-tier', tierSpec: [...spec],
+    })
+    perTier.root.updateMatrixWorld(true)
+    let perTierMembranes = 0
+    perTier.parts.roof.traverse((object) => {
+      if ((object as Mesh).isMesh && object.name === 'roof') perTierMembranes += 1
+    })
+    expect(perTierMembranes).toBe(1)
+    // Tier 0's own roof, so it sits at the BOTTOM tier's height, not the top's.
+    expect(new Box3().setFromObject(perTier.parts.roof).max.y).toBeLessThan(9)
+    perTier.dispose()
+
+    // ...and 'per-tier' with nothing declared is still the top tier only, as it always was.
+    const fallback = createGrandstandBay({ rows: 8, width: 10, tiers: 2, roof: 'per-tier' })
+    fallback.root.updateMatrixWorld(true)
+    expect(new Box3().setFromObject(fallback.parts.roof).max.y).toBeGreaterThan(13)
+    fallback.dispose()
+  })
+
+  test('grandstand-bay stairs is the top-level switch; tierSpec.stairSide overrides it', () => {
+    // Default: NO towers, so a run of bays squeezes together at exactly `width`.
+    const squeezed = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    expect(squeezed.getFootprint()).toEqual({ width: 10, totalWidth: 10, left: 0, right: 0 })
+    expect(squeezed.root.getObjectByName('stairs')).toBeUndefined()
+    squeezed.dispose()
+
+    const right = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'right' })
+    expect(right.getFootprint().left).toBe(0)
+    expect(right.getFootprint().right).toBeGreaterThan(0)
+    right.dispose()
+
+    const left = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'left' })
+    expect(left.getFootprint().right).toBe(0)
+    expect(left.getFootprint().left).toBeGreaterThan(0)
+    left.dispose()
+
+    // 'ends' is the documented alias for 'both' — a bay that is a run end on both sides.
+    const both = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'both' })
+    const ends = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'ends' })
+    expect(ends.getFootprint()).toEqual(both.getFootprint())
+    expect(ends.getFootprint().left).toBeGreaterThan(0)
+    expect(ends.getFootprint().right).toBeGreaterThan(0)
+    both.dispose()
+    ends.dispose()
+
+    // PRECEDENCE: a tier that names its own side wins over the top-level switch, for that tier.
+    const overridden = createGrandstandBay({
+      rows: 8, width: 10, tiers: 3, stairs: 'both',
+      tierSpec: [{}, { stairSide: 'none' }, { stairSide: 'left' }],
+    })
+    const footprint = overridden.getFootprint()
+    expect(footprint.left).toBeGreaterThan(0)
+    expect(footprint.right).toBe(0)
+    overridden.dispose()
+  })
+
+  test('grandstand-bay configure() patches roof and stairs live', () => {
+    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    model.root.updateMatrixWorld(true)
+    expect(model.getConfig().roof).toBe('full')
+    expect(model.getConfig().stairs).toBe('none')
+    const fullDepth = (() => {
+      const box = new Box3().setFromObject(model.parts.roof)
+      return box.max.z - box.min.z
+    })()
+
+    model.configure({ roof: 'top', stairs: 'both' })
+    model.root.updateMatrixWorld(true)
+    expect(model.getConfig().roof).toBe('top')
+    const topBox = new Box3().setFromObject(model.parts.roof)
+    expect(topBox.max.z - topBox.min.z).toBeLessThan(fullDepth / 2)
+    expect(model.getFootprint().left).toBeGreaterThan(0)
+    expect(model.getFootprint().right).toBeGreaterThan(0)
+
+    model.configure({ roof: 'none', stairs: 'none' })
+    model.root.updateMatrixWorld(true)
+    let roofMeshes = 0
+    model.parts.roof.traverse((object) => { if ((object as Mesh).isMesh) roofMeshes += 1 })
+    expect(roofMeshes).toBe(0)
+    expect(model.getFootprint().totalWidth).toBe(10)
+
+    model.configure({ roof: 'full' })
+    model.root.updateMatrixWorld(true)
+    const back = new Box3().setFromObject(model.parts.roof)
+    expect(back.max.z - back.min.z).toBeCloseTo(fullDepth, 6)
+    model.dispose()
+  })
 
   test('circuit stairs are 180 mm rise / 280 mm going', () => {
     const model = createStairs({ kind: 'flight', steps: 10, landing: false })
