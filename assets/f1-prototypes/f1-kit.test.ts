@@ -4,6 +4,7 @@
 // disposed), and `f1-tyre.setMaterial` was a silent no-op for its whole first life, so both are
 // covered here by construction rather than by inspection.
 
+import { createHash } from 'node:crypto'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { BufferGeometry, InstancedMesh, Material, Mesh, MeshStandardMaterial, Box3, Object3D, PlaneGeometry, Vector3 } from 'three/webgpu'
 import { GARAGE, SPECTATOR_BRIDGE, STAIRS, TOKEN } from './f1-kit-core/index.ts'
@@ -1126,6 +1127,163 @@ describe('FIA 1:1 datums', () => {
     model.dispose()
   })
 
+  test('grandstand-bay tiers:1 with default tierSpec is byte-identical to the pre-tierSpec build (sha256 vertex proof)', () => {
+    // Locks the acceptance gate: introducing `tierSpec` must not perturb a `tiers: 1` build one bit.
+    // Golden hash captured from the model BEFORE the tierSpec feature landed (rows: 8, width: 10, tiers: 1).
+    const hashOf = (root: Object3D): string => {
+      const hash = createHash('sha256')
+      root.traverse((object) => {
+        const mesh = object as InstancedMesh & Mesh
+        if (!mesh.isMesh && !mesh.isInstancedMesh) return
+        hash.update(mesh.name)
+        const pos = (mesh.geometry as BufferGeometry).getAttribute('position')
+        for (let i = 0; i < pos.count; i++) {
+          hash.update(pos.getX(i).toFixed(6))
+          hash.update(pos.getY(i).toFixed(6))
+          hash.update(pos.getZ(i).toFixed(6))
+        }
+        if (mesh.isInstancedMesh) {
+          hash.update(String(mesh.count))
+          for (const value of mesh.instanceMatrix.array) hash.update(value.toFixed(6))
+        }
+      })
+      return hash.digest('hex')
+    }
+    const omitted = createGrandstandBay({ rows: 8, width: 10, tiers: 1 })
+    omitted.root.updateMatrixWorld(true)
+    const omittedHash = hashOf(omitted.root)
+    expect(omittedHash).toBe('3570efa087f65d4981ccb6826b05f41abd494267e920100f1c578521b24b1674')
+    omitted.dispose()
+
+    // Also byte-identical when the default tierSpec is given explicitly, not just omitted.
+    const explicit = createGrandstandBay({
+      rows: 8, width: 10, tiers: 1,
+      tierSpec: [{ plinth: 0.95, support: 'columns', rearSupport: 'columns', stairs: false, roof: true }],
+    })
+    explicit.root.updateMatrixWorld(true)
+    expect(hashOf(explicit.root)).toBe(omittedHash)
+    explicit.dispose()
+  })
+
+  test('grandstand-bay tiers default to a fully supported stack, nothing left floating', () => {
+    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    model.root.updateMatrixWorld(true)
+    const names: string[] = []
+    model.root.traverse((object) => { if ((object as Mesh).isMesh) names.push(object.name) })
+    // One front/rear support and one stair per tier above the bottom (tiers 1 and 2 of 3).
+    expect(names.filter((n) => n === 'front-support').length).toBe(2)
+    expect(names.filter((n) => n === 'rear-support').length).toBe(2)
+    expect(names.filter((n) => n === 'stairs').length).toBe(2)
+    expect(names.filter((n) => n === 'stair-rail').length).toBe(2)
+    // Every rear support's foot lands at TRUE ground (y=0), never mid-air.
+    let rearSupportCount = 0
+    model.root.traverse((object) => {
+      if (object.name !== 'rear-support') return
+      rearSupportCount += 1
+      const box = new Box3().setFromObject(object)
+      expect(box.min.y).toBeGreaterThan(-0.05)
+      expect(box.min.y).toBeLessThan(0.05)
+    })
+    expect(rearSupportCount).toBe(2)
+    model.dispose()
+  })
+
+  test('grandstand-bay support: "none" removes the front/rear support members', () => {
+    const supported = createGrandstandBay({ rows: 8, width: 10, tiers: 2 })
+    supported.root.updateMatrixWorld(true)
+    expect(supported.root.getObjectByName('front-support')).toBeDefined()
+    expect(supported.root.getObjectByName('rear-support')).toBeDefined()
+    supported.dispose()
+
+    const unsupported = createGrandstandBay({
+      rows: 8, width: 10, tiers: 2,
+      tierSpec: [{}, { support: 'none', rearSupport: 'none' }],
+    })
+    unsupported.root.updateMatrixWorld(true)
+    expect(unsupported.root.getObjectByName('front-support')).toBeUndefined()
+    expect(unsupported.root.getObjectByName('rear-support')).toBeUndefined()
+    unsupported.dispose()
+  })
+
+  test('grandstand-bay per-tier lift/plinth/rows change the Box3 as expected', () => {
+    const base = createGrandstandBay({ rows: 8, width: 10, tiers: 2 })
+    base.root.updateMatrixWorld(true)
+    const baseBox = sizeOf(base.root).box
+    base.dispose()
+
+    // `lift` on the upper tier adds exactly that much extra height, nothing else.
+    const lifted = createGrandstandBay({ rows: 8, width: 10, tiers: 2, tierSpec: [{}, { lift: 3 }] })
+    lifted.root.updateMatrixWorld(true)
+    const liftedBox = sizeOf(lifted.root).box
+    expect(liftedBox.max.y).toBeCloseTo(baseBox.max.y + 3, 2)
+    lifted.dispose()
+
+    // `plinth` on tier 0 shifts the WHOLE stack up rigidly (2.45 m plinth vs the 0.95 m default), while
+    // tier 0's own front skirt still closes to true ground.
+    const plinth = createGrandstandBay({ rows: 8, width: 10, tiers: 2, tierSpec: [{ plinth: 2.45 }] })
+    plinth.root.updateMatrixWorld(true)
+    const plinthBox = sizeOf(plinth.root).box
+    expect(plinthBox.max.y).toBeCloseTo(baseBox.max.y + 1.5, 2)
+    expect(plinthBox.min.y).toBeCloseTo(baseBox.min.y, 2)
+    plinth.dispose()
+
+    // More rows on the upper tier grows both its height and its depth.
+    const moreRows = createGrandstandBay({ rows: 8, width: 10, tiers: 2, tierSpec: [{}, { rows: 14 }] })
+    moreRows.root.updateMatrixWorld(true)
+    const moreRowsBox = sizeOf(moreRows.root).box
+    expect(moreRowsBox.max.y).toBeGreaterThan(baseBox.max.y)
+    expect(moreRowsBox.min.z).toBeLessThan(baseBox.min.z)
+    moreRows.dispose()
+  })
+
+  test('grandstand-bay inter-tier stairs stay inside width, folding into a switchback when a straight flight would not fit', () => {
+    // 8 rows / 3 tiers at the default width (10 m) needs a run longer than the bay is wide, so the acceptance
+    // config folds — this proves the fold, not just the straight case.
+    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3 })
+    model.root.updateMatrixWorld(true)
+    const halfW = 10 / 2
+    let stairMeshes = 0
+    model.root.traverse((object) => {
+      if (object.name !== 'stairs' && object.name !== 'stair-rail') return
+      stairMeshes += 1
+      const box = new Box3().setFromObject(object)
+      expect(box.min.x).toBeGreaterThanOrEqual(-halfW)
+      expect(box.max.x).toBeLessThanOrEqual(halfW + 1e-6)
+    })
+    expect(stairMeshes).toBe(4) // 2 tiers × (stairs + stair-rail)
+    model.dispose()
+
+    // A shallow single-tier climb (small lift) stays a straight flight and still fits.
+    const straight = createGrandstandBay({
+      rows: 8, width: 10, tiers: 2, tierSpec: [{}, { lift: 0, overlapRows: 3 }],
+    })
+    straight.root.updateMatrixWorld(true)
+    const stairs = straight.root.getObjectByName('stairs')
+    expect(stairs).toBeDefined()
+    const box = new Box3().setFromObject(stairs!)
+    expect(box.min.x).toBeGreaterThanOrEqual(-halfW)
+    expect(box.max.x).toBeLessThanOrEqual(halfW + 1e-6)
+    straight.dispose()
+  })
+
+  test('grandstand-bay tiers given directly as the tierSpec array sets tiers = array.length', () => {
+    const model = createGrandstandBay({
+      rows: 8,
+      width: 10,
+      tiers: [
+        { rows: 6, plinth: 1.5 },
+        { rows: 8, lift: 1.5, support: 'wall' },
+        { rows: 10, lift: 0.5, rearSupport: 'wall' },
+      ],
+    })
+    expect(model.getConfig().tiers).toBe(3)
+    model.root.updateMatrixWorld(true)
+    // Both non-bottom tiers still get a front-support mesh — one 'wall', one 'columns' — neither is 'none'.
+    let frontSupportCount = 0
+    model.root.traverse((object) => { if (object.name === 'front-support') frontSupportCount += 1 })
+    expect(frontSupportCount).toBe(2)
+    model.dispose()
+  })
 
 
   test('circuit stairs are 180 mm rise / 280 mm going', () => {

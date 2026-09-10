@@ -13,14 +13,44 @@
 // bowlTop + ROOF_CLEAR (headroom for the concourse under it), and tier k's front CANTILEVERS
 // OVERLAP_ROWS rows' worth of tread past tier k-1's rear edge — the balcony front overhangs the tier
 // below rather than sitting flush on top of it (the Madring S/F photo's datum). Each tier's own closed
-// bowl mass is already a full-depth slab underneath it, so that overhang is automatically the soffit over
-// the covered rows below — no separate soffit geometry needed. Each tier below the top still gets its own
-// frontage (fascia/hoarding/guard-rail), landing right at the overhang's leading edge like a real balcony
-// front, and a rear wall stretched to close the gap under the tier above (no see-through void; the wall
-// now sits well inside the covered volume rather than at a visible seam, since the tier above's slab
-// reaches past it). ONE roof — the existing membrane/rafter/column system — rides the TOP tier only;
+// bowl mass is already a full-depth slab underneath it (its loft profile's lowest point is local y=0
+// across the WHOLE depth, front to rear — see {@link buildBowl}), so that overhang is automatically the
+// soffit over the covered rows below — no separate soffit geometry needed. Each tier below the top still
+// gets its own frontage (fascia/hoarding/guard-rail), landing right at the overhang's leading edge like a
+// real balcony front, and a rear wall stretched to close the gap under the tier above (no see-through
+// void). ONE roof — the existing membrane/rafter/column system — rides the TOP tier only by default;
 // lower tiers are uncovered except where the tier above overhangs them. `tiers: 1` is untouched: same
 // single bowl, same geometry as before.
+//
+// `tierSpec` (indexed by tier, 0 = bottom) makes every one of those per-tier decisions configurable, so a
+// stack is never left floating with no visible means of support:
+//   - `rows` — this tier's own row count (default `config.rows`).
+//   - `plinth` (tier 0 only) — deck height above ground (default `DECK`, 0.95 m). A taller plinth raises
+//     the front wall and the whole stack above it rigidly; it does not change any tier-to-tier clearance
+//     (those are all rise-relative, not ground-relative — see the `rebuild` origin derivation).
+//   - `lift` (tiers ≥1) — EXTRA clear height added above the default step, e.g. `tierSpec[1].lift` to
+//     raise just the middle tier.
+//   - `overlapRows` (tiers ≥1) — how many rows of tread this tier's front cantilevers past the tier
+//     below's rear edge (default `OVERLAP_ROWS`).
+//   - `support` — what carries THIS tier at its front (cantilever-tip) edge: `'columns'` (default) plants
+//     a column line, on the roof's own bay pitch, from the tier below's `surfaceY` up to this tier's flat
+//     underside (local y = 0), plus a raking stringer down each side to the rear support so the soffit
+//     visibly rests on something rather than just closing as a slab; `'wall'` is a solid panel instead of
+//     columns; `'none'` leaves it open. For tier 0 — which already stands on a closed loft face reaching
+//     the ground (the plinth) — `'columns'`/`'wall'`/`'none'` are all a no-op: there is nothing to add or
+//     remove, tier 0 was never floating.
+//   - `rearSupport` — the back of the stand: a column line (with X cross-bracing per bay) or wall running
+//     from TRUE GROUND up to this tier's own rear-wall height, at the rear face. Every tier above ground
+//     gets its own rear tower rather than one member spanning past intermediate tiers, because each tier
+//     steps further back as it stacks (see `tierStep.z` below), so the towers never collide.
+//   - `stairs` (default `true` for tiers ≥1) — one straight flight (or, past the point it fits inside
+//     `width`, a folded switchback) from the tier below's promenade to this tier's promenade, tucked
+//     against the +X end of the bay. See {@link buildStairs}.
+//   - `roof` (default: top tier only) — lets a non-top tier carry its own membrane roof too, gated by a
+//     thrown clearance check against the tier stacked above it.
+// Any field left out of a given tier's (partial) entry falls back to the default above, so `tiers: 3`
+// alone still builds a complete, fully-supported stack. `tiers` may also be given directly as the
+// `tierSpec` array (`tiers: [{...}, {...}, {...}]`), in which case `tiers = tiers.length`.
 
 import {
   BufferGeometry,
@@ -50,14 +80,41 @@ import {
 
 type Slot = 'structure' | 'deck' | 'seat' | 'roof' | 'fascia'
 
+/** What carries a tier at the edge in question: real columns, a solid panel, or nothing at all. */
+export type TierSupport = 'columns' | 'wall' | 'none'
+
+/** Per-tier overrides. Every field is optional on input — see the header comment for each default. */
+export interface TierSpec {
+  rows: number
+  /** Tier 0 only: deck height above ground. */
+  plinth: number
+  /** Tiers ≥1 only: extra clear height added above the default step. */
+  lift: number
+  /** Tiers ≥1 only: cantilever over the tier below, in rows of tread. */
+  overlapRows: number
+  support: TierSupport
+  rearSupport: TierSupport
+  stairs: boolean
+  roof: boolean
+}
+
 export interface F1GrandstandBayConfig {
   rows: number
   width: number
   /** Stacked bowls, 1-4. `tiers: 1` (the default) is the original single bowl, unchanged. */
   tiers: number
+  /** Per-tier overrides, indexed by tier (0 = bottom). Missing fields/entries fall back to defaults. */
+  tierSpec?: ReadonlyArray<Partial<TierSpec>>
 }
 
-export interface F1GrandstandBayOptions extends Partial<F1GrandstandBayConfig> {
+/** `tiers` may be a count, or the `tierSpec` array itself (then `tiers = tiers.length`). */
+export type F1GrandstandBayTiersInput = number | ReadonlyArray<Partial<TierSpec>>
+
+export type F1GrandstandBayPatch = Partial<Omit<F1GrandstandBayConfig, 'tiers'>> & {
+  tiers?: F1GrandstandBayTiersInput
+}
+
+export interface F1GrandstandBayOptions extends F1GrandstandBayPatch {
   materials?: Partial<Record<Slot, Material>>
 }
 
@@ -66,7 +123,7 @@ export interface F1GrandstandBayInstance {
   readonly parts: { bowl: Group; roof: Group }
   readonly materials: Readonly<Record<Slot, Material>>
   getConfig(): Readonly<F1GrandstandBayConfig>
-  configure(patch: Partial<F1GrandstandBayConfig>): void
+  configure(patch: F1GrandstandBayPatch): void
   setMaterial(slot: Slot, material: Material): void
   update(deltaSeconds: number): void
   dispose(): void
@@ -122,15 +179,38 @@ const RAIL_H = 1.12
 /**
  * estimate:photo — how many rows of tread a stacked tier's balcony front overhangs the tier below, read
  * off the Madring S/F stand photo (the upper tiers' fronts hang over roughly the last three rows of the
- * tier beneath, not sitting flush on top of it). Only meaningful when `tiers` > 1.
+ * tier beneath, not sitting flush on top of it). Only meaningful when `tiers` > 1. Default for a tier's
+ * `overlapRows`.
  */
 const OVERLAP_ROWS = 3
+
+/** Front/rear tier-support column radius — a lighter gauge than the roof's own 0.095 m columns, since a
+ *  support column carries one tier's cantilever rather than the whole canopy. */
+const SUPPORT_R = 0.085
+/** Ground/tread pad under a support column foot, matching the roof column's own pad convention. */
+const SUPPORT_PAD = 0.32
+/** Clear of the coincident bowl/wall face by more than the column radius, so neither z-fights the other. */
+const SUPPORT_INSET = SUPPORT_R + 0.05
+const BRACE_R = 0.03
+/** Solid-panel support thickness, front or rear. */
+const WALL_SUPPORT_T = 0.18
+
+/** Walkway width of the inter-tier stair flight. */
+const STAIR_WIDTH = 1.3
+/** How far in front of the tier's own leading edge the stair pocket sits — it "may sit outside the
+ *  bowl" (per the design brief), so this is unconstrained by `width` on the Z axis. */
+const STAIR_MARGIN = 0.5
+/** Clear gap between the two lanes of a folded switchback. */
+const STAIR_GAP = 0.3
 
 interface Layout {
   readonly rows: number
   readonly width: number
   readonly halfW: number
   readonly halfD: number
+  /** This tier's own promenade height above ITS OWN local ground (0.95 m by default; only tier 0's
+   *  `plinth` ever overrides it — see the header comment on why that doesn't perturb any clearance). */
+  readonly base: number
   readonly bowlTop: number
   /** Rafter and column stations across the bay, boundaries inclusive. */
   readonly columns: readonly number[]
@@ -140,17 +220,18 @@ interface Layout {
   readonly yFront: number
 }
 
-const layoutOf = ({ rows, width }: F1GrandstandBayConfig): Layout => {
+const layoutOf = (rows: number, width: number, base: number): Layout => {
   const halfD = (WALK + rows * TREAD + REAR) / 2
   const bays = Math.max(2, Math.round(width / BAY))
   const columns: number[] = []
   for (let i = 0; i <= bays; i++) columns.push(-width / 2 + (i / bays) * width)
-  const bowlTop = DECK + NOSE + rows * RISE
+  const bowlTop = base + NOSE + rows * RISE
   return {
     rows,
     width,
     halfW: width / 2,
     halfD,
+    base,
     bowlTop,
     columns,
     zBack: -halfD - ROOF_BACK,
@@ -160,17 +241,17 @@ const layoutOf = ({ rows, width }: F1GrandstandBayConfig): Layout => {
   }
 }
 
-/** Walking surface of tier `r`. */
-const treadY = (r: number): number => DECK + NOSE + r * RISE
+/** Walking surface of tier `r`, in this layout's own local frame. */
+const treadY = (layout: Layout, r: number): number => layout.base + NOSE + r * RISE
 
 /** Rear edge of tier `r` — where its seat standards bolt down. */
 const treadBack = (layout: Layout, r: number): number => layout.halfD - WALK - (r + 1) * TREAD
 
 /** Whatever a spectator stands on at `z`: the promenade, or the tier that covers it. */
 const surfaceY = (layout: Layout, z: number): number => {
-  if (z > layout.halfD - WALK) return DECK
+  if (z > layout.halfD - WALK) return layout.base
   const r = Math.floor((layout.halfD - WALK - z) / TREAD)
-  return treadY(Math.min(Math.max(r, 0), layout.rows - 1))
+  return treadY(layout, Math.min(Math.max(r, 0), layout.rows - 1))
 }
 
 /** Rafter top chord at `u`: 0 at the rear tie, 1 at the leading edge. */
@@ -387,11 +468,53 @@ const seatFrame = (): BufferGeometry => {
   )
 }
 
+const clampTierSupport = (value: TierSupport | undefined): TierSupport =>
+  value === 'wall' || value === 'none' ? value : 'columns'
+
+/** Fills in every field of one tier's spec from its (possibly empty) partial input. */
+const resolveTierSpec = (
+  tier: number, rowsDefault: number, isTop: boolean, partial: Partial<TierSpec> | undefined,
+): TierSpec => ({
+  rows: Math.max(4, Math.round(partial?.rows ?? rowsDefault)),
+  plinth: Math.max(0, partial?.plinth ?? DECK),
+  lift: Math.max(0, partial?.lift ?? 0),
+  overlapRows: Math.max(0, Math.round(partial?.overlapRows ?? OVERLAP_ROWS)),
+  support: clampTierSupport(partial?.support),
+  rearSupport: clampTierSupport(partial?.rearSupport),
+  stairs: partial?.stairs ?? tier >= 1,
+  roof: partial?.roof ?? isTop,
+})
+
+const resolveTiers = (config: F1GrandstandBayConfig): TierSpec[] => {
+  const specs: TierSpec[] = []
+  for (let tier = 0; tier < config.tiers; tier++) {
+    specs.push(resolveTierSpec(tier, config.rows, tier === config.tiers - 1, config.tierSpec?.[tier]))
+  }
+  return specs
+}
+
+/** `tiers` given as a count, or as the `tierSpec` array itself — resolves to both a clamped count and
+ *  the tierSpec to store, `patch.tierSpec` (if also given) always winning over a tiers-as-array input. */
+const resolveTiersInput = (
+  tiers: F1GrandstandBayTiersInput, explicitTierSpec: ReadonlyArray<Partial<TierSpec>> | undefined,
+): { tiers: number; tierSpec: ReadonlyArray<Partial<TierSpec>> | undefined } => {
+  if (typeof tiers === 'number') {
+    return {
+      tiers: Math.min(MAX_TIERS, Math.max(MIN_TIERS, Math.round(tiers))),
+      tierSpec: explicitTierSpec,
+    }
+  }
+  const count = Math.min(MAX_TIERS, Math.max(MIN_TIERS, tiers.length))
+  return { tiers: count, tierSpec: (explicitTierSpec ?? tiers).slice(0, count) }
+}
+
 export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandBayInstance {
+  const tiersInput = resolveTiersInput(options.tiers ?? defaults.tiers, options.tierSpec)
   const config: F1GrandstandBayConfig = {
     rows: Math.max(4, Math.round(options.rows ?? defaults.rows)),
     width: Math.max(4, options.width ?? defaults.width),
-    tiers: Math.min(MAX_TIERS, Math.max(MIN_TIERS, Math.round(options.tiers ?? defaults.tiers))),
+    tiers: tiersInput.tiers,
+    tierSpec: tiersInput.tierSpec,
   }
 
   const bundle = acquireF1Materials()
@@ -495,7 +618,30 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   }
 
   /**
-   * The raked mass: front skirt, promenade, tiers, rear return — one closed section swept across.
+   * A straight guard rail: one top-rail member from `foot` to `head`, plus baluster posts standing on
+   * `floorAt(t)` at each of `postsCount` stations along the run (`t` runs 0 at `foot` to 1 at `head`).
+   * Shared by the central gangway and the inter-tier stairs so both read as the same fabricated product.
+   */
+  const buildRail = (
+    foot: Vector3, head: Vector3, postsCount: number, floorAt: (t: number) => number,
+  ): BufferGeometry[] => {
+    const parts: BufferGeometry[] = [member(foot, head, 0.028, 8)]
+    for (let p = 0; p <= postsCount; p++) {
+      const t = p / postsCount
+      const x = foot.x + (head.x - foot.x) * t
+      const y = foot.y + (head.y - foot.y) * t
+      const z = foot.z + (head.z - foot.z) * t
+      parts.push(member(new Vector3(x, floorAt(t) - 0.04, z), new Vector3(x, y, z), 0.022, 6))
+    }
+    return parts
+  }
+
+  /**
+   * The raked mass: front skirt, promenade, tiers, rear return — one closed section swept across. Its
+   * profile starts and ends at LOCAL y = 0 (front-bottom and rear-bottom corners), and because the loft
+   * is closed the implicit edge joining those two points is a flat plane at y = 0 spanning the WHOLE
+   * depth — this tier's own underside, flat front to rear, is what a stacked tier above cantilevers over
+   * and what a `support` column's head meets (see `buildFrontSupport`).
    * `wallTop` overrides the rear-wall height (local, this tier's own origin) — used to stretch a
    * non-top tier's rear wall up to the tier stacked above it, so the concourse void underneath is
    * closed rather than see-through. Left undefined (the top/only tier) it is the original parapet.
@@ -503,13 +649,13 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   const buildBowl = (layout: Layout, group: Group, wallTop?: number): void => {
     const profile: Array<readonly [number, number]> = [
       [layout.halfD, 0],
-      [layout.halfD, DECK - 0.12],
-      [layout.halfD - 0.12, DECK],
-      [layout.halfD - WALK, DECK],
-      [layout.halfD - WALK, DECK + NOSE],
+      [layout.halfD, layout.base - 0.12],
+      [layout.halfD - 0.12, layout.base],
+      [layout.halfD - WALK, layout.base],
+      [layout.halfD - WALK, layout.base + NOSE],
     ]
     for (let r = 0; r < layout.rows; r++) {
-      const y = treadY(r)
+      const y = treadY(layout, r)
       const back = treadBack(layout, r)
       profile.push([back, y], [back, y + RISE])
     }
@@ -527,7 +673,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     const pitch = layout.width / across
     const matrices: Matrix4[] = []
     for (let r = 0; r < layout.rows; r++) {
-      const y = treadY(r)
+      const y = treadY(layout, r)
       const z = treadBack(layout, r) + 0.3
       for (let s = 0; s < across; s++) {
         const x = -layout.halfW + (s + 0.5) * pitch
@@ -544,34 +690,30 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     const steps: BufferGeometry[] = []
     for (let r = 0; r < layout.rows; r++) {
       const pad = bevelBox(AISLE, RISE / 2 + 0.02, TREAD / 2, 0.012)
-      pad.translate(0, treadY(r) + RISE / 4 - 0.01, treadBack(layout, r) + TREAD / 4)
+      pad.translate(0, treadY(layout, r) + RISE / 4 - 0.01, treadBack(layout, r) + TREAD / 4)
       steps.push(pad)
     }
     // The step up from the promenade is a full 0.75 m, so it gets its own pair of risers.
     for (let s = 0; s < 2; s++) {
       const h = (NOSE / 2) * (s + 1)
       const kerb = bevelBox(AISLE, h, TREAD / 2, 0.012)
-      kerb.translate(0, DECK + h / 2, layout.halfD - WALK + TREAD / 4 - (s * TREAD) / 2)
+      kerb.translate(0, layout.base + h / 2, layout.halfD - WALK + TREAD / 4 - (s * TREAD) / 2)
       steps.push(kerb)
     }
     const landing = bevelBox(AISLE, 0.06, WALK, 0.012)
-    landing.translate(0, DECK + 0.02, layout.halfD - WALK / 2)
+    landing.translate(0, layout.base + 0.02, layout.halfD - WALK / 2)
     steps.push(landing)
     emit('deck', mergeParts(steps, 'f1-grandstand-bay: aisle steps'), group, 'aisle-steps')
 
-    const rails: BufferGeometry[] = []
-    const foot = new Vector3(0, DECK + 1.06, layout.halfD - WALK + 0.2)
-    const head = new Vector3(0, layout.bowlTop + 0.86, treadBack(layout, layout.rows - 1) + 0.25)
+    const railFoot = new Vector3(0, layout.base + 1.06, layout.halfD - WALK + 0.2)
+    const railHead = new Vector3(0, layout.bowlTop + 0.86, treadBack(layout, layout.rows - 1) + 0.25)
     const posts = Math.max(3, Math.ceil(layout.rows / 2))
+    const rails: BufferGeometry[] = []
     for (const sx of [-1, 1] as const) {
       const x = (sx * AISLE) / 2
-      rails.push(member(new Vector3(x, foot.y, foot.z), new Vector3(x, head.y, head.z), 0.028, 8))
-      for (let p = 0; p <= posts; p++) {
-        const t = p / posts
-        const y = foot.y + (head.y - foot.y) * t
-        const z = foot.z + (head.z - foot.z) * t
-        rails.push(member(new Vector3(x, surfaceY(layout, z) - 0.04, z), new Vector3(x, y, z), 0.022, 6))
-      }
+      const foot = new Vector3(x, railFoot.y, railFoot.z)
+      const head = new Vector3(x, railHead.y, railHead.z)
+      rails.push(...buildRail(foot, head, posts, (t) => surfaceY(layout, foot.z + (head.z - foot.z) * t)))
     }
     emit('structure', mergeParts(rails, 'f1-grandstand-bay: gangway'), group, 'central-gangway')
   }
@@ -580,7 +722,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   const buildNosings = (layout: Layout, group: Group): void => {
     const parts: BufferGeometry[] = []
     for (let r = 0; r < layout.rows; r++) {
-      const y = treadY(r)
+      const y = treadY(layout, r)
       const edge = treadBack(layout, r) + TREAD
       for (const [x0, x1] of blocks(layout)) {
         const nose = bevelBox(x1 - x0, 0.028, 0.075, 0.007)
@@ -594,7 +736,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     // Promenade lip. Once the hoarding is only a band the walk behind it is on show, and an unmarked
     // slab edge is the one thing that would still give it away as a slab.
     const lip = bevelBox(layout.width, 0.026, 0.08, 0.007)
-    lip.translate(0, DECK + 0.01, layout.halfD - 0.17)
+    lip.translate(0, layout.base + 0.01, layout.halfD - 0.17)
     parts.push(lip)
     emit('structure', mergeParts(parts, 'f1-grandstand-bay: nosings'), group, 'nosings', kit.amber)
   }
@@ -608,9 +750,9 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
    */
   const buildFrontage = (layout: Layout, group: Group): void => {
     const z = layout.halfD + 0.07
-    const base = DECK + 0.09
+    const base = layout.base + 0.09
     const top = base + HOARD_H
-    const railHead = DECK + RAIL_H
+    const railHead = layout.base + RAIL_H
     const frame: BufferGeometry[] = []
     const panels: BufferGeometry[] = []
 
@@ -641,7 +783,7 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
     // rather than floating a hair over it (rule 8). At the concrete's own value it disappears, and the
     // void reads as a gap in a face instead of a walkway seen behind a rail.
     const strip = bevelBox(layout.width - 0.16, 0.05, WALK - 0.42, 0.012)
-    strip.translate(0, DECK + 0.02, layout.halfD - WALK / 2 - 0.04)
+    strip.translate(0, layout.base + 0.02, layout.halfD - WALK / 2 - 0.04)
     emit('deck', strip, group, 'promenade-strip', kit.graphite)
 
     // Fence posts sit mid-bay so a tiled run never doubles one up on a seam.
@@ -701,8 +843,8 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
         6,
       ))
       parts.push(member(
-        new Vector3(x, DECK + 0.92, z),
-        new Vector3(x, DECK + 0.92, layout.halfD),
+        new Vector3(x, layout.base + 0.92, z),
+        new Vector3(x, layout.base + 0.92, layout.halfD),
         0.04,
         6,
       ))
@@ -753,74 +895,306 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
   }
 
   /**
+   * What carries THIS tier at its front (cantilever-tip) edge: a column line on the roof's own bay pitch,
+   * or a solid panel, standing in the undercroft between the lower tier's own `surfaceY` and this tier's
+   * flat underside (local y = 0 — see `buildBowl`). Every foot is COMPUTED off `surfaceY`, never assumed,
+   * so it can only land on a real tread or promenade.
+   */
+  const buildFrontSupport = (
+    spec: TierSpec, layout: Layout, oy: number, oz: number, wallH: number,
+    lower: { readonly layout: Layout; readonly oy: number; readonly oz: number },
+    group: Group,
+  ): void => {
+    if (spec.support === 'none') return
+    const z = oz + layout.halfD - SUPPORT_INSET
+    const headY = oy
+    const footY = lower.oy + surfaceY(lower.layout, z - lower.oz)
+    if (footY >= headY) {
+      throw new Error(
+        `f1-grandstand-bay: front support foot (${footY.toFixed(3)}m) is not below its head `
+        + `(${headY.toFixed(3)}m) — the tier below's surface reaches above this tier's own soffit`,
+      )
+    }
+    const parts: BufferGeometry[] = []
+    if (spec.support === 'wall') {
+      const wall = bevelBox(layout.width, headY - footY, WALL_SUPPORT_T, 0.03)
+      wall.translate(0, (footY + headY) / 2, z)
+      parts.push(wall)
+    } else {
+      for (const x of layout.columns) {
+        parts.push(member(new Vector3(x, footY, z), new Vector3(x, headY, z), SUPPORT_R, 10))
+        parts.push(groundPad([SUPPORT_PAD, SUPPORT_PAD], [x, footY, z], 0.03))
+      }
+      // Raking stringer down each side of the bay, front-column head back to the rear support's own
+      // head — the primary raker beam a real cantilevered stand carries its soffit on, following the
+      // rake (low at the front, high at the back) rather than cutting straight across it.
+      const rearZ = oz - layout.halfD - 0.24 - 0.25 - SUPPORT_INSET
+      const rearHeadY = oy + wallH
+      for (const x of [-layout.halfW, layout.halfW] as const) {
+        parts.push(member(new Vector3(x, headY, z), new Vector3(x, rearHeadY, rearZ), BRACE_R + 0.01, 8))
+      }
+    }
+    // Every point above was computed in WORLD space (foot/head both cross tier boundaries via `lower`),
+    // but this mesh is emitted into `group`, which already carries this tier's own (oy, oz) translation
+    // — convert back to local-to-group space so the group's transform doesn't apply the offset twice.
+    emit(
+      'structure',
+      mergeParts(parts, 'f1-grandstand-bay: front support').translate(0, -oy, -oz),
+      group,
+      'front-support',
+    )
+  }
+
+  /**
+   * The back of the stand: a column line (with X cross-bracing per bay) or a wall, from TRUE GROUND up
+   * to this tier's own rear-wall height (`wallH` — the same value `buildBowl` used, so the support meets
+   * the wall it is bracing). Every tier gets its own tower rather than one member spanning past
+   * intermediate tiers, because each tier steps further back as it stacks — the towers never collide.
+   */
+  const buildRearSupport = (
+    spec: TierSpec, layout: Layout, oy: number, oz: number, wallH: number, group: Group,
+  ): void => {
+    if (spec.rearSupport === 'none') return
+    // The rear-wall box (`buildBowl`) is centred at halfD+0.24 with 0.5 m depth — its far face is
+    // 0.25 m further back again. Clear that face by more than the support's own radius.
+    const wallBackZ = oz - layout.halfD - 0.24 - 0.25
+    const z = wallBackZ - SUPPORT_INSET
+    const headY = oy + wallH
+    const footY = 0
+    if (headY <= footY) {
+      throw new Error(`f1-grandstand-bay: rear support head (${headY.toFixed(3)}m) is not above ground`)
+    }
+    const parts: BufferGeometry[] = []
+    if (spec.rearSupport === 'wall') {
+      const wall = bevelBox(layout.width, headY - footY, WALL_SUPPORT_T, 0.03)
+      wall.translate(0, (footY + headY) / 2, z)
+      parts.push(wall)
+    } else {
+      const feet: Vector3[] = []
+      const heads: Vector3[] = []
+      for (const x of layout.columns) {
+        const foot = new Vector3(x, footY, z)
+        const head = new Vector3(x, headY, z)
+        feet.push(foot)
+        heads.push(head)
+        parts.push(member(foot, head, SUPPORT_R, 10))
+        parts.push(groundPad([SUPPORT_PAD, SUPPORT_PAD], [x, footY, z], 0.03))
+      }
+      // X cross-bracing, two diagonals per bay, so the back reads as a braced frame rather than a row
+      // of unconnected posts.
+      for (let b = 0; b < feet.length - 1; b++) {
+        parts.push(member(feet[b]!, heads[b + 1]!, BRACE_R, 6))
+        parts.push(member(heads[b]!, feet[b + 1]!, BRACE_R, 6))
+      }
+    }
+    // Same local/world conversion as `buildFrontSupport` — the foot is TRUE ground (world y=0).
+    emit(
+      'structure',
+      mergeParts(parts, 'f1-grandstand-bay: rear support').translate(0, -oy, -oz),
+      group,
+      'rear-support',
+    )
+  }
+
+  /**
+   * One straight flight — or, past the point its run no longer fits inside `width`, a folded switchback
+   * (two half-flights and a landing) — from the lower tier's promenade to this tier's promenade, tucked
+   * against the +X end of the bay so it never overhangs the tiling module (it MAY run past the bowl's own
+   * depth on Z though — nothing tiles against a neighbour bay in that direction). Steps are solid stacked
+   * blocks, like the model's own row risers, so the flight is self-supporting rather than a floating
+   * tread run. Riser/tread is this model's own RISE/TREAD (0.44 m / 0.8 m) — this is part of the STAND,
+   * not the FIA circuit-stairs catalogue module.
+   */
+  const buildStairs = (
+    layout: Layout, oy: number, oz: number,
+    lower: { readonly layout: Layout; readonly oy: number; readonly oz: number },
+    width: number, group: Group,
+  ): { readonly steps: number; readonly switchback: boolean } => {
+    const footY = lower.oy + lower.layout.base
+    const headY = oy + layout.base
+    if (headY <= footY) {
+      throw new Error(
+        `f1-grandstand-bay: stairs head (${headY.toFixed(3)}m) is not above their foot `
+        + `(${footY.toFixed(3)}m)`,
+      )
+    }
+    const dy = headY - footY
+    const halfW = width / 2
+    // The guard rail's own top-rail member (radius 0.028) stands proud of whatever x it's centred on, so
+    // the flight's outer edge is pulled in by more than that radius — the rail is what would otherwise
+    // overhang the tiling module, not the tread blocks (which are already inset by their own margin).
+    const edge = halfW - 0.05
+    const steps = Math.max(1, Math.ceil(dy / RISE))
+    const run = steps * TREAD
+    const maxRun = width - STAIR_WIDTH - STAIR_MARGIN
+    const switchback = run > maxRun
+
+    const treads: BufferGeometry[] = []
+    const rails: BufferGeometry[] = []
+    const z0 = oz + layout.halfD + STAIR_MARGIN
+
+    const flight = (x0: number, x1: number, y0: number, y1: number, z: number, count: number): void => {
+      const stepRun = (x1 - x0) / count
+      for (let i = 0; i < count; i++) {
+        const xa = x0 + i * stepRun
+        const xb = x0 + (i + 1) * stepRun
+        const y = y0 + ((y1 - y0) * (i + 1)) / count
+        const block = bevelBox(Math.max(0.05, Math.abs(stepRun) - 0.02), Math.max(0.05, y - y0), STAIR_WIDTH, 0.02)
+        block.translate((xa + xb) / 2, y0 + (y - y0) / 2, z)
+        treads.push(block)
+      }
+      rails.push(...buildRail(
+        new Vector3(x0, y0 + RAIL_H, z - STAIR_WIDTH / 2 + 0.06),
+        new Vector3(x1, y1 + RAIL_H, z - STAIR_WIDTH / 2 + 0.06),
+        Math.max(3, count),
+        (t) => y0 + (y1 - y0) * t,
+      ))
+    }
+
+    if (!switchback) {
+      const x0 = edge - run
+      if (x0 < -halfW) {
+        throw new Error(
+          `f1-grandstand-bay: stairs run (${run.toFixed(2)}m) does not fit inside width (${width}m)`,
+        )
+      }
+      flight(x0, edge, footY, headY, z0, steps)
+    } else {
+      const steps1 = Math.ceil(steps / 2)
+      const steps2 = steps - steps1
+      const landingY = footY + (dy * steps1) / steps
+      const run1 = steps1 * TREAD
+      const run2 = steps2 * TREAD
+      const x0 = edge - Math.max(run1, run2)
+      if (x0 < -halfW) {
+        throw new Error(
+          `f1-grandstand-bay: switchback stair run (${Math.max(run1, run2).toFixed(2)}m) does not fit `
+          + `inside width (${width}m) even folded`,
+        )
+      }
+      const z1 = z0
+      const z2 = z0 + STAIR_WIDTH + STAIR_GAP
+      flight(edge - run1, edge, footY, landingY, z1, steps1)
+      flight(edge, edge - run2, landingY, headY, z2, steps2)
+      const landing = bevelBox(STAIR_WIDTH, 0.08, STAIR_WIDTH * 2 + STAIR_GAP, 0.02)
+      landing.translate(edge - STAIR_WIDTH / 2, landingY + 0.02, z0 + (STAIR_WIDTH + STAIR_GAP) / 2)
+      treads.push(landing)
+    }
+
+    // Same local/world conversion as `buildFrontSupport` — foot/head were computed in world space
+    // because they cross into `lower`'s own (differently-offset) group.
+    emit('deck', mergeParts(treads, 'f1-grandstand-bay: stairs').translate(0, -oy, -oz), group, 'stairs')
+    emit(
+      'structure',
+      mergeParts(rails, 'f1-grandstand-bay: stair-rail').translate(0, -oy, -oz),
+      group,
+      'stair-rail',
+    )
+    return { steps, switchback }
+  }
+
+  /**
    * Stacks `config.tiers` bowls. Tier 0 emits straight into the `bowl`/`roof` groups exactly as the
    * single-bowl model always has (identity transform) — that's what keeps `tiers: 1` byte-identical.
-   * Tier k>=1 gets its own subgroup, translated by the running (oy, oz) origin derived from the SAME
-   * constants `layoutOf` already uses: the y-step is the headroom a tier needs above the one below
-   * (`bowlTop - DECK + ROOF_CLEAR`, i.e. NOSE + rows*RISE + ROOF_CLEAR — the promenade rule from the
-   * header comment). The z-step is one full bowl depth back, LESS `OVERLAP_ROWS * TREAD` — tier k's
-   * front lands `OVERLAP_ROWS` rows short of tier k-1's rear edge, i.e. it cantilevers that many rows'
-   * worth of tread out over tier k-1 rather than sitting flush on top of it. Each tier's own bowl mass is
-   * already a closed full-depth slab underneath (see `buildBowl`'s profile), so that same overhang is
-   * automatically the soffit over the covered rows — no separate soffit geometry. Only the TOP tier gets
-   * a roof; every non-top tier's rear wall is still stretched to `wallTopStacked` so it closes flush
-   * against the underside of the tier above — that tier's slab still reaches past the wall's position
-   * (it's `2 * halfD` deep, the overhang is only `OVERLAP_ROWS * TREAD`), so the wall now sits well
-   * inside the covered volume rather than at a visible seam, but the closure is unchanged.
+   * Tier k>=1 gets its own subgroup, translated by the running (oy, oz) origin. Origins are derived in a
+   * PREPASS (before anything is built) so a later tier's position is known while building an earlier one
+   * — `buildRoof`'s clearance check and `buildFrontSupport`'s stringer both need to look at the tier
+   * ABOVE. Only tier 0's `plinth` ever shifts an origin directly: `tierStepY` (the promenade-to-promenade
+   * rise) is invariant to which local base a tier is built from (it cancels: `bowlTop - base` is always
+   * `NOSE + rows*RISE` regardless of `base`), so raising the plinth shifts tier 0 and, by carrying through
+   * the running `oy`, every tier stacked above it — rigidly, without perturbing any tier-to-tier
+   * clearance.
    */
   const rebuild = (): void => {
     releaseGenerated()
-    const layout = layoutOf(config)
-    const tierStep = {
-      y: layout.bowlTop - DECK + ROOF_CLEAR,
-      z: 2 * layout.halfD - OVERLAP_ROWS * TREAD,
-    }
-    const wallTopStacked = layout.bowlTop + (ROOF_CLEAR - DECK)
 
-    if (config.tiers > 1) {
-      const coveredRow = layout.rows - OVERLAP_ROWS
-      const headroom = tierStep.y - treadY(coveredRow)
+    const tierSpecs = resolveTiers(config)
+    const layouts = tierSpecs.map((spec, tier) =>
+      layoutOf(spec.rows, config.width, tier === 0 ? spec.plinth : DECK),
+    )
+
+    const origins: Array<{ oy: number; oz: number }> = [{ oy: 0, oz: 0 }]
+    for (let tier = 1; tier < tierSpecs.length; tier++) {
+      const spec = tierSpecs[tier]!
+      const lower = layouts[tier - 1]!
+      const lowerOrigin = origins[tier - 1]!
+      const lowerBase = tier === 1 ? tierSpecs[0]!.plinth : DECK
+      const tierStepY = NOSE + lower.rows * RISE + ROOF_CLEAR + spec.lift
+      const tierStepZ = 2 * lower.halfD - spec.overlapRows * TREAD
+      const oy = lowerOrigin.oy + (lowerBase - DECK) + tierStepY
+      const oz = lowerOrigin.oz - tierStepZ
+      origins.push({ oy, oz })
+
+      // The covered row is the last row of the tier below NOT under this tier's overhang; this tier's
+      // own flat underside (its local y=0, see `buildBowl`) must clear that row's tread by ROOF_CLEAR, or
+      // the concourse walking under the balcony has no headroom.
+      const coveredRow = Math.min(Math.max(lower.rows - spec.overlapRows, 0), lower.rows - 1)
+      const rowWorldY = lowerOrigin.oy + lowerBase + NOSE + coveredRow * RISE
+      const headroom = oy - rowWorldY
       if (headroom < ROOF_CLEAR) {
         throw new Error(
-          `f1-grandstand-bay: cantilever headroom over row ${coveredRow} is ${headroom.toFixed(3)}m, `
-          + `short of ROOF_CLEAR (${ROOF_CLEAR}m) — reduce OVERLAP_ROWS or rows`,
+          `f1-grandstand-bay: tier ${tier} cantilever headroom over row ${coveredRow} is `
+          + `${headroom.toFixed(3)}m, short of ROOF_CLEAR (${ROOF_CLEAR}m) — raise lift, reduce `
+          + `overlapRows, or reduce rows`,
         )
       }
     }
 
-    let oy = 0
-    let oz = 0
-    for (let tier = 0; tier < config.tiers; tier++) {
-      const isTop = tier === config.tiers - 1
+    for (let tier = 0; tier < tierSpecs.length; tier++) {
+      const spec = tierSpecs[tier]!
+      const layout = layouts[tier]!
+      const origin = origins[tier]!
+      const isTop = tier === tierSpecs.length - 1
+
       const bowlGroup = tier === 0 ? bowl : (() => {
         const g = new Group()
         g.name = `tier-${tier}`
-        g.position.set(0, oy, oz)
+        g.position.set(0, origin.oy, origin.oz)
         bowl.add(g)
         return g
       })()
 
-      buildBowl(layout, bowlGroup, isTop ? undefined : wallTopStacked)
+      const wallH = isTop ? layout.bowlTop + 0.62 : origins[tier + 1]!.oy - origin.oy
+      buildBowl(layout, bowlGroup, isTop ? undefined : wallH)
       buildSeating(layout, bowlGroup)
       buildAisle(layout, bowlGroup)
       buildNosings(layout, bowlGroup)
       buildFrontage(layout, bowlGroup)
 
-      if (isTop) {
+      if (tier > 0) {
+        const lower = { layout: layouts[tier - 1]!, oy: origins[tier - 1]!.oy, oz: origins[tier - 1]!.oz }
+        buildFrontSupport(spec, layout, origin.oy, origin.oz, wallH, lower, bowlGroup)
+        buildRearSupport(spec, layout, origin.oy, origin.oz, wallH, bowlGroup)
+        if (spec.stairs) buildStairs(layout, origin.oy, origin.oz, lower, config.width, bowlGroup)
+      }
+
+      if (spec.roof) {
         const roofGroup = tier === 0 ? roof : (() => {
           const g = new Group()
           g.name = `tier-${tier}`
-          g.position.set(0, oy, oz)
+          g.position.set(0, origin.oy, origin.oz)
           roof.add(g)
           return g
         })()
+
+        if (!isTop) {
+          let maxRoofY = -Infinity
+          for (let i = 0; i <= 24; i++) maxRoofY = Math.max(maxRoofY, rafterAt(layout, i / 24).y)
+          const roofTopWorldY = origin.oy + maxRoofY
+          const aboveMassBottomWorldY = origins[tier + 1]!.oy
+          const clearance = aboveMassBottomWorldY - roofTopWorldY
+          if (clearance < ROOF_CLEAR) {
+            throw new Error(
+              `f1-grandstand-bay: tier ${tier} roof clears the tier above by ${clearance.toFixed(3)}m, `
+              + `short of ROOF_CLEAR (${ROOF_CLEAR}m)`,
+            )
+          }
+        }
+
         buildRoof(layout, roofGroup)
         buildColumns(layout, roofGroup)
         buildFascia(layout, roofGroup)
       }
-
-      oy += tierStep.y
-      oz -= tierStep.z
     }
   }
   rebuild()
@@ -834,7 +1208,11 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       if (patch.rows !== undefined) config.rows = Math.max(4, Math.round(patch.rows))
       if (patch.width !== undefined) config.width = Math.max(4, patch.width)
       if (patch.tiers !== undefined) {
-        config.tiers = Math.min(MAX_TIERS, Math.max(MIN_TIERS, Math.round(patch.tiers)))
+        const resolved = resolveTiersInput(patch.tiers, patch.tierSpec)
+        config.tiers = resolved.tiers
+        config.tierSpec = resolved.tierSpec ?? config.tierSpec
+      } else if (patch.tierSpec !== undefined) {
+        config.tierSpec = patch.tierSpec
       }
       rebuild()
     },
