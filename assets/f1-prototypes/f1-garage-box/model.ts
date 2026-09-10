@@ -221,8 +221,12 @@ const BALUSTER_PITCH = 1.4
 const BALUSTER_W = 0.05
 /** Red leading-edge fascia band under each terrace. */
 const TERRACE_FASCIA_H = 0.3
-/** Storeys the glazed entry tower rises above the top floor. estimate:photo. */
-const TOWER_EXTRA_STOREYS = 2
+/**
+ * Storeys the glazed entry tower rises above the top floor. estimate:photo — in the S/F straight
+ * reference (f1com-YDRAY-foto-pit-building.webp) the tower at the building's start clears the main roof
+ * line by about one storey, not two.
+ */
+const TOWER_EXTRA_STOREYS = 1
 
 function bayNumber(start: string, offset: number): string {
   const n = Number.parseInt(start, 10)
@@ -250,9 +254,12 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
   // non-transmissive coat kept local here, same as that model's own glazing — never `transmission`,
   // which the host forbids for perf. RED_500 direct rather than the shared `kit.red` instance, which is
   // reserved for fire equipment, not a catalogue accent band.
+  // Near-opaque dark curtain wall, not a see-through box: the reference (pit-building-render.png,
+  // imagen-paddock.webp) reads as blue-black glass with the mullion grid as the only light lines and the
+  // floor plates behind only faintly visible. estimate:render.
   const localGlass = new MeshStandardMaterial({
-    name: 'f1-kit / garage glazing', color: 0x0d161d, roughness: 0.08, metalness: 0.45,
-    transparent: true, opacity: 0.6,
+    name: 'f1-kit / garage glazing', color: 0x050a10, roughness: 0.05, metalness: 0.55,
+    transparent: true, opacity: 0.9,
   })
   const terraceFasciaMat = new MeshStandardMaterial({
     name: 'f1-kit / garage terrace fascia', color: TOKEN.RED_500, roughness: 0.42, metalness: 0.04,
