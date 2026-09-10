@@ -10,11 +10,17 @@
 // fascia and the amber nosings are the catalogue tells — not a grey shed.
 //
 // `tiers` (1-4) stacks whole bowls, like Madring's S/F stand: tier k's promenade sits at tier k-1's
-// bowlTop + ROOF_CLEAR (headroom for the concourse under it) and tier k's front sits at tier k-1's rear
-// edge — stepped straight back and up, no cantilever overlap. Each tier below the top gets its own
-// frontage (fascia/hoarding/guard-rail) and a rear wall stretched to close the gap under the tier above
-// (no see-through void). ONE roof — the existing membrane/rafter/column system — rides the TOP tier
-// only; lower tiers are uncovered. `tiers: 1` is untouched: same single bowl, same geometry as before.
+// bowlTop + ROOF_CLEAR (headroom for the concourse under it), and tier k's front CANTILEVERS
+// OVERLAP_ROWS rows' worth of tread past tier k-1's rear edge — the balcony front overhangs the tier
+// below rather than sitting flush on top of it (the Madring S/F photo's datum). Each tier's own closed
+// bowl mass is already a full-depth slab underneath it, so that overhang is automatically the soffit over
+// the covered rows below — no separate soffit geometry needed. Each tier below the top still gets its own
+// frontage (fascia/hoarding/guard-rail), landing right at the overhang's leading edge like a real balcony
+// front, and a rear wall stretched to close the gap under the tier above (no see-through void; the wall
+// now sits well inside the covered volume rather than at a visible seam, since the tier above's slab
+// reaches past it). ONE roof — the existing membrane/rafter/column system — rides the TOP tier only;
+// lower tiers are uncovered except where the tier above overhangs them. `tiers: 1` is untouched: same
+// single bowl, same geometry as before.
 
 import {
   BufferGeometry,
@@ -113,6 +119,12 @@ const FASCIA_H = 0.46
 const HOARD_H = 0.62
 /** Guard-rail head above the deck. The open void between it and the hoarding is what shows the walk. */
 const RAIL_H = 1.12
+/**
+ * estimate:photo — how many rows of tread a stacked tier's balcony front overhangs the tier below, read
+ * off the Madring S/F stand photo (the upper tiers' fronts hang over roughly the last three rows of the
+ * tier beneath, not sitting flush on top of it). Only meaningful when `tiers` > 1.
+ */
+const OVERLAP_ROWS = 3
 
 interface Layout {
   readonly rows: number
@@ -746,16 +758,35 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
    * Tier k>=1 gets its own subgroup, translated by the running (oy, oz) origin derived from the SAME
    * constants `layoutOf` already uses: the y-step is the headroom a tier needs above the one below
    * (`bowlTop - DECK + ROOF_CLEAR`, i.e. NOSE + rows*RISE + ROOF_CLEAR — the promenade rule from the
-   * header comment), and the z-step is one full bowl depth back (`2 * halfD` — tier k's front is tier
-   * k-1's rear, and `halfD` is already half that depth by construction). Only the TOP tier gets a roof;
-   * every non-top tier's rear wall is stretched to `wallTopStacked` so it closes flush against the
-   * underside of the tier above (no see-through gap into the concourse).
+   * header comment). The z-step is one full bowl depth back, LESS `OVERLAP_ROWS * TREAD` — tier k's
+   * front lands `OVERLAP_ROWS` rows short of tier k-1's rear edge, i.e. it cantilevers that many rows'
+   * worth of tread out over tier k-1 rather than sitting flush on top of it. Each tier's own bowl mass is
+   * already a closed full-depth slab underneath (see `buildBowl`'s profile), so that same overhang is
+   * automatically the soffit over the covered rows — no separate soffit geometry. Only the TOP tier gets
+   * a roof; every non-top tier's rear wall is still stretched to `wallTopStacked` so it closes flush
+   * against the underside of the tier above — that tier's slab still reaches past the wall's position
+   * (it's `2 * halfD` deep, the overhang is only `OVERLAP_ROWS * TREAD`), so the wall now sits well
+   * inside the covered volume rather than at a visible seam, but the closure is unchanged.
    */
   const rebuild = (): void => {
     releaseGenerated()
     const layout = layoutOf(config)
-    const tierStep = { y: layout.bowlTop - DECK + ROOF_CLEAR, z: 2 * layout.halfD }
+    const tierStep = {
+      y: layout.bowlTop - DECK + ROOF_CLEAR,
+      z: 2 * layout.halfD - OVERLAP_ROWS * TREAD,
+    }
     const wallTopStacked = layout.bowlTop + (ROOF_CLEAR - DECK)
+
+    if (config.tiers > 1) {
+      const coveredRow = layout.rows - OVERLAP_ROWS
+      const headroom = tierStep.y - treadY(coveredRow)
+      if (headroom < ROOF_CLEAR) {
+        throw new Error(
+          `f1-grandstand-bay: cantilever headroom over row ${coveredRow} is ${headroom.toFixed(3)}m, `
+          + `short of ROOF_CLEAR (${ROOF_CLEAR}m) — reduce OVERLAP_ROWS or rows`,
+        )
+      }
+    }
 
     let oy = 0
     let oz = 0
