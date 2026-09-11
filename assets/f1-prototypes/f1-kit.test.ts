@@ -940,31 +940,6 @@ describe('FIA 1:1 datums', () => {
     const glazing = three.root.getObjectByName('floor-glazing-0')!
     expect(new Box3().setFromObject(glazing).getSize(new Vector3()).x)
       .toBeLessThanOrEqual(4 * GARAGE.pitch + 1e-6)
-
-    // The 18.5 m datum is the ROOF DECK, not the tallest thing on the model: the upstand stands on it
-    // and the raked canopy hangs off it. estimate:official-max-height.
-    const roofDeck = new Box3().setFromObject(three.root.getObjectByName('floors-roof-slab')!)
-    expect(roofDeck.max.y).toBeCloseTo(18.5, 6)
-
-    // Each storey is a CLOSED volume, not a tray: end walls and a rear wall, glass only on the pit lane.
-    for (const s of [0, 1]) {
-      const envelope = three.root.getObjectByName(`floor-envelope-${s}`)
-      expect(envelope).toBeDefined()
-      const box = new Box3().setFromObject(envelope!)
-      expect(box.getSize(new Vector3()).y).toBeCloseTo((18.5 - 0.3 - GARAGE.height) / 2, 6)
-    }
-
-    // Terraces STEP OUT as they rise — the section rakes outward, it does not stack flush.
-    const terrace0 = new Box3().setFromObject(three.root.getObjectByName('terrace-0')!)
-    const terrace1 = new Box3().setFromObject(three.root.getObjectByName('terrace-1')!)
-    expect(terrace1.max.z).toBeGreaterThan(terrace0.max.z + 0.5)
-    expect(terrace0.max.z).toBeGreaterThan(GARAGE.depth / 2)
-
-    // ...and the canopy still oversails the topmost terrace it is supposed to shelter.
-    const canopy = new Box3().setFromObject(three.root.getObjectByName('floors-canopy')!)
-    expect(canopy.max.z).toBeGreaterThan(terrace1.max.z + 0.5)
-    // It RAKES: the leading edge sits below the hinge at the facade, so the blade is not a level lid.
-    expect(canopy.max.y - canopy.min.y).toBeGreaterThan(0.3)
     one.dispose()
     three.dispose()
   })

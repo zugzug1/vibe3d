@@ -54,11 +54,9 @@ export interface F1GarageBoxConfig {
   open: number
   /**
    * Storeys, ground up: 1 = today's garage box (roof deck, nothing above). 2-3 add glazed Paddock Club
-   * levels. Each is a CLOSED volume — solid end walls and rear wall, a mullioned curtain wall on the
-   * pit-lane face only — fronted by a terrace that STEPS OUT past the storey below it, with a guard rail
-   * at its edge and a red leading-edge fascia band under it. The top storey caps with a roof slab whose
-   * 18.5 m deck is the datum, an upstand held back from the slab edge, and a raked canopy oversailing
-   * the pit lane. estimate:official-max-height (Madring pit building, 18.5 m official max at floors:3).
+   * levels — a mullioned curtain wall, a pit-lane terrace with a guard rail, and a red leading-edge
+   * fascia band under each terrace. The top storey caps with a flat roof slab and parapet.
+   * estimate:official-max-height (Madring pit building, 18.5 m official max at floors:3).
    */
   floors: number
   /**
@@ -208,34 +206,15 @@ const MAX_HEIGHT = 18.5
 const MAX_FLOORS = 3
 /** Roof slab capping the top storey. */
 const ROOF_SLAB_T = 0.3
-/**
- * How far the roof oversails the facade over the pit lane, and how thick the blade is where it does.
- * estimate:photo — in every Madring reference (pit-building-render, imagen-paddock, paddock-club-render)
- * the canopy hangs past the top terrace and over the near half of the pit lane, roughly a sixth of the
- * building's 20 m depth, and its leading edge is a lip rather than the full slab depth.
- */
-const ROOF_OVERHANG = 3.4
-const CANOPY_T = 0.22
-/** Fall of the blade from the facade hinge to its leading edge, radians. estimate:photo. */
-const CANOPY_RAKE = 0.105
-const PARAPET_H = 0.4
-/** How far the roof upstand is held back from the slab edge, so the slab is the silhouette. */
-const PARAPET_INSET = 0.5
+const PARAPET_H = 0.45
 const STOREY_H = (MAX_HEIGHT - H - ROOF_SLAB_T) / (MAX_FLOORS - 1)
 /** Spandrel band top and bottom of each curtain wall, so the glass never runs slab-to-slab. */
 const SPANDREL_T = 0.35
 const MULLION_PITCH = BAY / 4
 const MULLION_W = 0.09
 const MULLION_D = 0.05
-/**
- * How far each terrace projects past the facade, and how much further the storey above steps out again.
- * estimate:photo — the Paddock Club levels in pit-building-render / imagen-paddock do NOT stack flush:
- * each balcony edge is forward of the one below it, so the section rakes outward as it rises and the red
- * leading edge of each level is visible from below. A single shared projection reads as a stripe painted
- * on a sheer wall, which is the thing all four references never are.
- */
-const TERRACE_D0 = 1.7
-const TERRACE_STEP = 0.8
+/** How far the terrace projects past the garage apron line — the catalogue tell in the render. estimate:photo. */
+const TERRACE_D = 1.4
 const TERRACE_T = 0.22
 const GUARD_RAIL_H = 1.1
 const BALUSTER_PITCH = 1.4
@@ -640,31 +619,6 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
         plate.translate(0, y0 + STOREY_H - plateT / 2, 0)
         emit('shell', plate, shell, `floor-plate-${s}`, tone('shell', TONE.deck))
 
-        // The storey is a BUILDING, not a tray. Glazing on the pit-lane face alone left the slab and the
-        // plate open on their other three sides, so from anywhere but dead ahead the stack read as three
-        // floating shelves separated by voids instead of as one volume — the single thing the reference
-        // renders never do. The Paddock Club levels are a CLOSED box: solid end walls, a solid rear wall,
-        // glass only where it faces the pit lane.
-        //
-        // The walls are held a party-wall thickness inside the slab and plate that cap them, so the two
-        // horizontal bands stand proud as the shadow reveals they are in the reference — and so no wall
-        // face is ever coplanar with a slab face.
-        const envelope: BufferGeometry[] = []
-        const reveal = 0.08
-        for (const side of [-1, 1] as const) {
-          const flank = bevelBox(PARTY_T, STOREY_H, D - reveal, 0.012)
-          flank.translate(
-            side * (span / 2 - reveal - PARTY_T / 2), y0 + STOREY_H / 2, reveal / 2,
-          )
-          envelope.push(flank)
-        }
-        const rearW = span - 2 * (reveal + PARTY_T)
-        const rear = bevelBox(rearW, STOREY_H, PARTY_T, 0.012)
-        rear.translate(0, y0 + STOREY_H / 2, -FRONT + reveal + PARTY_T / 2)
-        envelope.push(rear)
-        emit('shell', mergeParts(envelope, `floor-envelope-${s}`), shell, `floor-envelope-${s}`,
-          tone('shell', TONE.flank))
-
         // Curtain wall: a mullion grid framing glass infill on the pit-lane face.
         const glazeH = STOREY_H - SPANDREL_T * 2
         const glazeY = y0 + SPANDREL_T + glazeH / 2
@@ -689,12 +643,11 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
 
         // Continuous terrace at the storey's floor line, with a glazed guard rail on its outer edge and
         // the red leading-edge fascia band under it — the catalogue tell in the render.
-        const terraceD = TERRACE_D0 + s * TERRACE_STEP
-        const terrace = bevelBox(span, TERRACE_T, terraceD, 0.02)
-        terrace.translate(0, y0 - TERRACE_T / 2, FRONT + terraceD / 2)
+        const terrace = bevelBox(span, TERRACE_T, TERRACE_D, 0.02)
+        terrace.translate(0, y0 - TERRACE_T / 2, FRONT + TERRACE_D / 2)
         emit('floor', terrace, shell, `terrace-${s}`, tone('floor', TONE.apron))
 
-        const railZ = FRONT + terraceD - 0.03
+        const railZ = FRONT + TERRACE_D - 0.03
         const railParts: BufferGeometry[] = []
         const topRail = bevelBox(span, 0.05, 0.06, 0.012)
         topRail.translate(0, y0 + GUARD_RAIL_H, railZ)
@@ -714,7 +667,7 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
         emit('glass', railGlass, shell, `terrace-rail-glass-${s}`)
 
         const fasciaBand = bevelBox(span, TERRACE_FASCIA_H, 0.08, 0.012)
-        fasciaBand.translate(0, y0 - TERRACE_T - TERRACE_FASCIA_H / 2, FRONT + terraceD - 0.05)
+        fasciaBand.translate(0, y0 - TERRACE_T - TERRACE_FASCIA_H / 2, FRONT + TERRACE_D - 0.05)
         emit('trim', fasciaBand, shell, `terrace-fascia-${s}`, terraceFasciaMat)
 
         if (isTop) {
@@ -724,52 +677,15 @@ export function createModel(options: F1GarageBoxOptions = {}): F1GarageBoxInstan
           roofSlab.translate(0, roofY + ROOF_SLAB_T / 2, 0)
           emit('shell', roofSlab, shell, 'floors-roof-slab', tone('shell', TONE.deck))
 
-          // THE landmark of this building: the roof does not stop at the facade, it oversails the pit
-          // lane as a thin canopy on a dark soffit. Every reference reads as a long horizontal plane
-          // hanging over the terraces — flush-capping the box at the facade line is what made the stack
-          // read as an extruded box rather than as this building.
-          //
-          // The oversail is thinner than the slab it grows out of (`CANOPY_T` vs `ROOF_SLAB_T`), and it
-          // RAKES: it hinges at the facade and falls `CANOPY_RAKE` toward the pit lane, so the leading
-          // edge cuts across the elevation as a slope rather than as a second horizontal line. A blade
-          // held level at full slab depth is a box lid with an overhang; the rake is what makes it a
-          // canopy. Every part of the blade is built in the hinge's own frame and raked together, so the
-          // soffit stays parallel to the plate above it however the rake is tuned.
-          const hingeY = roofY + ROOF_SLAB_T - CANOPY_T / 2
-          const rake = (geometry: BufferGeometry): BufferGeometry => {
-            geometry.rotateX(CANOPY_RAKE)
-            geometry.translate(0, hingeY, FRONT)
-            return geometry
-          }
-          const canopy = bevelBox(span, CANOPY_T, ROOF_OVERHANG, 0.02)
-          canopy.translate(0, 0, ROOF_OVERHANG / 2)
-          emit('shell', rake(canopy), shell, 'floors-canopy', tone('shell', TONE.deck))
-
-          // The dark underside. It is what makes the oversail read as a void the terrace sits inside,
-          // rather than as a white plate floating at roof level.
-          const canopySoffit = bevelBox(span - 0.1, 0.05, ROOF_OVERHANG - 0.12, 0.01)
-          canopySoffit.translate(0, -CANOPY_T / 2 - LAYER_CLEARANCE - 0.025, ROOF_OVERHANG / 2 - 0.06)
-          emit('shell', rake(canopySoffit), shell, 'floors-canopy-soffit', tone('shell', TONE.soffit))
-
-          // Leading lip: the bright edge band that reads against the soffit behind it.
-          const canopyEdge = bevelBox(span, CANOPY_T + 0.1, 0.12, 0.014)
-          canopyEdge.translate(0, -0.05, ROOF_OVERHANG - 0.06)
-          emit('shell', rake(canopyEdge), shell, 'floors-canopy-edge', tone('shell', TONE.coping))
-
-          // Upstand, NOT a parapet wrapping all four edges. A full-height band around the roof line adds
-          // itself to the slab and the two together read as a thick white lid — the exact "boxed fascia"
-          // that kept the stack looking extruded. So: nothing on the pit-lane edge, where the raked blade
-          // is the edge condition and a wall behind it would make no sense; and on the other three the
-          // upstand is held `PARAPET_INSET` back from the slab edge, so the SILHOUETTE is the 0.3 m slab
-          // and the upstand is a line on the deck behind it.
           const parapetParts: BufferGeometry[] = []
-          const upstandY = roofY + ROOF_SLAB_T + PARAPET_H / 2
-          const back = bevelBox(span - 2 * PARAPET_INSET, PARAPET_H, 0.12, 0.012)
-          back.translate(0, upstandY, -FRONT + PARAPET_INSET)
-          parapetParts.push(back)
+          for (const sz of [-1, 1] as const) {
+            const edge = bevelBox(span, PARAPET_H, 0.12, 0.012)
+            edge.translate(0, roofY + ROOF_SLAB_T + PARAPET_H / 2, sz * (FRONT - 0.06))
+            parapetParts.push(edge)
+          }
           for (const side of [-1, 1] as const) {
-            const flank = bevelBox(0.12, PARAPET_H, D - 2 * PARAPET_INSET, 0.012)
-            flank.translate(side * (span / 2 - PARAPET_INSET), upstandY, 0)
+            const flank = bevelBox(0.12, PARAPET_H, D, 0.012)
+            flank.translate(side * (span / 2 - 0.06), roofY + ROOF_SLAB_T + PARAPET_H / 2, 0)
             parapetParts.push(flank)
           }
           emit('shell', mergeParts(parapetParts, 'floors-parapet'), shell, 'floors-parapet',
