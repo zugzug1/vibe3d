@@ -65,7 +65,9 @@
 //     `'none'` for tier 0) — which END face carries this tier's access stair. The stair is NOT across
 //     the front of the bowl: it is a stair TOWER bolted to the bay's end face (x = ±halfW), travelling
 //     along Z and climbing from the tier below's promenade to this tier's, exactly as a
-//     temporary-stand scaffold tower does (Madring IMG_2437). See {@link buildStairTower}.
+//     temporary-stand scaffold tower does (Madring IMG_2437). A tower that reaches tier 0 also carries an
+//     ENTRY flight from GRADE up to tier 0's promenade, in the cage's own spare lane — see
+//     {@link GroundFlightPlan}. See {@link buildStairTower}.
 //   - `stairWidth` (default 1.4 m — f1-stairs' own flight width) — the flight width of that tower.
 //     A folded tower is two lanes wide (`2 × stairWidth + STAIR_GAP`); a straight one is one lane.
 //   - `roof` (default: top tier only) — lets a non-top tier carry its own membrane roof too, gated by a
@@ -851,6 +853,39 @@ const planFlight = (from: TowerLevel, to: TowerLevel): FlightPlan => {
   }
 }
 
+/**
+ * The ENTRY flight: grade to tier 0's promenade. Every other flight is pinned at both ends by the two
+ * promenades it joins, which is what makes {@link planFlight}'s runs derived rather than chosen. This one
+ * is pinned at ONE end only — its head is tier 0's landing, its foot is wherever the ground is — so its
+ * going is f1-stairs' own 280 mm exactly, and the free variable is instead WHICH EDGE of that landing it
+ * meets and therefore which way it travels:
+ *
+ *   - `'rear'` — the default. A folded cage is two lanes wide and the tier 0 -> tier 1 flight leaves the
+ *     rear edge on the OUTBOARD lane, so the inboard lane's rear is free all the way down to grade. The
+ *     entry climbs forward (+Z) in it, switchbacking at tier 0's promenade into the flight above. That
+ *     volume is already inside the cage — under the outboard lane, above nothing — so the cage, the
+ *     footprint and the collision box do not move a millimetre.
+ *   - `'front'` — the fallback for a cage whose flights all run STRAIGHT (one lane, which needs a step
+ *     back longer than the climb: ~175 rows at the default overlap). That single lane's rear edge is
+ *     taken, so the entry hangs off the landing's FRONT edge instead and the cage grows forward to cover
+ *     it. {@link TowerPlan.zFront} carries that, so the collision box follows on its own.
+ */
+interface GroundFlightPlan {
+  readonly steps: number
+  readonly going: number
+  readonly rise: number
+  /** Lane centre the flight runs in. */
+  readonly laneX: number
+  /** Which edge of tier 0's landing the head meets — and so which way the flight travels. */
+  readonly edge: 'front' | 'rear'
+  /** z of the flight's own origin: its FOOT, on grade. */
+  readonly footZ: number
+  /** z where it meets the landing. */
+  readonly headZ: number
+  /** True when the flight climbs toward -Z (a `'front'` entry), matching {@link flightGeometry}'s turn. */
+  readonly rearward: boolean
+}
+
 /** The cage: ONE per end face, serving every level any tier asked it to reach. */
 interface TowerPlan {
   readonly side: -1 | 1
@@ -866,6 +901,8 @@ interface TowerPlan {
   readonly laneOuterX: number
   readonly levels: readonly TowerLevel[]
   readonly flights: readonly FlightPlan[]
+  /** Grade to tier 0's promenade — `null` only when tier 0 already walks at grade (`plinth: 0`). */
+  readonly ground: GroundFlightPlan | null
   readonly zFront: number
   readonly zRear: number
   readonly topY: number
@@ -885,6 +922,32 @@ const planTower = (
   const xInner = side * (halfW + TOWER_GAP)
   const xOuter = xInner + side * towerWidth
 
+  // The entry flight. Its head is the LOWEST level the cage serves — tier 0's promenade — and its foot is
+  // grade, so the bottom bays of the cage carry a stair instead of standing as an empty braced shaft.
+  const foot = levels[0]!
+  let ground: GroundFlightPlan | null = null
+  // Only when the cage's lowest level IS tier 0. A cage asked to serve tiers 1 and 2 alone is a cage
+  // whose bottom is reached some other way — running an entry flight from grade to a promenade seven
+  // metres up would invent circulation nobody asked for.
+  if (foot.tier === 0 && foot.y > 1e-6) {
+    const steps = Math.max(2, Math.ceil(foot.y / TOWER_RISE))
+    const run = steps * TOWER_RUN
+    // A folded cage has a spare lane at the foot landing's rear; a straight one does not — see
+    // {@link GroundFlightPlan}.
+    const edge = folded ? 'rear' : 'front'
+    const headZ = foot.z + (edge === 'rear' ? -TOWER_LANDING / 2 : TOWER_LANDING / 2)
+    ground = {
+      steps,
+      going: TOWER_RUN,
+      rise: foot.y / steps,
+      laneX: xInner + (side * lane) / 2,
+      edge,
+      footZ: edge === 'rear' ? headZ - run : headZ + run,
+      headZ,
+      rearward: edge === 'front',
+    }
+  }
+
   const segments: Array<{ z0: number; z1: number; y0: number; y1: number }> = []
   const add = (za: number, ya: number, zb: number, yb: number): void => {
     segments.push(za <= zb ? { z0: za, z1: zb, y0: ya, y1: yb } : { z0: zb, z1: za, y0: yb, y1: ya })
@@ -892,6 +955,10 @@ const planTower = (
   for (const level of levels) {
     add(level.z - TOWER_LANDING / 2, level.y, level.z + TOWER_LANDING / 2, level.y)
   }
+  // The entry flight is a cage segment like any other: it is what decides whether the cage has to reach
+  // past the level landings to cover it, and therefore whether `zFront`/`zRear` — and with them the
+  // collision box — move at all. A `'rear'` entry tucks under an existing lane and moves neither.
+  if (ground) add(ground.footZ, 0, ground.headZ, foot.y)
   for (const flight of flights) {
     const footZ = flight.from.z - TOWER_LANDING / 2
     const turnY = flight.from.y + flight.stepsA * flight.rise
@@ -922,6 +989,7 @@ const planTower = (
     laneOuterX: xOuter - (side * lane) / 2,
     levels,
     flights,
+    ground,
     zFront,
     zRear,
     topY: topWalk + STAIRS.railH + TOWER_HEAD,
@@ -951,7 +1019,7 @@ const planTower = (
  * is that dense bright band, not the tube, that keeps the flight's silhouette off the bowl behind it.
  */
 const flightGeometry = (
-  steps: number, going: number, rise: number, width: number,
+  steps: number, going: number, rise: number, width: number, underslung = true,
 ): {
   readonly treads: BufferGeometry[]
   readonly frame: BufferGeometry[]
@@ -981,6 +1049,12 @@ const flightGeometry = (
     // here spans seven or eight, and at that length the channel alone reads as a ladder stringer rather
     // than as something carrying a stair — so each stringer gets a raking bottom chord and a web between
     // the two, which is how a long scaffold flight is actually made up.
+    //
+    // `underslung: false` drops that trussing for the GROUND flight alone. It is not a budget cut: the
+    // chord hangs `STAIRS.stringer + 0.24` BELOW the flight's own datum, and the ground flight's datum
+    // is grade — so trussing it would bury half a metre of steel in the dirt. A short entry flight is
+    // exactly the couple of metres the catalogue channel was sized for, so the channel alone is right.
+    if (!underslung) continue
     const drop = STAIRS.stringer + 0.24
     frame.push(member(
       new Vector3(sx, -drop, 0.06),
@@ -1899,6 +1973,11 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       openingsFor(flight.from.tier).rear.push(laneSpan(flight.folded ? plan.laneOuterX : plan.laneInnerX))
       openingsFor(flight.to.tier).front.push(laneSpan(plan.laneInnerX))
     }
+    // ...and the entry flight opens the LOWEST level landing on whichever edge it arrives at. Without
+    // this the ground flight would climb into a guarded edge — a stair arriving at a handrail.
+    if (plan.ground) {
+      openingsFor(plan.levels[0]!.tier)[plan.ground.edge].push(laneSpan(plan.ground.laneX))
+    }
 
     for (const level of plan.levels) {
       const openings = levelOpenings.get(level.tier) ?? { front: [], rear: [] }
@@ -1932,6 +2011,28 @@ export function createModel(options: F1GrandstandBayOptions = {}): F1GrandstandB
       treads.push(...upper.treads)
       frame.push(...upper.frame)
       rails.push(...upper.rails)
+    }
+
+    // The entry flight. Same tread pan, same channel stringer, same double rail and toe board as every
+    // other flight in the cage — it is one more call to the same builder, at f1-stairs' own 280 mm going
+    // because this is the one flight whose foot is not pinned to a promenade. Its datum is grade, so it
+    // is built WITHOUT the underslung chord (see {@link flightGeometry}) and bears on sole boards.
+    if (plan.ground) {
+      const entry = flightGeometry(
+        plan.ground.steps, plan.ground.going, plan.ground.rise, plan.flightWidth, false,
+      )
+      const { laneX, footZ, rearward } = plan.ground
+      place(entry.treads, laneX, 0, footZ, rearward)
+      place(entry.frame, laneX, 0, footZ, rearward)
+      place(entry.rails, laneX, 0, footZ, rearward)
+      treads.push(...entry.treads)
+      frame.push(...entry.frame)
+      rails.push(...entry.rails)
+      // Sole boards under the stringer ends, the same base-plate convention the standards use — what
+      // stops the bottom of the flight reading as steel driven into the ground.
+      for (const sx of stringerStations(plan.flightWidth)) {
+        frame.push(groundPad([0.26, 0.34], [laneX + sx, 0, footZ + (rearward ? -0.14 : 0.14)], 0.035))
+      }
     }
 
     // Standards stand at every landing edge — deduped, so a shared level/turn edge never doubles one up.

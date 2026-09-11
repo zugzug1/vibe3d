@@ -1271,8 +1271,9 @@ describe('FIA 1:1 datums', () => {
       expect(box.max.x).toBeLessThanOrEqual(halfW + footprint.right + 1e-6)
       // Direction of travel is Z: the tower is far longer front-to-back than it is wide.
       expect(box.max.z - box.min.z).toBeGreaterThan((box.max.x - box.min.x) * 3)
-      // It starts at tier 0's promenade (0.95 m) or the ground pads under it, not up in the air.
-      expect(box.min.y).toBeLessThan(1.2)
+      // It starts at GRADE — the entry flight's own foot, or the ground pads under the cage — not up in
+      // the air and not on tier 0's promenade (see the ground-flight test below for the exact datum).
+      expect(box.min.y).toBeLessThan(0.12)
     })
     expect(checked).toBe(3)
 
@@ -1283,6 +1284,76 @@ describe('FIA 1:1 datums', () => {
     expect(treadBox.max.y).toBeGreaterThan(13.9)
     expect(treadBox.max.y).toBeLessThan(14.3)
     model.dispose()
+  })
+
+  test('grandstand-bay stair tower runs a GROUND flight: grade -> tier 0, inside the cage it already had', () => {
+    // The gate on the missing bottom flight. Before this, the tower's LOWEST landing was tier 0's own
+    // promenade (DECK 0.95 m + plinth), so the bottom bays of the cage were an empty braced shaft and
+    // the stand had no way in from grade. The entry flight fills them.
+    //
+    // Read off the built geometry rather than declared, using two datums that are pure functions of the
+    // flight's own foot:
+    //   - the lowest tread's kick lip sits `0.028 - 0.019 = 0.009 m` above the flight's datum, whatever
+    //     the rise — so `stairs.min.y === 0.009` says the datum IS grade, and nothing else does;
+    //   - the lowest rail post starts `rise/2 + 0.02` above it, which recovers the derived rise exactly.
+    const KICK_ABOVE_DATUM = 0.009
+    const POST_ABOVE_TREAD = 0.02
+    const boxesNamed = (model: { root: Object3D }, name: string): Box3[] => {
+      const boxes: Box3[] = []
+      model.root.traverse((object) => {
+        if (object.name === name) boxes.push(new Box3().setFromObject(object))
+      })
+      return boxes
+    }
+
+    const model = createGrandstandBay({ rows: 8, width: 10, tiers: 3, stairs: 'both' })
+    model.root.updateMatrixWorld(true)
+    const footprint = model.getFootprint()
+    // ONE ground flight per tower — 'both' mounts two cages, and each gets its own way in.
+    const treadBoxes = boxesNamed(model, 'stairs')
+    const railBoxes = boxesNamed(model, 'stair-rail')
+    expect(treadBoxes).toHaveLength(2)
+    expect(railBoxes).toHaveLength(2)
+    for (const [index, treads] of treadBoxes.entries()) {
+      // Foot at y = 0. Never BELOW grade, and one kick lip above it — not up on the promenade.
+      expect(treads.min.y).toBeCloseTo(KICK_ABOVE_DATUM, 6)
+      // f1-stairs' own pitch: the derived rise never exceeds the FIA 180 mm the catalogue flight uses,
+      // and 0.95 m of plinth divides into exactly six of them.
+      const rise = 2 * (railBoxes[index]!.min.y - POST_ABOVE_TREAD)
+      expect(rise).toBeLessThanOrEqual(0.18 + 1e-9)
+      expect(Math.round(0.95 / rise)).toBe(6)
+      expect(0.95 / rise).toBeCloseTo(6, 4)
+      // Inside the footprint the emitter was already promised — the entry flight rides in the cage's own
+      // spare lane, so it may not push a millimetre past the overhang `getFootprint()` reports.
+      expect(Math.abs(treads.min.x)).toBeGreaterThanOrEqual(10 / 2 - 1e-6)
+      expect(Math.abs(treads.max.x)).toBeLessThanOrEqual(10 / 2 + footprint.right + 1e-6)
+    }
+    expect(footprint.width).toBe(10)
+    expect(footprint.left).toBeCloseTo(3.27, 6)
+    expect(footprint.right).toBeCloseTo(3.27, 6)
+    expect(footprint.totalWidth).toBeCloseTo(16.54, 6)
+
+    // ...and the collision proxy does not grow either: the entry flight tucks UNDER the outboard lane
+    // that was already there, so the tower box is the same box it was before the flight existed.
+    for (const volume of model.getCollisionVolumes().filter((v) => v.part === 'stair-tower')) {
+      expect(volume.min[1]).toBeCloseTo(0, 6)
+      expect(volume.min[2]).toBeCloseTo(-11.33, 6)
+      expect(volume.max[2]).toBeCloseTo(4.05, 6)
+      expect(volume.max[1]).toBeCloseTo(15.34, 2)
+    }
+    model.dispose()
+
+    // A taller plinth is more risers, still landing on grade — the flight is derived, not a fixed part.
+    const tall = createGrandstandBay({
+      rows: 8, width: 10, tiers: 3, stairs: 'right', tierSpec: [{ plinth: 2 }, {}, {}],
+    })
+    tall.root.updateMatrixWorld(true)
+    const tallTreads = boxesNamed(tall, 'stairs')[0]!
+    const tallRise = 2 * (boxesNamed(tall, 'stair-rail')[0]!.min.y - POST_ABOVE_TREAD)
+    expect(tallTreads.min.y).toBeCloseTo(KICK_ABOVE_DATUM, 6)
+    expect(tallRise).toBeLessThanOrEqual(0.18 + 1e-9)
+    expect(Math.round(2 / tallRise)).toBe(12)
+    tall.dispose()
   })
 
   test('grandstand-bay stairSide picks the end face — "both" mirrors the tower, "none" removes it', () => {
