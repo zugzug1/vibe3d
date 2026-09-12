@@ -18,10 +18,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "0fa211d10e0f566dae8ea453235163a193fa96847561c8fc98b5318c2006d06a",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-e0cef5eb-3db8-4c67-a6b9-17012c2a4a5c.png"
     },
     {
       "id": "kk-002",
@@ -40,10 +44,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "12e72e89f870848ee36492f2ade9e23be357784c27faf15d0c4d7e9a4fa72d69",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-f2e7fca4-2895-44f0-8d5b-5f18942fc161.png"
     },
     {
       "id": "kk-003",
@@ -62,10 +70,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "b58d06aaa5ad3920b7b8281c64c820f190cbf3561b92be2a562e57b3e155f4ee",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-5c0207d8-f7af-41dc-86cf-187044e477fd.png"
     },
     {
       "id": "kk-004",
@@ -84,10 +96,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "cc41625bb52214a142a353ceebaf717c54bdfb0800d01c49bed587c015628b62",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-5fa5f74f-b453-4a88-a677-902829fbea27.png"
     },
     {
       "id": "kk-005",
@@ -106,10 +122,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "3ac3adac3dacc2ec327d971535ca625fd6bd510d6ef52d7d21985557507a2c9d",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Resting cat is context only; exclude from the furniture model.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-93a22918-e97c-4327-bcba-9d244012ca1b.png"
     },
     {
       "id": "kk-006",
@@ -128,10 +148,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "3c5d9c13e66f8ba0656d0d2211d4b7ea66e89ebd828b9f9f7a92619d6e4c28f8",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-01eb300d-a00c-468c-af5c-1480244905ac.png"
     },
     {
       "id": "kk-007",
@@ -150,10 +174,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "47218a1ec7b1bb2dc8196edfd1a42566509f15dd0c44d12bc86d78753ba30d0b",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-e2798fee-5781-4d9c-bba1-0d38a53f3ddd.png"
     },
     {
       "id": "kk-008",
@@ -172,10 +200,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "df7ea5bef561a46a59da9243fc52e8d4008b1a1e9f55830280bb9fb9ad188bb0",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-7ba18e65-89c2-412c-8e73-95dc04535dc8.png"
     },
     {
       "id": "kk-009",
@@ -194,10 +226,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "525f966c9e4fa390fbfc44b9285ad6f2196dc8fad16af59703ebf3d37755e6fd",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-20ab08f7-f6d4-4323-bf1f-0a77472a7b73.png"
     },
     {
       "id": "kk-010",
@@ -216,10 +252,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "1be9ed3757f829bff8eca5144b972f078ea3e821c8202ee464f1baacdfad3819",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-48d1a7b8-88ad-4585-bf6f-2875bb555b86.png"
     },
     {
       "id": "kk-011",
@@ -238,10 +278,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "730a88418457d3860fdb7dd873393f7d198b27fe3be0552f6b42e25cc08e03f1",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-7f3f9baf-945e-448e-928e-bab86368fc50.png"
     },
     {
       "id": "kk-012",
@@ -260,10 +304,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "b70eea6bfa6bcecaa5db0307dc15ae92a230c441eb89f53718ef6213ecfbf50e",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-33de66d7-22eb-445a-9b6c-f5dd80302b2e.png"
     },
     {
       "id": "kk-013",
@@ -282,10 +330,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "29428aadf87b3d328a3bc784409aa89de241c7b49915944edee3da70ca4eba04",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-5ac304c4-5379-48ad-aef9-354faaf3aa97.png"
     },
     {
       "id": "kk-014",
@@ -304,10 +356,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "b2909f3b1bb2f20707905bd51e5541366682bed24fa5655b557caee941e8ec11",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-51f041aa-c384-4850-9478-66bc1397d879.png"
     },
     {
       "id": "kk-015",
@@ -326,10 +382,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "56d82d54be98dfa50a0dd3365d09492d18df5d69cf70b494406500550eed18d9",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-95812709-8f96-4982-b0cd-69e34ab3ffa5.png"
     },
     {
       "id": "kk-016",
@@ -348,10 +408,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "6a1122a87ba262ce759d9feae220c0b47f49cba03645935fdcdc57697f0bc8b5",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Cat, loose pottery and plants are optional dressing; preserve shelving structure.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-0e78842e-15e7-4238-9118-445d66bd82ae.png"
     },
     {
       "id": "kk-017",
@@ -370,10 +434,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "f50f3d55a8a114b58131d8be3ffcea758c13740d698e6008952b755a0ab0feb0",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-c88377f8-d813-4942-ac45-4fbc458be3da.png"
     },
     {
       "id": "kk-018",
@@ -392,10 +460,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "281deca7ff6c0f61ef2f1f7255bf52ea8f032fd9b5cf9d968462c6019bf76047",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-10e0447c-428c-4a86-9bbf-079737d97f34.png"
     },
     {
       "id": "kk-019",
@@ -414,10 +486,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "6756d5e66b34f5529d22dac02b80a8d9b90e13e4efd8db0b8f6241c9da4845c2",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-ef351c55-e435-4314-bb2c-80a3c46f5c44.png"
     },
     {
       "id": "kk-020",
@@ -436,10 +512,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "f33d3f210c32e0cd13ef0f943be71e6b5b9b976fe290b64c9f9a56714a1be923",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-df5d56a6-3fbf-413b-85dd-16e0e75abcf7.png"
     },
     {
       "id": "kk-021",
@@ -458,10 +538,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "f65b894424b20b50f9551c986df986ef8c11e5876d9d471daa8a594aa4aed14a",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-46b303d0-15e4-428f-b5b9-af1bab25d10d.png"
     },
     {
       "id": "kk-022",
@@ -480,10 +564,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "3acb4261c87adbf4d0ce22e8cba25e750c7c18d40e573228b660117a60600aa4",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-1be04f43-cc60-4411-a30e-d777043d415a.png"
     },
     {
       "id": "kk-023",
@@ -502,10 +590,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "d0ab724b298a5147df8e6d7f95706ad7e08e256e58bb2effca64941878255668",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-ecee688a-79ea-45f1-8ca1-1ab752d5be89.png"
     },
     {
       "id": "kk-024",
@@ -523,11 +615,18 @@
       "prompt": "Use case: stylized-concept. One high-resolution square production reference image for a 3D game prop from a cohesive 1990s Kyoto cat cafe kit. STRONG manga ink contours and visible flat cel shading, elegant hand-painted game art with simplified broad material areas. Charcoal #262128, ivory #efe4cc, moss #788468, restrained vermilion #d85645, indigo #667c9c. Loved cedar, handmade ceramics and softened fabric as appropriate. Isolate ONLY the described asset on a plain neutral ivory backdrop. Entire silhouette visible with generous 15 percent margins, consistent front-right three-quarter view, elevated 20 degrees, soft upper-left light. Readable functional construction. No scene, no extra furniture, no people, no branding, no writing, no annotations, no watermark. Avoid photorealism and plastic toy appearance. Subject: Ventilated litter enclosure: low cedar cabinet with offset entrance",
       "generator": "built-in ImageGen",
       "model": null,
-      "reference_inputs": [],
-      "qa": "pending",
+      "reference_inputs": [
+        "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-3968f851-77b7-454a-b535-27827582c7f7.png"
+      ],
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "95b6f27ab17b438245c31e78aababe0e219ef1366d1ebf960878ffb8c3cd5185",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-ca47c802-4957-40cd-87fd-c637b3bc1ec4.png",
+      "edit_prompt": "Edit this reference ONLY to zoom out and complete the canvas framing. Preserve the exact asset, materials, colors and cel-shaded style. Show the ENTIRE object including every extremity, leaf tip, hanging loop, feather and base. Object must fit within the central 65 percent of the square canvas, with broad plain ivory margins on ALL FOUR sides. No cropping and no new objects. Solid neutral ivory background."
     },
     {
       "id": "kk-025",
@@ -546,10 +645,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "2ddb66b101535dc5f3e46f1e170289fa84dce349b0854d0b69a8d459c60a6638",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-51f24aff-2795-4adb-8645-1f7a4991a777.png"
     },
     {
       "id": "kk-026",
@@ -568,10 +671,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "f64df5dcaa9f4b7719eb897f3889ff2c13ce94c182f00f369aaacaea97c96c3b",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-567c23ea-9305-477f-80df-7f1be8ca7222.png"
     },
     {
       "id": "kk-027",
@@ -590,10 +697,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "c208310972536697248839855f4d764e0de4b950b633724295ec3b5cfcd17b3f",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-73e5f6ce-6dfd-4282-a627-8b8c88659001.png"
     },
     {
       "id": "kk-028",
@@ -612,10 +723,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "c0b755dee337064b6a1089ccbda18c272bd1725ddf73c72243a96cafa02df480",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-019cdd57-074f-4b1c-94db-492742eddda0.png"
     },
     {
       "id": "kk-029",
@@ -634,10 +749,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "47260c8911e45ba70fbcf49cfc7315adb19e4073a06351594b2e0ec9dcb04517",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-77453a98-c1c2-4486-9684-518c65c38f44.png"
     },
     {
       "id": "kk-030",
@@ -656,10 +775,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "d59f0075f1e8838b39f647c95c957b16e2f257ad3a685d9001b487ff316686c9",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-35d230e8-ec64-4788-bf6b-51b7fb422395.png"
     },
     {
       "id": "kk-031",
@@ -678,10 +801,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "4ad6781e5a71a431ff2585b62a0a5750bb2efe64781d7a7c9a45e45403ad7bfd",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Build a plausible whisk and ceramic support; avoid intersecting whisk tines.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-c89dd527-a8f7-4718-9541-33c7d0f3f866.png"
     },
     {
       "id": "kk-032",
@@ -700,10 +827,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "5c209dbf66fda2740d0e46bdea3168cb6905006629b47318b4f3c6ba0c7da059",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-d8573615-016c-48c6-bb66-89289368670d.png"
     },
     {
       "id": "kk-033",
@@ -722,10 +853,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "a1d1d5939efd0db65b7a54799ee3fad2e7239266031b41d67812ba76e5e84ca0",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-c0383755-aeac-46ef-ae73-89ed93dc07b0.png"
     },
     {
       "id": "kk-034",
@@ -744,10 +879,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "de8dabe1683fbd33fed67014bc927ca5aba60b7b2453a31bb0fe9edec137fd0b",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-bc77f931-7e6a-4241-9e5d-f94e9c3c6dc6.png"
     },
     {
       "id": "kk-035",
@@ -766,10 +905,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "7f7dbb3b03593b1252b4fabd0924a321e390324a45dbb2f2aaa12f60cd950d88",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-db201c80-b5e7-420d-964d-33bde0ea1d89.png"
     },
     {
       "id": "kk-036",
@@ -788,10 +931,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "348838e542859fe4a429956070fddc0228e44bddb891562a92fb95e6d3388cb6",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-89b89cd5-dcd4-414a-94d4-a26aa2283de1.png"
     },
     {
       "id": "kk-037",
@@ -810,10 +957,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "99d9128a3561198d51464c177bfd4e83eee57b663298fe6939768ee1519af1b4",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-3d1a257d-7bc6-4980-a830-083ecb1d2485.png"
     },
     {
       "id": "kk-038",
@@ -832,10 +983,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "978e49c680e6a51bf843e9a5731ad633a5d03a2b1c0a3b247e6aaa322aba7b66",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-667f2bbb-a20f-4b46-91ad-3dfbc248ce51.png"
     },
     {
       "id": "kk-039",
@@ -854,10 +1009,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "900d624222cfcd340eda8a1466b616a347193ed5779fe886c1880f5569732221",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-67ef5baa-78f0-4ca5-8a62-8ea018d6618d.png"
     },
     {
       "id": "kk-040",
@@ -876,10 +1035,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "8720a64afa95bf7bcfc56f7c75bf20a206709b2e223f41a2b48ee40bb7fed8e6",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-e6bdbed5-28ed-4ab1-bc79-578fa9305d1e.png"
     },
     {
       "id": "kk-041",
@@ -898,10 +1061,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "ba3cf004c9136f3531b9655164a8263ac6e0e15bc18e0eccbcbea38d25076c67",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-0d22648b-bcb7-4a00-8907-5bb959ca7f64.png"
     },
     {
       "id": "kk-042",
@@ -920,10 +1087,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "33221d19af605011276b3dd9af0b4ac650b0e91f5137d7c6822d7feee38dbd11",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-8ae00a0d-7439-431f-a51e-2b3b08828f1b.png"
     },
     {
       "id": "kk-043",
@@ -942,10 +1113,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "0a468ffada65a215e3d74bb50b7d4c10b999b41b53016903306cfc60b578f12c",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Dial numerals are illustrative, not a required exact texture.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-e765ba80-bd2b-4a3c-89fd-d80f496fd429.png"
     },
     {
       "id": "kk-044",
@@ -963,11 +1138,18 @@
       "prompt": "Use case: stylized-concept. One high-resolution square production reference image for a 3D game prop from a cohesive 1990s Kyoto cat cafe kit. STRONG manga ink contours and visible flat cel shading, elegant hand-painted game art with simplified broad material areas. Charcoal #262128, ivory #efe4cc, moss #788468, restrained vermilion #d85645, indigo #667c9c. Loved cedar, handmade ceramics and softened fabric as appropriate. Isolate ONLY the described asset on a plain neutral ivory backdrop. Entire silhouette visible with generous 15 percent margins, consistent front-right three-quarter view, elevated 20 degrees, soft upper-left light. Readable functional construction. No scene, no extra furniture, no people, no branding, no writing, no annotations, no watermark. Avoid photorealism and plastic toy appearance. Subject: Ceramic wind bell: compact glazed bell with hanging blank paper strip",
       "generator": "built-in ImageGen",
       "model": null,
-      "reference_inputs": [],
-      "qa": "pending",
+      "reference_inputs": [
+        "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-4c5ad17c-5aff-498e-be6d-0a7ff35951bf.png"
+      ],
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "5d26be6e47d8031952b44811f85fe7249fdefe3ba474e4c5101ac04d8b337545",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-6ffee06a-f137-48f5-87dd-5da48bf24a5d.png",
+      "edit_prompt": "Edit this reference ONLY to zoom out and complete the canvas framing. Preserve the exact asset, materials, colors and cel-shaded style. Show the ENTIRE object including every extremity, leaf tip, hanging loop, feather and base. Object must fit within the central 65 percent of the square canvas, with broad plain ivory margins on ALL FOUR sides. No cropping and no new objects. Solid neutral ivory background."
     },
     {
       "id": "kk-045",
@@ -985,11 +1167,18 @@
       "prompt": "Use case: stylized-concept. One high-resolution square production reference image for a 3D game prop from a cohesive 1990s Kyoto cat cafe kit. STRONG manga ink contours and visible flat cel shading, elegant hand-painted game art with simplified broad material areas. Charcoal #262128, ivory #efe4cc, moss #788468, restrained vermilion #d85645, indigo #667c9c. Loved cedar, handmade ceramics and softened fabric as appropriate. Isolate ONLY the described asset on a plain neutral ivory backdrop. Entire silhouette visible with generous 15 percent margins, consistent front-right three-quarter view, elevated 20 degrees, soft upper-left light. Readable functional construction. No scene, no extra furniture, no people, no branding, no writing, no annotations, no watermark. Avoid photorealism and plastic toy appearance. Subject: Maple branch vase: narrow handmade vessel with sparse angular maple branch",
       "generator": "built-in ImageGen",
       "model": null,
-      "reference_inputs": [],
-      "qa": "pending",
+      "reference_inputs": [
+        "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-6b21b275-c1ea-4ed3-9eee-ae162c1c9d0f.png"
+      ],
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "2ed250732d69bfc73c815e3ffc81fe151b962b643a94059577665a27b1242798",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-db10f96f-1b75-422a-bc1d-2c7026209101.png",
+      "edit_prompt": "Edit this reference ONLY to zoom out and complete the canvas framing. Preserve the exact asset, materials, colors and cel-shaded style. Show the ENTIRE object including every extremity, leaf tip, hanging loop, feather and base. Object must fit within the central 65 percent of the square canvas, with broad plain ivory margins on ALL FOUR sides. No cropping and no new objects. Solid neutral ivory background."
     },
     {
       "id": "kk-046",
@@ -1007,11 +1196,18 @@
       "prompt": "Use case: stylized-concept. One high-resolution square production reference image for a 3D game prop from a cohesive 1990s Kyoto cat cafe kit. STRONG manga ink contours and visible flat cel shading, elegant hand-painted game art with simplified broad material areas. Charcoal #262128, ivory #efe4cc, moss #788468, restrained vermilion #d85645, indigo #667c9c. Loved cedar, handmade ceramics and softened fabric as appropriate. Isolate ONLY the described asset on a plain neutral ivory backdrop. Entire silhouette visible with generous 15 percent margins, consistent front-right three-quarter view, elevated 20 degrees, soft upper-left light. Readable functional construction. No scene, no extra furniture, no people, no branding, no writing, no annotations, no watermark. Avoid photorealism and plastic toy appearance. Subject: Cat toy basket: woven basket with feather wand and cloth toys",
       "generator": "built-in ImageGen",
       "model": null,
-      "reference_inputs": [],
-      "qa": "pending",
+      "reference_inputs": [
+        "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-11271011-5fb2-4bc5-adda-646f0e8f26ad.png"
+      ],
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "0744e879c8a716d8720598c343caf731f193dc1e52774bfba6839e89e2467bd0",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-a8db3fd5-8a83-430d-97db-7aa6b452236e.png",
+      "edit_prompt": "Edit this reference ONLY to zoom out and complete the canvas framing. Preserve the exact asset, materials, colors and cel-shaded style. Show the ENTIRE object including every extremity, leaf tip, hanging loop, feather and base. Object must fit within the central 65 percent of the square canvas, with broad plain ivory margins on ALL FOUR sides. No cropping and no new objects. Solid neutral ivory background."
     },
     {
       "id": "kk-047",
@@ -1030,10 +1226,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "02f57b671dd1a2e904e0b696df757062c1d3aa06b7858eb424030ed80d002671",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Correct the illustrated comb to have open-ended teeth; simplify brush bristles for mobile.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-5de81f6d-00b6-48e8-a30f-bc77224ffa13.png"
     },
     {
       "id": "kk-048",
@@ -1052,10 +1252,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "3b46083c35ab023fc3878cd0e9f8525df183cdc39010653e56795bc12e11a944",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-1167fba5-4ac1-4651-89b5-065be35c834c.png"
     },
     {
       "id": "kk-049",
@@ -1074,10 +1278,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "0c93e26a0d64730adfc4b826b1e488cbf55b531986f4dcc247e9d41c47de0a37",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-02fb4aef-1dfb-48ff-94cb-3531343ae98a.png"
     },
     {
       "id": "kk-050",
@@ -1096,10 +1304,14 @@
       "generator": "built-in ImageGen",
       "model": null,
       "reference_inputs": [],
-      "qa": "pending",
+      "qa": "reviewed",
       "source": null,
       "glb": null,
-      "preview": null
+      "preview": null,
+      "sha256": "092fab8ca6fa99cfc470d1fe28571e51b44c83a158bf62931caf8e90ae77d28d",
+      "qa_scope": "Visual concept review: subject, silhouette, palette, framing. Not 3D or mobile validation.",
+      "review_notes": "Optional loose dressing can be omitted; reconstruct concealed surfaces plausibly.",
+      "generated_source": "/Users/mlopez/.codex/generated_images/01a096f5-2f91-7bf2-b727-ef41245e77e0/exec-17bb36e5-e755-4088-81af-8e634392ec37.png"
     }
   ]
 }
