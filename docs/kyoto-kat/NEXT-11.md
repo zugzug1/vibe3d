@@ -148,3 +148,24 @@ Combined local review archive (005 original target, 003 and 017 repairs):
 `/Volumes/zug1/kyoto-kat-kit/pilot-review/cabinet-repairs-original-bench-2026-09-12-v1/README.md`.
 Sources require repository shared modules. Local paths are not remote downloads.
 New cabinet visuals await Miguel's approval; no new batch starts automatically.
+
+## Approved cabinets and next-seven authorization — 2026-09-13
+
+Miguel approved 003/017 and requested continuation. Fifteen models are now
+appearance-approved. Original-height 005 follows his explicit dimensional request.
+Next seven proceed as one integration checkpoint, not an automatic merge/release.
+
+- Luna-medium A owns 009 engawa, 013 low table, 015 trolley.
+- Luna-medium B owns 007 lantern, 010 entrance, 014 zabuton, 018 basin.
+- Existing approved references: 005 for soft fabric and cedar, 016/017 for hollow
+  ceramics and material ownership, 003 for stable configuration and fitted parts.
+- Each worker reads only its references, manifest entries, required vibe-model
+  instructions and suitable approved examples. No copying earlier rejected sources.
+- Exact original dimensions, stable anchors, positive geometry, proper outward
+  normals, grounded pivots (ceiling mount for lantern), shared portable maps and
+  category triangle caps are non-negotiable. Decorative context is not extra assets.
+- Coordinator serializes early renders, exports/reimports, runs measurable checks
+  and integrates disjoint directories. One temporary Luna critic per completed
+  batch, one correction pass; unresolved defects stop expansion and enter repair.
+- No Astra/Sol escalation, repeated reviews, new framework or standing validator.
+  No promise of first-pass visual acceptance. Model budgets are not phone FPS.

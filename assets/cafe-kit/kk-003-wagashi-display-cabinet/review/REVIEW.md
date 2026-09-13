@@ -1,5 +1,8 @@
 # kk-003 Wagashi display cabinet
 
+User acceptance: Miguel explicitly approved the final exported appearance on
+2026-09-13. Historical checkpoint text below describes the pre-approval checks.
+
 Reference: `/Volumes/zug1/kyoto-kat-kit/v1/images/kk-003.png`. Exact authored envelope: 1.20 × 0.50 × 1.10 m (width/depth/height), bottom-centre origin, Y-up.
 
 Status: final source iteration 005 and exported/reimported close/gameplay previews are generated. Coordinator inspected final GLB close/gameplay pixels: coherent frame, populated tiers, seated trays, lobed pink sweets and readable glazing. No user acceptance is claimed.

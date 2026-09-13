@@ -1,5 +1,8 @@
 # kk-017 Sliding-door pantry
 
+User acceptance: Miguel explicitly approved the final exported appearance on
+2026-09-13. Historical checkpoint text below describes the pre-approval checks.
+
 Reference: `/Volumes/zug1/kyoto-kat-kit/v1/images/kk-017.png`. Exact authored envelope: 0.85 × 0.45 × 1.80 m (width/depth/height), bottom-centre origin, Y-up.
 
 Status: final source iteration 005 and exported/reimported close/gameplay previews are generated. Coordinator inspected final GLB close/gameplay pixels: open slats, stocked interior and dark recessed pulls read clearly, with restrained vessel tint variations. No user acceptance is claimed.
