@@ -66,12 +66,17 @@ test('kk-005 all cushion counts remain seated and within budget; front lattice c
       triangles += (object.geometry.index?.count ?? object.geometry.getAttribute('position').count) / 3
       if (object.name.endsWith('/ stuffed seat cushion')) {
         cushions++
-        expect(new Box3().setFromObject(object).min.y).toBeCloseTo(0.598, 4)
+        expect(new Box3().setFromObject(object).min.y).toBeCloseTo(0.384, 4)
       }
       if (object.name.endsWith('/ front vertical lattice')) expect(new Box3().setFromObject(object).min.z).toBeGreaterThan(paperBox.max.z)
     } })
     expect(cushions).toBe(model.getConfig().cushionCount)
     expect(triangles).toBeLessThanOrEqual(15000)
+    const size = new Box3().setFromObject(model.root).getSize(new Vector3())
+    expect(size.x).toBeCloseTo(1.60, 4)
+    expect(size.y).toBeCloseTo(0.85, 4)
+    expect(size.z).toBeCloseTo(0.55, 4)
+    expect(model.root.scale.toArray()).toEqual([1, 1, 1])
   }
   model.dispose()
 })

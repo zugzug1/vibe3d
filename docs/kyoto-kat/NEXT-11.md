@@ -100,3 +100,51 @@ Review package (local-only):
 Includes source and GLB close/gameplay captures, GLBs, per-asset sources/reviews,
 topology sidecars and verified copy checksums. Sources require this repo's shared
 modules; the package is not a standalone source distribution.
+
+## User approval and original bench dimensions
+
+Miguel explicitly approved 005 and 016 on 2026-09-12: "approved both. we should
+use the original target." Record their repaired appearance as approved at
+8968f85; retain that immutable archive. 005 subsequently returns to the original
+1.60 x 0.55 x 0.85 m target without changing the manifest or uniformly shrinking
+the upholstery. A new lower-frame preview accompanies this requested revision.
+016 receives no geometry or material changes.
+
+Original-target bench source and exported/reimported close/gameplay previews were
+inspected and archived with 10 verified copies at
+`/Volumes/zug1/kyoto-kat-kit/pilot-review/bench-original-target-2026-09-12-v1/README.md`.
+The 7,048-triangle GLB is 618,988 bytes. Regression tests assert exact width,
+depth and height for all cushion counts, grounded pivot and unit root scale.
+
+Miguel also authorized a bounded Astra-low repair of 003 wagashi cabinet and
+017 pantry. Reuse the existing worker and opt-in surface helper; no additional
+agents, global palette change or broad production. Coordinator handles the bench,
+shared documentation, checks and serialized exports/renders. New cabinet repairs
+remain pending visual approval. Overall: 13 appearance approvals, two cabinet
+drafts and 35 unstarted models; seven of the requested next eleven stay paused.
+
+## Cabinet repairs ready for user review
+
+One Astra-low worker, two cabinet assets, one refinement pass. 003 has complete
+glazed framing, nine seated trays and 36 sweets; 017 has real open slats, stocked
+interiors and charcoal-lined recessed pulls. Reused approved surface maps without
+changing shared materials or any other approved geometry. Both retain original
+manifest envelopes and existing runtime interfaces. Door configurations remain
+static visibility controls, not animated sliding mechanisms.
+
+Coordinator inspected exported/reimported close and gameplay captures. Technical
+results: 185 affected tests pass, registry build passes, exact dimensions checked
+across configurations, coplanar bounds checks pass with 153/70 inspected parts,
+and regenerated topology sidecars pass current tests. Node typecheck retains the
+five existing unrelated F1/render-headless errors. Default topology selection
+does not establish full collision coverage; phone performance remains pending.
+
+- 003: 13,220/15,000 triangles; GLB 904,916 bytes; source close iteration 005.
+- 017: 4,320/6,000 triangles; GLB 538,156 bytes; source close iteration 005.
+- Both GLBs use embedded standard PBR textures, verified through Three reimport.
+- No painted motifs, elaborate pastry wrappers or ink outlines are claimed.
+
+Combined local review archive (005 original target, 003 and 017 repairs):
+`/Volumes/zug1/kyoto-kat-kit/pilot-review/cabinet-repairs-original-bench-2026-09-12-v1/README.md`.
+Sources require repository shared modules. Local paths are not remote downloads.
+New cabinet visuals await Miguel's approval; no new batch starts automatically.

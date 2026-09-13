@@ -1,8 +1,7 @@
-// kk-003-wagashi-display-cabinet — low glazed cedar case with tiered trays and sliding doors.
-// DATUM: 1.20 × 0.50 × 1.10 m authored envelope, Y-up, front = +Z.
-
-import { Box3, BufferGeometry, Group, Mesh, MeshStandardMaterial, Vector3, type Material } from 'three/webgpu'
-import { acquireKkMaterials, bevelBox, bevelDisc, createKkPreview, finishModel, mergeParts, socket } from '../kk-core/index.ts'
+// 1.20 x 0.50 x 1.10 m; bottom-centre, Y-up, front +Z.
+import { Group, Mesh, PlaneGeometry, SphereGeometry, DoubleSide, type BufferGeometry, type Material, type MeshStandardMaterial } from 'three/webgpu'
+import { bevelBox, createKkPreview, socket, type KkMaterials } from '../kk-core/index.ts'
+import { acquireSurfaceMaterials, boardUVs } from '../kk-core/surface-detail.ts'
 
 const ID = 'kk-003-wagashi-display-cabinet'
 type Slot = 'cedar' | 'cedarDark' | 'trayCharcoal' | 'glass' | 'washi' | 'ceramic' | 'moss' | 'vermilion'
@@ -19,106 +18,101 @@ export interface KkCabinetInstance {
   dispose(): void
 }
 
-function box(w: number, h: number, d: number, x: number, y: number, z: number, bevel = 0.006): BufferGeometry {
-  const geometry = bevelBox(w, h, d, bevel); geometry.translate(x, y, z); return geometry
-}
-
 export function createModel(options: KkCabinetOptions = {}): KkCabinetInstance {
-  const config: KkCabinetConfig = { doors: options.doors ?? true, trays: options.trays ?? true }
-  const bundle = acquireKkMaterials({ overrides: options.materials }); const kit = bundle.materials
+  const config = { doors: options.doors ?? true, trays: options.trays ?? true }
+  const bundle = acquireSurfaceMaterials({ cedar: 'cedar', cedarDark: 'cedar', washi: 'paper', glaze: 'glaze', glazeMoss: 'glaze' }, Object.fromEntries(Object.entries({
+    cedar: options.materials?.cedar, cedarDark: options.materials?.cedarDark, washi: options.materials?.washi,
+    glaze: options.materials?.ceramic, glazeMoss: options.materials?.moss,
+  }).filter(([, material]) => material !== undefined)))
+  // The helper acquires the complete kit bundle; only the selected surfaces receive detail.
+  const kit = bundle.materials as Record<keyof KkMaterials, Material>
   const materials: Record<Slot, Material> = {
-    cedar: options.materials?.cedar ?? kit.cedar,
-    cedarDark: options.materials?.cedarDark ?? kit.cedarDark,
-    trayCharcoal: kit.ink,
-    glass: options.materials?.glass ?? kit.glass,
-    washi: options.materials?.washi ?? kit.washi,
-    ceramic: kit.glaze,
-    moss: kit.glazeMoss,
-    vermilion: kit.vermilion,
+    cedar: kit.cedar, cedarDark: kit.cedarDark, washi: kit.washi, ceramic: kit.glaze, moss: kit.glazeMoss,
+    trayCharcoal: options.materials?.trayCharcoal ?? kit.ink, glass: options.materials?.glass ?? kit.glass,
+    vermilion: options.materials?.vermilion ?? kit.vermilion,
   }
+  if (!options.materials?.glass) { const glass = materials.glass as MeshStandardMaterial; glass.opacity = 0.12; glass.side = DoubleSide }
+  if (!options.materials?.ceramic) (materials.ceramic as MeshStandardMaterial).roughness = 0.82
+  if (!options.materials?.moss) (materials.moss as MeshStandardMaterial).roughness = 0.85
   const root = new Group(); root.name = ID
-  const carcass = new Group(); carcass.name = 'carcass'
-  const doors = new Group(); doors.name = 'doors'
-  const trays = new Group(); trays.name = 'trays'
-  const dressing = new Group(); dressing.name = 'dressing'
-  root.add(carcass, doors, trays, dressing)
-  const generated: BufferGeometry[] = []; const meshesBySlot: Record<Slot, Mesh[]> = { cedar: [], cedarDark: [], trayCharcoal: [], glass: [], washi: [], ceramic: [], moss: [], vermilion: [] }
-  const emit = (group: Group, name: string, slot: Slot, parts: BufferGeometry[]): void => {
-    if (!parts.length) return
-    const geometry = mergeParts(parts, `${ID}: ${name}`); generated.push(geometry)
-    const mesh = new Mesh(geometry, materials[slot]); mesh.name = `${ID} / ${name}`; mesh.castShadow = true; mesh.receiveShadow = true
-    if (slot === 'glass') mesh.renderOrder = 2
-    group.add(mesh); meshesBySlot[slot].push(mesh)
+  const parts = { carcass: new Group(), doors: new Group(), trays: new Group(), dressing: new Group() }
+  const content = new Map<Group, Group>()
+  for (const [name, anchor] of Object.entries(parts)) {
+    anchor.name = `${ID} / ${name}`; root.add(anchor)
+    const group = new Group(); anchor.add(group); content.set(anchor, group)
   }
-  const release = (): void => {
-    for (const group of [carcass, doors, trays, dressing]) group.clear()
-    for (const geometry of generated) geometry.dispose(); generated.length = 0
-    for (const slot of Object.keys(meshesBySlot) as Slot[]) meshesBySlot[slot].length = 0
+  root.add(socket('anchor-cabinet', [0, 0, 0]))
+  const geometries: BufferGeometry[] = []
+  let disposed = false
+  const emit = (group: Group, geometry: BufferGeometry, slot: Slot, pos: [number, number, number], name: string): Mesh => {
+    geometries.push(geometry)
+    const mesh = new Mesh(geometry, materials[slot]); mesh.name = `${ID} / ${name}`; mesh.position.set(...pos)
+    mesh.castShadow = slot !== 'glass'; mesh.receiveShadow = slot !== 'glass'
+    mesh.userData.materialSlot = slot
+    if (slot === 'glass') mesh.renderOrder = 2
+    content.get(group)!.add(mesh); return mesh
+  }
+  const box = (group: Group, slot: Slot, size: [number, number, number], pos: [number, number, number], name: string): void => {
+    const geometry = bevelBox(...size, Math.min(0.0035, Math.min(...size) * 0.15)); boardUVs(geometry, size)
+    emit(group, geometry, slot, pos, name)
   }
   const rebuild = (): void => {
-    release()
-    const wood: BufferGeometry[] = [
-      box(1.14, 0.08, 0.46, 0, 1.08, 0, 0.008), box(1.14, 0.10, 0.46, 0, 0.08, 0, 0.008),
-      box(1.08, 0.10, 0.05, 0, 1.025, 0.20, 0.005),
-      box(1.08, 0.06, 0.04, 0, 0.13, -0.20, 0.004),
-      // Front posts lap the side panels by 10 mm instead of sharing their outer x face.
-      box(0.06, 1.02, 0.06, -0.575, 0.57, 0.22, 0.004), box(0.06, 1.02, 0.06, 0.575, 0.57, 0.22, 0.004),
-    ]
-    for (const x of [-0.565, 0.565]) {
-      wood.push(box(0.05, 0.05, 0.36, x, 1.01, 0.02, 0.004), box(0.05, 0.05, 0.36, x, 0.17, 0.02, 0.004), box(0.05, 0.82, 0.05, x, 0.59, -0.18, 0.004))
+    content.forEach((g) => g.clear()); geometries.splice(0).forEach((g) => g.dispose())
+    box(parts.carcass, 'cedar', [1.20, 0.045, 0.50], [0, 1.0775, 0], 'continuous crown')
+    box(parts.carcass, 'cedar', [1.15, 0.055, 0.46], [0, 0.1075, 0], 'bottom plinth')
+    for (const x of [-0.55, 0.55]) for (const z of [-0.205, 0.205]) {
+      box(parts.carcass, 'cedar', [0.065, 0.08, 0.065], [x, 0.04, z], 'short foot')
+      box(parts.carcass, 'cedar', [0.055, 0.92, 0.055], [x, 0.595, z], 'continuous corner post')
     }
-    for (const y of [0.33, 0.58, 0.83]) wood.push(box(1.04, 0.045, 0.38, 0, y, -0.005, 0.004))
-    for (const x of [-0.52, 0.52]) for (const z of [-0.18, 0.18]) wood.push(box(0.09, 0.07, 0.08, x, 0.035, z, 0.004))
-    emit(carcass, 'cedar-case', 'cedar', wood)
-    emit(carcass, 'glazed-side-panels', 'glass', [-0.565, 0.565].map((x) => box(0.004, 0.78, 0.32, x, 0.59, 0.02, 0)))
-    if (config.doors) {
-      const doorFrames: BufferGeometry[] = []
-      for (const x of [-0.285, 0.285]) {
-        doorFrames.push(box(0.53, 0.035, 0.018, x, 0.18, 0.235, 0.003), box(0.53, 0.035, 0.018, x, 0.98, 0.235, 0.003))
-        doorFrames.push(box(0.035, 0.78, 0.018, x - 0.247, 0.58, 0.235, 0.003), box(0.035, 0.78, 0.018, x + 0.247, 0.58, 0.235, 0.003))
-      }
-      emit(doors, 'sliding-door-frames', 'cedarDark', doorFrames)
-      // A single transparent layer per door; the shelves remain readable behind it.
-      emit(doors, 'glazed-doors', 'glass', [-0.285, 0.285].map((x) => box(0.47, 0.70, 0.004, x, 0.58, 0.228, 0)))
+    box(parts.carcass, 'cedarDark', [1.045, 0.92, 0.020], [0, 0.595, -0.222], 'closed cedar back')
+    for (const x of [-0.55, 0.55]) {
+      box(parts.carcass, 'cedar', [0.055, 0.15, 0.36], [x, 0.21, 0], 'lower side panel')
+      box(parts.carcass, 'cedar', [0.052, 0.035, 0.36], [x, 1.035, 0], 'side glazing rail')
+      const pane = emit(parts.carcass, new PlaneGeometry(0.355, 0.73), 'glass', [x, 0.65, 0], 'single side glass pane')
+      pane.rotation.y = Math.PI / 2
     }
-    if (config.trays) {
-      const trayParts: BufferGeometry[] = []
-      for (const y of [0.35, 0.60, 0.85]) {
-        for (const x of [-0.29, 0.29]) {
-          trayParts.push(box(0.43, 0.018, 0.30, x, y, 0.02, 0.002))
-          trayParts.push(box(0.43, 0.035, 0.018, x, y + 0.025, 0.16, 0.002), box(0.43, 0.035, 0.018, x, y + 0.025, -0.12, 0.002))
-          trayParts.push(box(0.018, 0.035, 0.26, x - 0.205, y + 0.025, 0.02, 0.002), box(0.018, 0.035, 0.26, x + 0.205, y + 0.025, 0.02, 0.002))
+    for (const y of [0.32, 0.56, 0.80]) box(parts.carcass, 'cedar', [1.045, 0.026, 0.385], [0, y - 0.013, -0.01], 'seated display shelf')
+    // Three full-width shelf tiers carry three trays each; everything is seated from shelf top.
+    if (config.trays) for (const [tier, y] of [0.32, 0.56, 0.80].entries()) for (const [col, x] of [-0.352, 0, 0.352].entries()) {
+      box(parts.trays, 'trayCharcoal', [0.323, 0.012, 0.325], [x, y + 0.006, 0], 'tray floor')
+      for (const z of [-0.157, 0.157]) box(parts.trays, 'trayCharcoal', [0.323, 0.018, 0.012], [x, y + 0.021, z], 'tray lip')
+      for (const side of [-1, 1]) box(parts.trays, 'trayCharcoal', [0.012, 0.018, 0.301], [x + side * 0.1555, y + 0.021, 0], 'tray side')
+      for (const dx of [-0.073, 0.073]) for (const z of [-0.073, 0.073]) {
+        const kind = (tier + col) % 3
+        const slot: Slot = kind === 0 ? 'moss' : kind === 1 ? 'ceramic' : 'vermilion'
+        if (tier === 1 && col === 1) {
+          box(parts.dressing, 'vermilion', [0.076, 0.061, 0.073], [x + dx, y + 0.0425, z], 'cut yokan sweet')
+        } else {
+          const sweet = new SphereGeometry(1, 16, 10); const p = sweet.getAttribute('position')
+          for (let i = 0; i < p.count; i++) {
+            const px = p.getX(i); const py = p.getY(i); const pz = p.getZ(i)
+            const angle = Math.atan2(pz, px)
+            const lobes = kind === 2 ? 1 + 0.23 * Math.cos(angle * 5) * (1 - py * py) : 1
+            const crease = kind === 2 && py > 0 ? 0.007 * Math.sin(angle * 2.5) ** 2 * (1 - py * py) : 0
+            p.setXYZ(i, px * 0.052 * lobes, py * 0.040 - crease, pz * 0.052 * lobes)
+          }
+          sweet.computeVertexNormals(); boardUVs(sweet, [0.104, 0.08, 0.104])
+          emit(parts.dressing, sweet, slot, [x + dx, y + 0.052, z], 'rounded wagashi')
         }
+        const accent = new SphereGeometry(1, 8, 4); accent.scale(0.010, 0.005, 0.010)
+        emit(parts.dressing, accent, kind === 1 ? 'vermilion' : 'ceramic', [x + dx, y + (tier === 1 && col === 1 ? 0.077 : 0.093), z], 'sweet flower centre')
       }
-      emit(trays, 'tiered-serving-trays', 'trayCharcoal', trayParts)
     }
-    // Lower opaque panel band echoes the reference without inventing pastry geometry.
-    emit(dressing, 'lower-washi-panels', 'washi', [box(0.48, 0.20, 0.006, -0.285, 0.27, 0.226, 0.001), box(0.48, 0.20, 0.006, 0.285, 0.27, 0.226, 0.001)])
-    const sweets: Record<'ceramic' | 'moss' | 'vermilion', BufferGeometry[]> = { ceramic: [], moss: [], vermilion: [] }
-    for (const y of [0.35, 0.60, 0.85] as const) {
-      const positions = [[-0.36, 0.01], [-0.24, 0.04], [-0.12, -0.01], [0.12, 0.03], [0.24, -0.02], [0.36, 0.04]]
-      positions.forEach(([x, z], index) => {
-        const sweet = index % 2 === 0 ? bevelDisc(0.032 + (index % 3) * 0.006, 0.028, 0.003, 16) : box(0.052 - (index % 3) * 0.006, 0.035, 0.046, x, y + 0.035, z, 0.003)
-        if (index % 2 === 0) sweet.rotateX(Math.PI / 2)
-        if (index % 2 === 0) sweet.translate(x, y + 0.035, z)
-        sweets[index % 3 === 1 ? 'vermilion' : index % 3 === 2 ? 'moss' : 'ceramic'].push(sweet)
-      })
+    if (config.doors) for (const [i, x] of [-0.262, 0.262].entries()) {
+      const z = i === 0 ? 0.216 : 0.236
+      for (const sx of [-1, 1]) box(parts.doors, 'cedar', [0.028, 0.886, 0.022], [x + sx * 0.247, 0.595, z], 'door stile')
+      for (const y of [0.153, 0.294, 1.037]) box(parts.doors, 'cedar', [0.468, 0.028, 0.022], [x, y, z], 'door rail')
+      box(parts.doors, 'washi', [0.465, 0.113, 0.009], [x, 0.2235, z - 0.006], 'lower washi inset')
+      emit(parts.doors, new PlaneGeometry(0.465, 0.714), 'glass', [x, 0.665, z - 0.006], 'single door glass pane')
+      box(parts.doors, 'trayCharcoal', [0.011, 0.065, 0.004], [x + (i === 0 ? -0.247 : 0.247), 0.52, z + 0.011], 'slim door pull')
     }
-    emit(dressing, 'wagashi-display', 'ceramic', sweets.ceramic)
-    emit(dressing, 'wagashi-moss', 'moss', sweets.moss)
-    emit(dressing, 'wagashi-accent', 'vermilion', sweets.vermilion)
-    const bounds = new Box3().setFromObject(root as never); const center = bounds.getCenter(new Vector3()); root.position.set(-center.x, -bounds.min.y, -center.z)
   }
   rebuild()
-  const finished = finishModel(root, bundle, { name: ID, geometries: generated, sockets: [socket('anchor-cabinet', [0, 0, 0])] })
-  return {
-    root, parts: { carcass, doors, trays, dressing }, materials,
-    getConfig: () => ({ ...config }),
-    configure(patch) { if (patch.doors !== undefined) config.doors = Boolean(patch.doors); if (patch.trays !== undefined) config.trays = Boolean(patch.trays); rebuild() },
-    setMaterial(slot, material) { materials[slot] = material; for (const mesh of meshesBySlot[slot]) mesh.material = material },
-    update: () => {}, dispose() { finished.dispose() },
+  return { root, parts, materials, getConfig: () => ({ ...config }),
+    configure(patch) { if (disposed) return; if (patch.doors !== undefined) config.doors = Boolean(patch.doors); if (patch.trays !== undefined) config.trays = Boolean(patch.trays); rebuild() },
+    setMaterial(slot, material) { if (disposed) return; materials[slot] = material; root.traverse((o) => { if (o instanceof Mesh && o.userData.materialSlot === slot) o.material = material }) },
+    update() {}, dispose() { if (disposed) return; disposed = true; geometries.splice(0).forEach((g) => g.dispose()); bundle.dispose(); root.removeFromParent() },
   }
 }
-
 export function createPreview({ aspect, yaw, pitch }: { aspect?: number; yaw?: number; pitch?: number } = {}) { return createKkPreview(createModel(), { aspect, yaw, pitch }) }
 export function createCafePreview({ aspect, yaw, pitch }: { aspect?: number; yaw?: number; pitch?: number } = {}) { return createKkPreview(createModel(), { aspect, yaw, pitch, framing: 'cafe' }) }

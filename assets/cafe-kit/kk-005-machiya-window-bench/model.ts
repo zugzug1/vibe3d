@@ -62,39 +62,40 @@ export function createModel(options: KkWindowBenchOptions = {}): KkWindowBenchIn
   const rebuild = (): void => {
     for (const group of content.values()) group.clear()
     geometries.splice(0).forEach((geometry) => geometry.dispose())
-    // 1.60 x 0.55 x 1.42 m. Side returns and rear screen seat into the same frame.
+    // Original 1.60 x 0.55 x 0.85 m target. Keep upholstery thickness and
+    // 0.479 m seat top; shorten the storage and shoji instead of scaling the model.
     for (const x of [-0.755, 0.755]) {
-      box(parts.frame, m.cedarDark, [0.09, 1.34, 0.09], [x, 0.67, -0.23], 'rear structural post')
-      box(parts.frame, m.cedar, [0.09, 1.34, 0.09], [x, 0.67, 0.23], 'front structural post')
-      box(parts.frame, m.cedar, [0.10, 0.10, 0.55], [x, 1.37, 0], 'side crown rail')
-      box(parts.frame, m.cedarDark, [0.065, 0.49, 0.39], [x, 0.335, 0], 'closed lower side panel')
-      box(parts.frame, m.cedar, [0.075, 0.065, 0.43], [x, 0.655, 0], 'side sill')
+      box(parts.frame, m.cedarDark, [0.09, 0.77, 0.09], [x, 0.385, -0.23], 'rear structural post')
+      box(parts.frame, m.cedar, [0.09, 0.77, 0.09], [x, 0.385, 0.23], 'front structural post')
+      box(parts.frame, m.cedar, [0.09, 0.10, 0.55], [x, 0.80, 0], 'side crown rail')
+      box(parts.frame, m.cedarDark, [0.065, 0.285, 0.39], [x, 0.2075, 0], 'closed lower side panel')
+      box(parts.frame, m.cedar, [0.075, 0.045, 0.43], [x, 0.485, 0], 'side sill')
     }
-    box(parts.frame, m.cedar, [1.42, 0.12, 0.10], [0, 1.36, -0.23], 'rear crown beam')
-    box(parts.frame, m.cedar, [1.42, 0.10, 0.075], [0, 0.71, -0.235], 'shoji sill')
-    box(parts.frame, m.cedarDark, [1.43, 0.09, 0.09], [0, 0.625, -0.23], 'continuous back apron')
-    box(parts.frame, m.cedar, [1.42, 0.048, 0.47], [0, 0.574, 0.005], 'seat deck')
-    box(parts.frame, m.cedarDark, [1.42, 0.07, 0.045], [0, 0.529, 0.235], 'front seat apron')
-    box(parts.frame, m.cedar, [1.42, 0.065, 0.47], [0, 0.1125, 0], 'continuous cabinet floor')
-    box(parts.frame, m.cedarDark, [1.42, 0.37, 0.024], [0, 0.33, -0.235], 'cabinet back')
-    box(parts.shoji, m.washi, [1.40, 0.54, 0.012], [0, 1.03, -0.243], 'rear paper')
-    box(parts.shoji, m.cedar, [0.05, 0.555, 0.042], [0, 1.035, -0.209], 'center mullion')
+    box(parts.frame, m.cedar, [1.42, 0.10, 0.10], [0, 0.80, -0.225], 'rear crown beam')
+    box(parts.frame, m.cedar, [1.42, 0.045, 0.075], [0, 0.485, -0.235], 'shoji sill')
+    box(parts.frame, m.cedarDark, [1.43, 0.07, 0.09], [0, 0.421, -0.23], 'continuous back apron')
+    box(parts.frame, m.cedar, [1.42, 0.048, 0.47], [0, 0.36, 0.005], 'seat deck')
+    box(parts.frame, m.cedarDark, [1.42, 0.05, 0.045], [0, 0.313, 0.235], 'front seat apron')
+    box(parts.frame, m.cedar, [1.42, 0.05, 0.47], [0, 0.09, 0], 'continuous cabinet floor')
+    box(parts.frame, m.cedarDark, [1.42, 0.23, 0.024], [0, 0.225, -0.235], 'cabinet back')
+    box(parts.shoji, m.washi, [1.40, 0.2425, 0.012], [0, 0.62875, -0.243], 'rear paper')
+    box(parts.shoji, m.cedar, [0.05, 0.2525, 0.042], [0, 0.62875, -0.209], 'center mullion')
     // Visible lattice is forward (+Z) of opaque paper. Crossbars have separate depth layers.
-    for (const x of [-0.60, -0.49, -0.38, -0.27, -0.16, 0.16, 0.27, 0.38, 0.49, 0.60]) box(parts.shoji, m.cedarDark, [0.011, 0.54, 0.016], [x, 1.03, -0.222], 'front vertical lattice')
-    for (const y of [0.91, 1.13]) box(parts.shoji, m.cedarDark, [1.40, 0.013, 0.015], [0, y, -0.208], 'front cross lattice')
+    for (const x of [-0.60, -0.49, -0.38, -0.27, -0.16, 0.16, 0.27, 0.38, 0.49, 0.60]) box(parts.shoji, m.cedarDark, [0.011, 0.2425, 0.016], [x, 0.62875, -0.222], 'front vertical lattice')
+    for (const y of [0.59, 0.67]) box(parts.shoji, m.cedarDark, [1.40, 0.013, 0.015], [0, y, -0.208], 'front cross lattice')
     for (const side of [-1, 1]) {
-      box(parts.shoji, m.washi, [0.012, 0.60, 0.37], [side * 0.773, 0.995, 0], 'side paper')
-      for (const z of [-0.135, -0.045, 0.045, 0.135]) box(parts.shoji, m.cedarDark, [0.018, 0.60, 0.011], [side * 0.75, 0.995, z], 'inside side lattice')
-      for (const y of [0.88, 1.09]) box(parts.shoji, m.cedarDark, [0.014, 0.013, 0.37], [side * 0.735, y, 0], 'inside side crossbar')
+      box(parts.shoji, m.washi, [0.012, 0.2425, 0.37], [side * 0.767, 0.62875, 0], 'side paper')
+      for (const z of [-0.135, -0.045, 0.045, 0.135]) box(parts.shoji, m.cedarDark, [0.018, 0.2425, 0.011], [side * 0.75, 0.62875, z], 'inside side lattice')
+      for (const y of [0.59, 0.67]) box(parts.shoji, m.cedarDark, [0.014, 0.013, 0.37], [side * 0.735, y, 0], 'inside side crossbar')
       // Both sides of the return are visible; the outside needs its own lattice over the paper.
-      for (const z of [-0.135, -0.045, 0.045, 0.135]) box(parts.shoji, m.cedarDark, [0.012, 0.60, 0.011], [side * 0.790, 0.995, z], 'outside side lattice')
-      for (const y of [0.88, 1.09]) box(parts.shoji, m.cedarDark, [0.010, 0.013, 0.37], [side * 0.800, y, 0], 'outside side crossbar')
+      for (const z of [-0.135, -0.045, 0.045, 0.135]) box(parts.shoji, m.cedarDark, [0.012, 0.2425, 0.011], [side * 0.782, 0.62875, z], 'outside side lattice')
+      for (const y of [0.59, 0.67]) box(parts.shoji, m.cedarDark, [0.010, 0.013, 0.37], [side * 0.795, y, 0], 'outside side crossbar')
     }
-    for (const x of [-0.285, 0, 0.285]) box(parts.cubbies, m.cedarDark, [0.04, 0.40, 0.43], [x, 0.347, -0.005], 'fitted bay divider')
+    for (const x of [-0.285, 0, 0.285]) box(parts.cubbies, m.cedarDark, [0.04, 0.225, 0.43], [x, 0.225, -0.005], 'fitted bay divider')
     for (const x of [-0.5025, 0.5025]) {
-      box(parts.cubbies, m.cedarDark, [0.38, 0.32, 0.35], [x, 0.325, -0.025], 'drawer body')
-      box(parts.cubbies, m.cedar, [0.387, 0.355, 0.030], [x, 0.3325, 0.213], 'fitted drawer face')
-      box(parts.cubbies, m.cedarDark, [0.105, 0.023, 0.025], [x, 0.405, 0.237], 'drawer handle')
+      box(parts.cubbies, m.cedarDark, [0.38, 0.185, 0.35], [x, 0.218, -0.025], 'drawer body')
+      box(parts.cubbies, m.cedar, [0.387, 0.208, 0.030], [x, 0.224, 0.213], 'fitted drawer face')
+      box(parts.cubbies, m.cedarDark, [0.105, 0.023, 0.025], [x, 0.255, 0.237], 'drawer handle')
     }
     const width = (1.40 - (config.cushionCount - 1) * 0.012) / config.cushionCount
     const cushion = (w: number, h: number, d: number, position: [number, number, number], material: Material, name: string, tilt = 0): void => {
@@ -106,8 +107,8 @@ export function createModel(options: KkWindowBenchOptions = {}): KkWindowBenchIn
       const seam = emit(parts.seat, new TubeGeometry(new CatmullRomCurve3(points, true), 40, 0.0017, 4, true), material, position, `${name} sewn edge`)
       seam.rotation.x = tilt
     }
-    for (let i = 0; i < config.cushionCount; i++) cushion(width, 0.095, 0.43, [-0.70 + width / 2 + i * (width + 0.012), 0.6455, 0.015], m.indigo, 'stuffed seat cushion')
-    for (const side of [-1, 1]) cushion(0.27, 0.10, 0.29, [side * 0.545, 0.82, -0.115], m.indigoFaded, 'soft back pillow', 1.34)
+    for (let i = 0; i < config.cushionCount; i++) cushion(width, 0.095, 0.43, [-0.70 + width / 2 + i * (width + 0.012), 0.4315, 0.015], m.indigo, 'stuffed seat cushion')
+    for (const side of [-1, 1]) cushion(0.27, 0.10, 0.29, [side * 0.545, 0.606, -0.115], m.indigoFaded, 'soft back pillow', 1.34)
   }
   rebuild()
   return {
