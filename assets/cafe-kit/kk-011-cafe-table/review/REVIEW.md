@@ -63,8 +63,9 @@ topology ✓ (`kk:compile-topology --only=kk-011-cafe-table`: 156 tris, manifold
 `bun test assets/cafe-kit/cafe-kit.topology.test.ts -t kk-011`, 1 pass)
 coplanar ✓ (exit 0 — see `open` below)
 inventory ✓ (`--check`, ok, no breach, no warning)
-qa-sheet ✓ (8 views inspected by me: symmetric, no floating part, no unclosed seam, all four brackets
-identical, plank seams straight in every view)
+qa-sheet ✓ (a GENUINE 8-view turntable — see below — inspected by me: elevations consistent on all four
+sides, apron cove symmetric, no floating part, no unclosed seam, feet flat, and the top-down view shows
+the plank seams dead straight across the whole slab)
 
 ## open
 - **The coplanar lens is structurally blind to this model** and reports "0 authored parts". It captures

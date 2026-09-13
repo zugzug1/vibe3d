@@ -397,7 +397,15 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
     for (let i = 0; i < count; i++) {
       const f = count === 1 ? 0 : (i / (count - 1)) * 2 - 1
       const x = f * SPINDLE_SPREAD
-      const landing = Math.max(0.02, SPINDLE_LANDING_R * SPINDLE_LANDING_R - x * x)
+      // Solve the spindle's top ON the landing circle. The floor here must be 0, not a "safe" positive
+      // number: a 0.02 floor silently overrode the real solution for the two OUTER spindles (whose
+      // x² term is larger), lifting their tips to radius 0.194 — 11 mm OUTSIDE a hoop of radius 0.168
+      // + 0.014 — so both end spindles crossed in front of the bow instead of entering it. The clamp
+      // fired on exactly the cases it was meant to protect, and it is invisible to every visual lens
+      // at the kit's preview angle. `SPINDLE_SPREAD < SPINDLE_LANDING_R` is what actually keeps this
+      // real, so it is asserted rather than clamped around.
+      const landing = SPINDLE_LANDING_R * SPINDLE_LANDING_R - x * x
+      if (landing <= 0) throw new Error(`${ID}: spindle ${i} at x=${x} cannot reach the bow`)
       const topY = CROWN_Y + Math.sqrt(landing)
       const from = new Vector3(x, SPINDLE_FOOT_Y, BOW_Z0 + config.rake * (SEAT_TOP - SPINDLE_FOOT_Y))
       const to = new Vector3(x, topY, BOW_Z0 + config.rake * (SEAT_TOP - topY))
@@ -457,8 +465,20 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
   }
 }
 
-export function createPreview({ aspect }: { aspect: number; time?: number }) {
-  return createKkPreview(createModel(), { aspect })
+/**
+ * Close-up preview. `yaw`/`pitch` are FORWARDED, which the contract's one-liner does not do — and that
+ * omission is what makes an 8-view QA sheet worthless: `scripts/qa-sheet.mjs` orbits by generating a
+ * module that calls `createPreview({ yaw, pitch })`, so a `createPreview({ aspect })` that destructures
+ * only `aspect` silently renders all eight panels from the default angle. This model's first 8-view
+ * sheet was eight copies of the hero shot, which is exactly why a spindle breaching the bow survived my
+ * own inspection of it and had to be caught by an outside critic instead.
+ */
+export function createPreview(
+  options: { aspect: number; time?: number; yaw?: number; pitch?: number },
+) {
+  return createKkPreview(createModel(), {
+    aspect: options.aspect, yaw: options.yaw, pitch: options.pitch,
+  })
 }
 
 export function createCafePreview({ aspect }: { aspect: number; time?: number }) {

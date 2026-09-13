@@ -2,10 +2,10 @@
 reference: images/kk-012.png · manifest target 0.45 × 0.48 × 0.85 m · built 0.450 × 0.480 × 0.850 m —
 exact, with each of the three numbers carried by a different member: the splayed feet own the width, the
 raked bow's back face against the seat's nose owns the depth, the crown owns the height.
-iterations: 5 · accepted score: 77 · critic: independent fresh subagents (Sonnet), one per capture, each
-given only the brief, the reference and the render — 60 → 77 → 61. Stopped on inter-critic variance rather
-than on 85 or on a plateau: 77 and 61 are the SAME build seen by two critics, and the 61's error list does
-not survive the 8-view sheet. See `open`.
+iterations: 6 · accepted score: 77 · critic: independent fresh subagents (Sonnet), one per capture, each
+given only the brief, the reference and the render — 60 → 77 → 61 → 73 (tie-break, adjudicating the 61).
+Stopped on inter-critic variance rather than on 85: 77, 61 and 73 are all the same build family. The
+tie-break earned its keep — see `the modelling error the critics found and I did not`.
 
 ## reads correctly
 - The bow-back Windsor gestalt at a glance: continuous arched hoop, five spindles, plank seat, four raked
@@ -68,19 +68,42 @@ coplanar ✓ (exit 0 — see `open`)
 inventory ✓ (`--check`, ok, no breach, no warning)
 qa-sheet ✓ (8 views inspected by me — see `open` for what that inspection settled)
 
+## the modelling error the critics found and I did not — and why my own inspection missed it
+
+The third critic (61) claimed the outer spindles poked past the bow. I talked myself out of it from the
+arithmetic — `SPINDLE_LANDING_R` 0.161 against a hoop centreline of 0.168 in a 0.014 tube *is* 7 mm of
+burial — and from an 8-view sheet that showed nothing. A tie-break critic then CONFIRMED it and added that
+it was **systemic on both end spindles, not right-only**. That detail is what made me measure instead of
+argue, and measuring proved the critics right:
+
+```
+BROKEN  max radius over the crown arc 0.19729  allowed 0.18200  breach +0.01529   at (-0.137, 0.810)
+FIXED   max radius over the crown arc 0.18192  allowed 0.18200  breach -0.00008
+```
+
+Cause: `const landing = Math.max(0.02, R² − x²)`. A guard floor, written to stop a negative sqrt, is
+LARGER than the real value for exactly the two outer spindles (their x² term is biggest): 0.161² − 0.132²
+= 0.0085 < 0.02. So the clamp fired on precisely the cases it was meant to protect, lifted both end tips
+to radius 0.194 and crossed them 12 mm in front of the hoop. **A clamp whose bound is reached in normal
+operation is not a guard, it is a silent second implementation.** The floor is now 0 and the real
+invariant (`SPINDLE_SPREAD < SPINDLE_LANDING_R`) throws instead of being clamped around.
+
+Why the 8-view sheet did not catch it: **it was not an 8-view sheet.** All eight panels rendered the same
+pose. `scripts/qa-sheet.mjs` orbits by generating a module that calls `createPreview({ yaw, pitch })`, but
+the asset contract's `createPreview({ aspect })` destructures only `aspect` and drops them. Every asset in
+this kit that follows the contract literally produces eight copies of its hero shot — and the kit's own
+step 5 ("look at the 8-view sheet yourself: a part floating off its mount hides at the hero angle") is
+therefore doing nothing for anyone. `createPreview` here now forwards `yaw`/`pitch`; the committed sheet
+is a genuine turntable, and the front elevation is the view that proves the spindles land in the bow.
+
 ## open
-- **Inter-critic variance is the reason iteration stopped, not a plateau.** The third critic scored 61 on a
-  build the second had scored 77, and listed four modelling errors: a gapped seam at the top right of the
-  hoop, the rightmost spindle poking past the hoop, a side stretcher falling short of its leg, and
-  asymmetric stile curvature. I checked all four against the 8-view sheet and **none is reproducible**:
-  the hoop is ONE swept tube and cannot have a seam; every spindle tip lands on a circle 7 mm inside the
-  hoop's centreline, buried in a 14 mm-radius tube; each stretcher end is solved against the leg's true
-  sheared axis at that height and sits inside a 18 mm-radius leg on an 11 mm-radius rail; the bow is built
-  from mirrored control points and is symmetric by construction. All four claims come from the hero angle
-  only. Recorded rather than chased.
-- The ONE modelling error a critic did find and that was real: the medial stretcher's ends originally ran
-  1.12 × past the side stretchers' axes and poked a ~20 mm stub out through them. Fixed at iteration 2 by
-  landing the ends exactly on the axes.
+- The other three claims from the 61 remain NOT REPRODUCIBLE, and the tie-break critic agreed on a real
+  turntable: the hoop is ONE swept tube and cannot have a seam; each stretcher end is solved against the
+  leg's true sheared axis and sits inside an 18 mm-radius leg; the bow is built from mirrored control
+  points. The tie-break's own extra claim (a stray knob by the front-left leg, "low confidence, single
+  view") does not appear in any panel of the regenerated sheet.
+- The earlier real error, fixed at iteration 2: the medial stretcher's ends ran 1.12 × past the side
+  stretchers' axes and poked a ~20 mm stub through them.
 - **The coplanar lens is structurally blind to this model** and reports "0 authored parts" — it skips any
   mesh whose name contains " / ", which `finishModel` gives every mesh in this kit. A pass by vacancy.
   Coincidence was avoided by construction instead, with each clearance a stated number in the header.

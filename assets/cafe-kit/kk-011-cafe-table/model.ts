@@ -393,8 +393,18 @@ export function createModel(options: KkCafeTableOptions = {}): KkCafeTableInstan
   }
 }
 
-export function createPreview({ aspect }: { aspect: number; time?: number }) {
-  return createKkPreview(createModel(), { aspect })
+/**
+ * Close-up preview. `yaw`/`pitch` are FORWARDED, which the contract's one-liner does not do — and that
+ * omission is what makes an 8-view QA sheet worthless: `scripts/qa-sheet.mjs` orbits by generating a
+ * module that calls `createPreview({ yaw, pitch })`, so a `createPreview({ aspect })` that destructures
+ * only `aspect` silently renders all eight panels from the default angle.
+ */
+export function createPreview(
+  options: { aspect: number; time?: number; yaw?: number; pitch?: number },
+) {
+  return createKkPreview(createModel(), {
+    aspect: options.aspect, yaw: options.yaw, pitch: options.pitch,
+  })
 }
 
 export function createCafePreview({ aspect }: { aspect: number; time?: number }) {
