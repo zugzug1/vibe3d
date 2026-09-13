@@ -78,7 +78,7 @@ for (const id of ids) {
   }
 }
 copy(join(root, 'docs/kyoto-kat/CALIBRATION.md'), 'CALIBRATION.md')
-for (const document of ['CONTROLS.md', 'PRODUCTION.md']) {
+for (const document of ['CONTROLS.md', 'PRODUCTION.md', 'PERF.md', 'REVIEW-INDEX.md', 'delivery-manifest.json', 'inventory.json']) {
   const source = join(root, 'docs/kyoto-kat', document)
   if (existsSync(source)) copy(source, document)
 }
