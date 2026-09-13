@@ -29,8 +29,9 @@ Scores below are resemblance judgments, not approval or technical certification.
 - 034 cup, 7/10: preserve geometry budget; subtle glaze variation rather than more vertices.
 - 040 apron, 6/10: thin pockets and add shallow asymmetric folds; avoid rigid slabs.
 
-Luna applies one focused correction pass. No post-correction expert score is
-claimed. Miguel's visual approval is required before the remaining 43 assets.
+Luna applied one focused correction pass. No post-correction expert score is
+claimed. Miguel approved the seven corrected pilots on 2026-09-12 ("everything
+lgtm, continue"). Production of the remaining 43 may proceed in Luna batches.
 
 ## Technical qualifications
 
