@@ -88,7 +88,7 @@ export function createModel(options: KkTeaCaddyOptions = {}): KkTeaCaddyInstance
       const lidBase = bevelBox(0.118, 0.012, 0.118, 0.005)
       lidBase.translate(0, 0.134, 0)
       emit('tin', lidBase, lid, 'lid-shoulder')
-      const crown = bevelDisc(0.046, 0.014, 0.004, 24)
+      const crown = bevelDisc(0.046, 0.022, 0.004, 24)
       crown.rotateX(Math.PI / 2)
       crown.translate(0, 0.146, 0)
       emit('tin', crown, lid, 'lid-crown')
@@ -99,8 +99,8 @@ export function createModel(options: KkTeaCaddyOptions = {}): KkTeaCaddyInstance
     }
 
     if (config.label) {
-      const paper = bevelBox(0.078, 0.056, 0.002, 0.0015)
-      paper.translate(0, 0.067, 0.057)
+      const paper = bevelBox(0.080, 0.080, 0.0005, 0.0001)
+      paper.translate(0, 0.067, 0.05625)
       emit('label', paper, label, 'blank-paper-label')
     }
   }

@@ -8,6 +8,6 @@ parts: tray · bowl · cradle · caddies. `cradle` and `caddies` are configurati
 
 materials: cedarDark, glaze, glazeMoss, brass-as-bamboo proxy; no texture or baked lighting. This is an honest first production approximation; no Astra/Sol post-build review or render approval is claimed.
 
-correction pass: removed the invented overhead whisk frame; retained a low cradle with a standing sparse whisk, and added tray divisions, bamboo mat and front channel. The bowl and caddies now use closed hollow profiles with inner walls and bottoms.
+correction pass: replaced the broom-like 9-tine/long-shaft whisk with 18 compact radial tines, five control points per tine, a 0.14 m head and a 0.04 m exposed grip seated in a low holder. The bowl now sits at the bamboo mat top (0.149 m), uses an ordered closed profile with a broad 62% floor radius and continuous rolled lip; caddies use straight closed walls plus shallow closed disc lids.
 
-open: the reference's hand-painted ceramic marks and fine bamboo whisk microstructure are intentionally deferred. Coordinator must visually verify the new silhouette; no post-correction review is claimed.
+open: the reference's hand-painted ceramic marks and fine bamboo whisk microstructure are intentionally deferred. Source has not been rendered after this correction; no visual approval is claimed.

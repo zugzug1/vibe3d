@@ -1,9 +1,9 @@
 // kk-033-kyusu-teapot — a low handmade kyusu with a domed lid, short left spout, and side handle.
 //
-// Datum: 0.19 W × 0.14 D × 0.12 H m, bottom-centre origin, Y-up, front = +Z. The handle is on +X and
-// the short pouring spout points −X, matching the reference's readable side-to-side silhouette.
+// Datum: 0.19 W × 0.14 D × 0.12 H m, bottom-centre origin, Y-up, front = +Z. The cylindrical handle
+// projects on +X and the short pouring spout rises toward +Z, perpendicular in plan as in the reference.
 
-import { BufferGeometry, Group, Mesh, Quaternion, Vector3, type Material } from 'three/webgpu'
+import { BufferAttribute, BufferGeometry, Group, LatheGeometry, Mesh, Quaternion, Vector2, Vector3, type Material } from 'three/webgpu'
 
 import {
   acquireKkMaterials,
@@ -12,7 +12,6 @@ import {
   createKkPreview,
   finishModel,
   revolve,
-  taperedTube,
 } from '../kk-core/index.ts'
 
 const ID = 'kk-033-kyusu-teapot'
@@ -39,6 +38,44 @@ export interface KkKyusuInstance {
 
 const DEFAULTS: KkKyusuConfig = { lid: true, handleSide: 1 }
 const Z_AXIS = new Vector3(0, 0, 1)
+const Y_AXIS = new Vector3(0, 1, 0)
+
+/** Four axial rings replace the long default TubeGeometry path for this tiny spout. */
+function axialSpout(path: readonly Vector3[], radii: readonly number[], radial = 10): BufferGeometry {
+  const positions = new Float32Array(path.length * radial * 3)
+  const indices: number[] = []
+  for (let i = 0; i < path.length; i++) {
+    const previous = path[Math.max(0, i - 1)]!
+    const next = path[Math.min(path.length - 1, i + 1)]!
+    const tangent = next.clone().sub(previous).normalize()
+    const u = new Vector3(1, 0, 0).projectOnPlane(tangent).normalize()
+    const v = tangent.clone().cross(u).normalize()
+    for (let j = 0; j < radial; j++) {
+      const a = (j / radial) * Math.PI * 2
+      const point = path[i]!.clone()
+        .addScaledVector(u, radii[i]! * Math.cos(a))
+        .addScaledVector(v, radii[i]! * Math.sin(a))
+      const offset = (i * radial + j) * 3
+      positions[offset] = point.x
+      positions[offset + 1] = point.y
+      positions[offset + 2] = point.z
+    }
+  }
+  for (let i = 0; i < path.length - 1; i++) {
+    for (let j = 0; j < radial; j++) {
+      const a = i * radial + j
+      const b = i * radial + (j + 1) % radial
+      const c = (i + 1) * radial + j
+      const d = (i + 1) * radial + (j + 1) % radial
+      indices.push(a, b, c, b, d, c)
+    }
+  }
+  const geometry = new BufferGeometry()
+  geometry.setAttribute('position', new BufferAttribute(positions, 3))
+  geometry.setIndex(indices)
+  geometry.computeVertexNormals()
+  return geometry
+}
 
 export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
   const config: KkKyusuConfig = {
@@ -78,6 +115,12 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
     return geometry
   }
 
+  const orientAtY = (geometry: BufferGeometry, point: Vector3, direction: Vector3): BufferGeometry => {
+    geometry.applyQuaternion(new Quaternion().setFromUnitVectors(Y_AXIS, direction.clone().normalize()))
+    geometry.translate(point.x, point.y, point.z)
+    return geometry
+  }
+
   const rebuild = (): void => {
     for (const group of [body, lid, spout, handle]) group.clear()
     for (const geometry of generated) geometry.dispose()
@@ -86,7 +129,7 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
 
     const vessel = revolve([
       [0, 0.028], [0.08, 0.047], [0.22, 0.055], [0.48, 0.057], [0.7, 0.053], [0.9, 0.039], [1, 0.030],
-    ], { yBot: 0.012, yTop: 0.088, segments: 10 })
+    ], { yBot: 0.012, yTop: 0.088, segments: 16 })
     emit('ceramic', vessel, body, 'rounded-vessel')
 
     const base = bevelRing(0.032, 0.048, 0.006, 0.0012, 8)
@@ -97,15 +140,18 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
     if (config.lid) {
       const dome = revolve([
         [0, 0.043], [0.22, 0.044], [0.5, 0.039], [0.76, 0.026], [1, 0.010],
-    ], { yBot: 0.084, yTop: 0.104, segments: 10 })
+    ], { yBot: 0.084, yTop: 0.104, segments: 16 })
       emit('ceramic', dome, lid, 'domed-lid')
       const rim = bevelRing(0.035, 0.047, 0.003, 0.0008, 8)
       rim.rotateX(Math.PI / 2)
       rim.translate(0, 0.086, 0)
       emit('metal', rim, lid, 'lid-rim')
-      const knob = revolve([[0, 0.009], [0.35, 0.014], [0.7, 0.016], [1, 0.009]], {
-      yBot: 0.102, yTop: 0.119, segments: 8,
-      })
+      // Local ordered profile closes both axis ends; `revolve()` sorts normalized stations and cannot
+      // express this returning inner edge without reopening the crown.
+      const knob = new LatheGeometry([
+        new Vector2(0, 0.102), new Vector2(0.008, 0.102), new Vector2(0.013, 0.106),
+        new Vector2(0.015, 0.112), new Vector2(0.010, 0.118), new Vector2(0, 0.119),
+      ], 8)
       const knobSeat = bevelDisc(0.012, 0.004, 0.0008, 8)
       knobSeat.rotateX(Math.PI / 2)
       knobSeat.translate(0, 0.103, 0)
@@ -114,24 +160,27 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
     }
 
     const side = config.handleSide
-    const handlePath = [
-      new Vector3(side * 0.044, 0.064, -0.002),
-      new Vector3(side * 0.074, 0.071, -0.002),
-      new Vector3(side * 0.098, 0.078, -0.002),
+    const handleRoot = new Vector3(side * 0.050, 0.064, -0.002)
+    const handleDirection = new Vector3(side, 0.18, 0.02).normalize()
+    const handleProfile = [
+      new Vector2(0, 0), new Vector2(0.012, 0), new Vector2(0.014, 0.014),
+      new Vector2(0.018, 0.050), new Vector2(0.015, 0.052), new Vector2(0.015, 0.032),
+      new Vector2(0, 0.032), new Vector2(0, 0),
     ]
-    emit('moss', taperedTube(handlePath, 0.015, 6), handle, 'side-cylinder-handle')
+    emit('moss', orientAtY(new LatheGeometry(handleProfile, 10), handleRoot, handleDirection), handle, 'side-cylinder-handle')
 
-    const spoutPath = [
-      new Vector3(-side * 0.043, 0.057, 0.004),
-      new Vector3(-side * 0.066, 0.067, 0.004),
-      new Vector3(-side * 0.093, 0.081, 0.004),
+    const spoutRings = [
+      new Vector3(-0.010, 0.057, 0.036),
+      new Vector3(-0.011, 0.064, 0.053),
+      new Vector3(-0.012, 0.073, 0.073),
+      new Vector3(-0.014, 0.082, 0.092),
     ]
-    emit('ceramic', taperedTube(spoutPath, 0.012, 6), spout, 'short-spout')
-    const baseDirection = spoutPath[1]!.clone().sub(spoutPath[0]!).normalize()
-    emit('metal', orientAt(bevelRing(0.010, 0.016, 0.004, 0.0006, 8), spoutPath[0]!, baseDirection), spout, 'spout-junction')
-    const direction = spoutPath[2]!.clone().sub(spoutPath[1]!).normalize()
-    emit('metal', orientAt(bevelRing(0.008, 0.013, 0.003, 0.0006, 8), spoutPath[2]!, direction), spout, 'spout-rim')
-    emit('opening', orientAt(bevelDisc(0.0085, 0.001, 0.0003, 8), spoutPath[2]!.clone().addScaledVector(direction, 0.001), direction), spout, 'spout-opening')
+    emit('ceramic', axialSpout(spoutRings, [0.016, 0.014, 0.011, 0.009], 10), spout, 'short-spout')
+    const baseDirection = spoutRings[1]!.clone().sub(spoutRings[0]!).normalize()
+    emit('metal', orientAt(bevelRing(0.010, 0.016, 0.004, 0.0006, 8), spoutRings[0]!, baseDirection), spout, 'spout-junction')
+    const direction = spoutRings[3]!.clone().sub(spoutRings[2]!).normalize()
+    emit('metal', orientAt(bevelRing(0.008, 0.010, 0.003, 0.0006, 8), spoutRings[3]!, direction), spout, 'spout-rim')
+    emit('opening', orientAt(bevelDisc(0.0065, 0.001, 0.0003, 8), spoutRings[3]!.clone().addScaledVector(direction, -0.001), direction), spout, 'spout-opening')
   }
 
   rebuild()

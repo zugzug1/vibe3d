@@ -8,6 +8,6 @@ parts: frame · bowlLeft · bowlRight. `configure({ bowls })` keeps the runtime 
 
 materials: cedar and glaze, no texture or baked lighting. This is an honest first production approximation; no Astra/Sol post-build review or render approval is claimed.
 
-correction pass: replaced the boxy solid platform with open legs and apron rails, and replaced both exterior-only bowls with closed hollow profiles containing inner walls and bottoms.
+correction pass: retained the open-legged cedar bench, replaced the solid deck with an extruded deck containing two true circular openings, lowered each bowl to baseY 0.060 m with 0.055 m depth, and used ordered closed profiles with broad floors and continuous rolled lips; no cedar occupies the bowl interiors.
 
-open: painted floral motifs and paw marks remain omitted; coordinator should inspect the first serialized reference render before any further detail work. No post-correction review is claimed.
+open: painted floral motifs and paw marks remain omitted; source has not been rendered after this correction, so no visual approval is claimed.

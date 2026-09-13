@@ -2,7 +2,7 @@
 // DATUM. Manifest kk-006: 0.50 W × 0.30 D × 0.18 H m, authored target. Y-up, metres,
 // bottom-centre origin, front = +Z. Bowls are the identity; the frame stays quiet and structural.
 
-import { Box3, BufferAttribute, BufferGeometry, Group, Mesh, MeshStandardMaterial, Vector3, type Material } from 'three/webgpu'
+import { Box3, BufferAttribute, BufferGeometry, ExtrudeGeometry, Group, Mesh, MeshStandardMaterial, Path, Shape, Vector3, type Material } from 'three/webgpu'
 import { acquireKkMaterials, bevelBox, createKkPreview, finishModel, mergeParts, socket } from '../kk-core/index.ts'
 
 const ID = 'kk-006-feeding-station'
@@ -28,9 +28,9 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number, b
 
 function bowl(radius: number, height: number, x: number, y: number, z: number): BufferGeometry {
   const profile: ReadonlyArray<readonly [number, number]> = [
-    [0.02, 0.00], [0.34, 0.00], [0.58, 0.10], [0.86, 0.78],
-    [0.98, 0.98], [1.04, 1.00], [0.94, 0.96], [0.84, 0.84],
-    [0.73, 0.61], [0.57, 0.38], [0.36, 0.18], [0.08, 0.13], [0.00, 0.13],
+    [0.02, 0.00], [0.34, 0.00], [0.58, 0.10], [0.84, 0.38], [0.96, 0.78],
+    [1.02, 0.93], [1.04, 0.96], [1.02, 0.985], [0.99, 1.00],
+    [0.94, 0.96], [0.84, 0.78], [0.74, 0.52], [0.66, 0.25], [0.62, 0.15], [0.00, 0.15],
   ]
   const segments = 24
   const positions = new Float32Array(profile.length * segments * 3)
@@ -63,6 +63,24 @@ function bowl(radius: number, height: number, x: number, y: number, z: number): 
   return geometry
 }
 
+function perforatedDeck(): BufferGeometry {
+  const deck = new Shape()
+  deck.moveTo(-0.23, -0.135); deck.lineTo(0.23, -0.135); deck.lineTo(0.23, 0.135)
+  deck.lineTo(-0.23, 0.135); deck.closePath()
+  for (const x of [-0.115, 0.115]) {
+    const hole = new Path()
+    hole.absarc(x, 0, 0.108, 0, Math.PI * 2, false)
+    deck.holes.push(hole)
+  }
+  const geometry = new ExtrudeGeometry(deck, {
+    depth: 0.035, bevelEnabled: true, bevelThickness: 0.003, bevelSize: 0.003,
+    bevelSegments: 1, steps: 1, curveSegments: 24,
+  })
+  geometry.rotateX(Math.PI / 2)
+  geometry.translate(0, 0.105, 0)
+  return geometry
+}
+
 export function createModel(options: KkFeederOptions = {}): KkFeederInstance {
   const config: KkFeederConfig = { bowls: options.bowls ?? true }
   const bundle = acquireKkMaterials({ overrides: options.materials })
@@ -80,7 +98,8 @@ export function createModel(options: KkFeederOptions = {}): KkFeederInstance {
   const rebuild = (): void => {
     release()
     const wood: BufferGeometry[] = [
-      box(0.46, 0.035, 0.27, 0, 0.105, 0, 0.006),
+      // A shaped deck with two true circular openings keeps cedar out of the bowl interiors.
+      perforatedDeck(),
       box(0.46, 0.055, 0.035, 0, 0.065, 0.117, 0.004),
       box(0.46, 0.055, 0.035, 0, 0.065, -0.117, 0.004),
       box(0.035, 0.055, 0.20, -0.212, 0.065, 0, 0.004),
@@ -89,8 +108,8 @@ export function createModel(options: KkFeederOptions = {}): KkFeederInstance {
     for (const x of [-0.19, 0.19]) for (const z of [-0.105, 0.105]) wood.push(box(0.055, 0.07, 0.055, x, 0.035, z, 0.004))
     emit(frame, 'cedar', 'cedar-frame', wood)
     if (config.bowls) {
-      emit(bowlLeft, 'ceramic', 'bowl-left', [bowl(0.098, 0.078, -0.115, 0.125, 0)])
-      emit(bowlRight, 'ceramic', 'bowl-right', [bowl(0.098, 0.078, 0.115, 0.125, 0)])
+      emit(bowlLeft, 'ceramic', 'bowl-left', [bowl(0.098, 0.055, -0.115, 0.06, 0)])
+      emit(bowlRight, 'ceramic', 'bowl-right', [bowl(0.098, 0.055, 0.115, 0.06, 0)])
     }
     frame.updateMatrixWorld(true); const bounds = new Box3().setFromObject(root as never); const centre = bounds.getCenter(new Vector3()); root.position.set(-centre.x, -bounds.min.y, -centre.z)
   }

@@ -54,7 +54,7 @@ export interface KkMatchaInstance {
 
 const W = 0.8
 const D = 0.55
-const TOP = 0.22
+const MAT_TOP = 0.149
 const defaults: KkMatchaConfig = { cradle: true, caddies: true }
 
 function box(w: number, h: number, d: number, x: number, y: number, z: number, bevel = 0.006): BufferGeometry {
@@ -64,13 +64,7 @@ function box(w: number, h: number, d: number, x: number, y: number, z: number, b
 }
 
 /** Closed thrown bowl profile: underside, outer wall, rolled rim, inner wall and dished bottom. */
-function bowl(radius: number, height: number, x: number, y: number, z: number): BufferGeometry {
-  const profile: ReadonlyArray<readonly [number, number]> = [
-    [0.02, 0.00], [0.34, 0.00], [0.58, 0.10], [0.86, 0.78],
-    [0.98, 0.98], [1.04, 1.00], [0.94, 0.96], [0.84, 0.84],
-    [0.73, 0.61], [0.57, 0.38], [0.36, 0.18], [0.08, 0.13], [0.00, 0.13],
-  ]
-  const segments = 28
+function lathe(profile: ReadonlyArray<readonly [number, number]>, segments: number, radius: number, height: number, x: number, y: number, z: number): BufferGeometry {
   const positions = new Float32Array(profile.length * segments * 3)
   const uvs = new Float32Array(profile.length * segments * 2)
   const indices: number[] = []
@@ -99,6 +93,22 @@ function bowl(radius: number, height: number, x: number, y: number, z: number): 
   geometry.setIndex(indices)
   geometry.computeVertexNormals()
   return geometry
+}
+
+/** Ordered exterior/interior profile; the inner floor is closed instead of relying on backface visibility. */
+function bowl(radius: number, height: number, x: number, y: number, z: number): BufferGeometry {
+  return lathe([
+    [0.02, 0.00], [0.34, 0.00], [0.58, 0.10], [0.84, 0.38], [0.96, 0.78],
+    [1.02, 0.93], [1.04, 0.96], [1.02, 0.985], [0.99, 1.00], // 4–5 mm rolled lip
+    [0.94, 0.96], [0.84, 0.78], [0.74, 0.52], [0.66, 0.25], [0.62, 0.15], [0.00, 0.15],
+  ], 28, radius, height, x, y, z)
+}
+
+function straightCaddy(radius: number, height: number, x: number, y: number, z: number): BufferGeometry {
+  return lathe([
+    [0.02, 0.00], [0.98, 0.00], [1.00, 0.08], [1.00, 0.92], [0.98, 0.98],
+    [0.88, 0.98], [0.88, 0.16], [0.02, 0.16],
+  ], 20, radius, height, x, y, z)
 }
 
 export function createModel(options: KkMatchaOptions = {}): KkMatchaInstance {
@@ -151,15 +161,17 @@ export function createModel(options: KkMatchaOptions = {}): KkMatchaInstance {
     const mat: BufferGeometry[] = []
     for (let i = 0; i < 10; i++) mat.push(box(0.28, 0.008, 0.012, 0.20, 0.145, -0.16 + i * 0.028, 0.002))
     emit(tray, 'bamboo-mat', 'bamboo', mat)
-    emit(bowlPart, 'matcha-bowl', 'ceramic', [bowl(0.18, 0.18, 0.20, TOP, 0.045)])
+    emit(bowlPart, 'matcha-bowl', 'ceramic', [bowl(0.18, 0.15, 0.20, MAT_TOP, 0.045)])
     const tea = bevelDisc(0.12, 0.006, 0.002, 24)
-    tea.rotateX(Math.PI / 2); tea.translate(0.20, TOP + 0.032, 0.045)
+    tea.rotateX(Math.PI / 2); tea.translate(0.20, MAT_TOP + 0.15 * 0.16 + 0.004, 0.045)
     emit(bowlPart, 'matcha-surface', 'moss', [tea])
     if (config.caddies) {
       const tin: BufferGeometry[] = []
       for (const x of [-0.19, -0.02]) {
-        tin.push(bowl(0.075, 0.13, x, TOP, -0.11))
-        tin.push(bowl(0.078, 0.016, x, TOP + 0.13, -0.11))
+        tin.push(straightCaddy(0.075, 0.11, x, MAT_TOP, -0.11))
+        const lid = bevelDisc(0.073, 0.008, 0.002, 20)
+        lid.rotateX(Math.PI / 2); lid.translate(x, MAT_TOP + 0.11 + 0.004, -0.11)
+        tin.push(lid)
       }
       emit(caddies, 'tea-caddies', 'ceramic', tin)
     }
@@ -168,18 +180,17 @@ export function createModel(options: KkMatchaOptions = {}): KkMatchaInstance {
         box(0.025, 0.12, 0.025, -0.26, 0.25, -0.10, 0.004),
         box(0.025, 0.12, 0.025, -0.08, 0.25, -0.10, 0.004),
         box(0.21, 0.025, 0.025, -0.17, 0.31, -0.10, 0.004),
-        tubeSection(0.028, 0.02, [-0.17, 0.33, -0.10], AXIS_Y, 16),
-        // The cradle stays low; the whisk itself supplies the reference's tall bamboo silhouette.
-        taperedTube([new Vector3(-0.17, 0.31, -0.10), new Vector3(-0.17, 0.48, -0.10), new Vector3(-0.17, 0.63, -0.10)], 0.009, 8),
+        tubeSection(0.028, 0.04, [-0.17, 0.33, -0.10], AXIS_Y, 16),
+        taperedTube([new Vector3(-0.17, 0.46, -0.10), new Vector3(-0.17, 0.50, -0.10), new Vector3(-0.17, 0.54, -0.10)], 0.009, 8),
       ]
       emit(cradle, 'whisk-cradle', 'bamboo', cradleParts)
       const tines: BufferGeometry[] = []
-      for (let i = -4; i <= 4; i++) {
-        const spread = i * 0.009
+      for (let i = 0; i < 18; i++) {
+        const angle = (i / 18) * Math.PI * 2
+        const radial = (r: number, y: number): Vector3 => new Vector3(-0.17 + Math.cos(angle) * r, y, -0.10 + Math.sin(angle) * r)
         tines.push(taperedTube([
-          new Vector3(-0.17, 0.56, -0.10),
-          new Vector3(-0.17 + spread * 0.45, 0.73, -0.10),
-          new Vector3(-0.17 + spread, 0.84 - Math.abs(i) * 0.006, -0.10),
+          radial(0.008, 0.35), radial(0.030, 0.375), radial(0.058, 0.405),
+          radial(0.064, 0.445), radial(0.046, 0.475),
         ], 0.0035, 6))
       }
       emit(cradle, 'whisk-bristles', 'bamboo', tines)
