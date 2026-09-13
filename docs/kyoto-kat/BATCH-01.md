@@ -123,6 +123,10 @@ Remaining approximations include ceramic decoration, wood grain and textile
 print; kyusu spout-root/knob facets and shallow-looking handle cavity remain
 visible up close. Phone performance and target-viewer reimport remain pending.
 
+Miguel approved the reviewed batch on 2026-09-12: "ok approved lets work on the
+next 11". The eleven existing models are now visually approved; this does not
+waive target-viewer, mobile, licensing or final collection acceptance checks.
+
 Runtime tests, compiled topology, and registry/export checks establish technical
 properties, not resemblance. GLB export success is not target-viewer reimport or
 phone performance validation. The batch must not silently advance from draft to
