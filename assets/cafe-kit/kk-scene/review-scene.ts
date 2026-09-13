@@ -66,27 +66,27 @@ export async function createReviewScene(): Promise<ComposedScene> {
  * Placements for the furnished café, by roster number. Positions are metres on a 6 × 8 m floor, origin
  * at the room centre, +Z toward the street entrance. A model that is not built yet is simply absent.
  */
-const CAFE_LAYOUT: Record<number, { x: number; z: number; yaw: number }> = {
+const CAFE_LAYOUT: Record<number, { x: number; y?: number; z: number; yaw: number }> = {
   1: { x: -1.6, z: -3.0, yaw: 0 },        // espresso station along the back wall
   2: { x: 0.4, z: -3.1, yaw: 0 },         // matcha station beside it
   3: { x: 2.0, z: -2.9, yaw: 0 },         // wagashi cabinet
   26: { x: -2.6, z: -2.6, yaw: 0.4 },     // register
-  16: { x: -1.6, z: -3.55, yaw: 0 },      // cup shelving behind the counter (wall)
+  16: { x: -1.6, y: 0.9, z: -3.55, yaw: 0 }, // shelving mounted above the counter
   18: { x: 2.8, z: -1.0, yaw: -Math.PI / 2 }, // basin on the right wall
   5: { x: -2.6, z: 2.4, yaw: Math.PI / 2 },   // window bench, left wall near the street
   9: { x: 2.0, z: 1.6, yaw: 0 },          // engawa platform, right front
-  13: { x: 2.0, z: 1.6, yaw: 0 },         // low table on the platform
-  14: { x: 1.4, z: 2.1, yaw: 0 },         // zabuton
+  13: { x: 2.2, y: 0.165, z: 1.65, yaw: 0 }, // original engawa tatami top (not its rail height)
+  14: { x: 1.38, y: 0.165, z: 1.70, yaw: 0 }, // beside table, fully supported on tatami
   11: { x: -0.6, z: 0.4, yaw: 0 },        // two-person table
   12: { x: -0.6, z: 1.0, yaw: Math.PI },  // chair
   4: { x: -2.4, z: -0.6, yaw: 0.3 },      // cat tower
-  21: { x: 0.0, z: -3.6, yaw: 0 },        // wall walkway (attachment at wall)
+  21: { x: 0.0, y: 1.4, z: -3.6, yaw: 0 }, // elevated wall walkway
   22: { x: 1.2, z: -0.4, yaw: 0 },        // scratching column
   23: { x: -1.4, z: -1.2, yaw: 0.8 },     // sleeping basket
   6: { x: 2.6, z: -2.2, yaw: 0 },         // feeding station
   24: { x: 2.7, z: 0.6, yaw: -Math.PI / 2 }, // litter enclosure
   8: { x: 0.9, z: -1.6, yaw: 0.2 },       // shoji screen dividing the room
-  7: { x: 0.0, z: 0.0, yaw: 0 },          // pendant lantern (attachment at ceiling)
+  7: { x: 0.0, y: 2.3, z: 0.0, yaw: 0 }, // 0.5 m lantern hangs below the 2.8 m ceiling
   10: { x: 0.0, z: 3.9, yaw: 0 },         // entrance assembly on the street face
   20: { x: -2.4, z: 3.4, yaw: Math.PI / 2 },  // shoe cubby by the door
   28: { x: 2.5, z: 3.3, yaw: -Math.PI / 2 },  // coat stand
@@ -108,7 +108,7 @@ export async function createCafeScene(): Promise<ComposedScene> {
     const n = Number(id.slice(3, 6))
     const placed = CAFE_LAYOUT[n]
     if (placed) {
-      model.root.position.set(placed.x, 0, placed.z)
+      model.root.position.set(placed.x, placed.y ?? 0, placed.z)
       model.root.rotation.y = placed.yaw
     } else {
       // Storytelling props without a placement go on the back counter run, 0.35 m apart, at counter
