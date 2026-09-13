@@ -11,9 +11,48 @@
  * single-layer by contract — never stacked, never behind another transparent surface.
  */
 
-import { DoubleSide, MeshStandardMaterial, type Material } from 'three/webgpu'
+import { Color, DoubleSide, MeshStandardMaterial, type Material, type Object3D, Mesh } from 'three/webgpu'
 
 import { DERIVED, TOKEN } from './palette.ts'
+
+const woodDefaults = new WeakMap<Material, { color: Color; roughness: number }>()
+
+export interface CafeWoodFinish {
+  /** Cedar colour in #RRGGBB; null restores the original finish. */
+  tint?: string | null
+  /** Scalar roughness, 0.45–0.95; null restores each slot's original value. */
+  roughness?: number | null
+}
+
+/** Apply to an item or café root. Only kit-owned wood is touched; maps remain intact.
+ * Reapply after inserting new models or replacing materials. Undefined fields are unchanged.
+ */
+export function setCafeWoodFinish(root: Object3D, patch: CafeWoodFinish): number {
+  if (patch.tint != null && !/^#[\da-f]{6}$/i.test(patch.tint)) {
+    throw new TypeError('Wood tint must be #RRGGBB or null')
+  }
+  if (patch.roughness != null && (!Number.isFinite(patch.roughness) || patch.roughness < 0.45 || patch.roughness > 0.95)) {
+    throw new RangeError('Wood roughness must be finite and between 0.45 and 0.95')
+  }
+  const tint = patch.tint == null ? null : new Color(patch.tint)
+  const cedar = new Color(DERIVED.CEDAR)
+  const materials = new Set<MeshStandardMaterial>()
+  root.traverse((object) => {
+    if (!(object instanceof Mesh)) return
+    for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+      if (woodDefaults.has(material)) materials.add(material as MeshStandardMaterial)
+    }
+  })
+  for (const material of materials) {
+    const original = woodDefaults.get(material)!
+    if (patch.tint !== undefined) {
+      material.color.copy(original.color)
+      if (tint) material.color.multiply(new Color(tint.r / cedar.r, tint.g / cedar.g, tint.b / cedar.b))
+    }
+    if (patch.roughness !== undefined) material.roughness = patch.roughness ?? original.roughness
+  }
+  return materials.size
+}
 
 export interface KkMaterials {
   /** Softened cedar: counters, frames, plinths, shelves. */
@@ -70,6 +109,9 @@ export function acquireKkMaterials(options: KkMaterialOptions = {}): KkMaterialB
     const override = options.overrides?.[slot]
     if (override) return override
     const material = new MeshStandardMaterial({ name: `cafe-kit / ${slot}`, ...parameters })
+    if (slot === 'cedar' || slot === 'cedarDark') {
+      woodDefaults.set(material, { color: material.color.clone(), roughness: material.roughness })
+    }
     owned.push(material)
     return material
   }

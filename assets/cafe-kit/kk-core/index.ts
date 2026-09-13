@@ -1,6 +1,7 @@
 export { DERIVED, TOKEN, mixToken, shade } from './palette.ts'
 export type { Token } from './palette.ts'
-export { acquireKkMaterials, disposeKkMaterials } from './materials.ts'
+export { acquireKkMaterials, disposeKkMaterials, setCafeWoodFinish } from './materials.ts'
+export type { CafeWoodFinish } from './materials.ts'
 export type { KkMaterialBundle, KkMaterialOptions, KkMaterials } from './materials.ts'
 export {
   AXIS_X,
