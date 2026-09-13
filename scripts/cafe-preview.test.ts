@@ -3,6 +3,19 @@ import assert from 'node:assert/strict'
 import { Box3, BoxGeometry, DirectionalLight, Group, Mesh, MeshStandardMaterial, Vector3 } from 'three/webgpu'
 import { createKkPreview } from '../assets/cafe-kit/kk-core/preview.ts'
 
+test('contrast preview respects explicit thin-shell shadow opt-outs', () => {
+  const geometry = new BoxGeometry(1, 1, 1)
+  const material = new MeshStandardMaterial()
+  const root = new Group()
+  const shell = new Mesh(geometry, material)
+  shell.userData.cafeCastShadow = false
+  root.add(shell)
+  const preview = createKkPreview({ root, dispose() { geometry.dispose(); material.dispose() } }, { lighting: 'contrast' })
+  assert.equal(shell.castShadow, false)
+  assert.equal(shell.receiveShadow, true)
+  preview.dispose()
+})
+
 test('close preview keeps corners inside margins even with a too-close override', () => {
   const geometry = new BoxGeometry(2, 1, 1)
   const material = new MeshStandardMaterial()

@@ -124,7 +124,13 @@ export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions
   const centre = box.getCenter(new Vector3())
   const diagonal = Math.max(0.2, box.getSize(new Vector3()).length())
   if (options.lighting === 'contrast') {
-    model.root.traverse((object) => { if (object instanceof Mesh) { object.castShadow = true; object.receiveShadow = true } })
+    model.root.traverse((object) => {
+      if (object instanceof Mesh) {
+        // Thin shells may explicitly opt out of self-shadow acne; metadata survives GLB extras.
+        object.castShadow = object.userData.cafeCastShadow !== false
+        object.receiveShadow = true
+      }
+    })
     scene.children.forEach((object) => { if (object instanceof HemisphereLight) object.intensity = 0.18 })
     key.intensity = 1.35; fill.intensity = 0.12; rim.intensity = 0.22
     key.castShadow = true
