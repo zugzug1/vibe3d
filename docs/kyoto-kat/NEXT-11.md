@@ -169,3 +169,64 @@ Next seven proceed as one integration checkpoint, not an automatic merge/release
   batch, one correction pass; unresolved defects stop expansion and enter repair.
 - No Astra/Sol escalation, repeated reviews, new framework or standing validator.
   No promise of first-pass visual acceptance. Model budgets are not phone FPS.
+
+### First timber checkpoint
+
+Coordinator captured 009/013/015 iteration 001. Fresh Luna critic scores were
+74/63/55; scores are not acceptance. The coordinator rejected the critic's claim
+that the platform step was already rounded: it was still rectangular. One
+correction pass targets a rounded step/tatami binding, true end-trestle table
+construction, vertical solid caster wheels and forks, and removal of the trolley's
+floating cloth block. Original envelopes and approved pale materials remain fixed.
+
+Coordinator also identified transform resets and public-anchor clearing during
+rebuild. Shared regression tests now protect consumer placement/attachments for
+all seven, and strict dimension assertions replace warning-only drift for this
+batch. Registry packaging excludes test/spec sources with a regression test.
+
+### Post-correction timber review and second batch correction
+
+Coordinator inspected corrected source and exported/reimported close previews:
+009 now has a rounded step and bound tatami panels; 013 now has two trestle ends
+and pegs. Both remain simplified and await Miguel's visual approval. 015 has
+vertical wheels but visible gaps at tray/upright and lower wheel-post connections;
+it enters the repair queue after its one correction pass. Do not promote it on
+the basis of passing geometry or bounds-based coplanar checks.
+
+One fresh Luna critic reviewed 007/010/014/018; scores 60/50/40/60 are not
+acceptance. The coordinator rejected the critic's demand for 1254 px captures:
+1024 px previews are intentional and image resolution is not the meter envelope.
+The single correction pass targets fitted lantern ribs and ceiling hardware,
+seated entrance roof, cushion tuft/ties, and connected basin/faucet/towel. No
+Astra or Sol assignment was made. Repeated physical-connection failures mean no
+expansion beyond these seven until the repair gate is resolved.
+
+### Seven-draft integration checkpoint — 2026-09-13
+
+Both builders have stopped. Final source and GLB close views inspected. 009 and
+013 are available for user review, with simplified construction/material detail.
+007/010/014/015/018 remain in the repair queue: floating lantern ribs, unsupported
+noren rod, hidden cushion details, disconnected trolley supports, and flat-looking
+basin interior/towel respectively. See individual REVIEW.md files for evidence.
+No new visual approvals are implied: **15 approved, seven new drafts, 28 unstarted**.
+
+Coordinator integration fixes preserve exact envelopes (including submillimeter
+lantern/roof corrections), root placement, public attachments and consumer brass
+texture maps. 277 affected tests pass; registry builds 24 items from 22 models.
+All seven bounds-based coplanar checks pass, which demonstrably does not prove
+connected assemblies. Topology sidecars and embedded-texture GLBs regenerate;
+default largest-island topology is not full collision coverage. Node typecheck
+retains five existing F1/render-headless errors; registry typecheck retains two
+existing TS-extension import errors. No claim of clean full-project typechecking.
+
+Source and reimported close/gameplay captures are included. Some earlier timber
+capture processes crashed during renderer shutdown after writing PNGs; archive
+validation decodes the actual saved pixels. Four later asset capture sequences
+completed without those shutdown errors. No phone FPS measurement or other-engine
+acceptance; furnished-scene placement still needs integration.
+
+Local review archive:
+`/Volumes/zug1/kyoto-kat-kit/pilot-review/next-seven-drafts-2026-09-13-v1/README.md`.
+Sources import repository shared modules; this is not a standalone source kit or
+a remotely downloadable path. Do not merge, publish, deploy or expand production
+while these recurring construction defects remain unresolved.

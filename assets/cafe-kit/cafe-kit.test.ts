@@ -12,7 +12,7 @@
 import { readFileSync } from 'node:fs'
 import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
-import { Box3, BufferGeometry, Material, Mesh, MeshStandardMaterial, Vector3 } from 'three/webgpu'
+import { Box3, BufferGeometry, Material, Mesh, MeshStandardMaterial, Texture, Vector3 } from 'three/webgpu'
 import { listModelIds } from './kk-core/catalog.ts'
 import { TIER_BUDGET, numberFromId, tierFromId } from '../../registries/cafe-kit/src/categories.ts'
 
@@ -44,6 +44,8 @@ const manifest = JSON.parse(readFileSync(join(import.meta.dir, '../../docs/kyoto
   items: ManifestItem[]
 }
 const manifestById = new Map(manifest.items.map((item) => [numberFromId(item.id), item]))
+// This production batch must match the original targets; don't accept warning-only drift.
+const exactTargetIds = new Set([7, 9, 10, 13, 14, 15, 18])
 
 // --- dispose instrumentation -------------------------------------------------------------------------
 
@@ -164,6 +166,41 @@ describe.each(ids)('%s', (id) => {
     model.dispose()
   })
 
+  if (exactTargetIds.has(numberFromId(id))) test('configuration preserves consumer placement and attachments', () => {
+    const model = factory()
+    model.root.position.set(2, 3, -4)
+    model.root.rotation.set(0.1, 0.4, -0.2)
+    const attachments = Object.values(model.parts).map((anchor) => {
+      const group = anchor as unknown as import('three/webgpu').Group
+      const child = new Mesh(new BufferGeometry(), new MeshStandardMaterial())
+      group.add(child)
+      return { group, child }
+    })
+    try {
+      model.configure(model.getConfig())
+      expect(model.root.position.toArray()).toEqual([2, 3, -4])
+      expect(model.root.rotation.toArray()).toEqual([0.1, 0.4, -0.2, 'XYZ'])
+      for (const { group, child } of attachments) expect(child.parent).toBe(group)
+    } finally {
+      for (const { child } of attachments) { child.removeFromParent(); child.geometry.dispose(); (child.material as Material).dispose() }
+      model.dispose()
+    }
+  })
+
+  if ([7, 10, 18].includes(numberFromId(id))) test('does not erase consumer brass texture maps', () => {
+    const texture = new Texture()
+    const brass = new MeshStandardMaterial({ map: texture, normalMap: texture, roughnessMap: texture })
+    const model = factory({ materials: { brass } })
+    try {
+      model.configure(model.getConfig())
+      expect(brass.map).toBe(texture)
+      expect(brass.normalMap).toBe(texture)
+      expect(brass.roughnessMap).toBe(texture)
+    } finally {
+      model.dispose(); brass.dispose(); texture.dispose()
+    }
+  })
+
   test('never disposes a consumer-supplied material (rule 17)', () => {
     const model = factory()
     const slot = Object.keys(model.materials)[0]!
@@ -187,6 +224,11 @@ describe.each(ids)('%s', (id) => {
     const size = box.getSize(new Vector3())
     const centre = box.getCenter(new Vector3())
     const item = manifestById.get(numberFromId(id))!
+    if (exactTargetIds.has(numberFromId(id))) {
+      expect(size.x).toBeCloseTo(item.dimensions_m.width, 4)
+      expect(size.y).toBeCloseTo(item.dimensions_m.height, 4)
+      expect(size.z).toBeCloseTo(item.dimensions_m.depth, 4)
+    }
     const hanging = (model.root.userData as { attachment?: string }).attachment
     // Hanging / wall-mounted objects document an attachment pivot instead of standing on y = 0.
     if (!hanging) {

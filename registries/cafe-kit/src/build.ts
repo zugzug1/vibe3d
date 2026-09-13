@@ -31,11 +31,12 @@ function hash(content: string | Uint8Array): string {
   return createHash('sha256').update(content).digest('hex')
 }
 
-/** Only the shipped source: model.ts and catalog.ts. Specs, reviews and work dirs stay out of the registry. */
-async function collectShippedFiles(root: string, skip = new Set<string>()): Promise<string[]> {
+/** Ship source helpers, never tests, specs, reviews or work directories. */
+export async function collectShippedFiles(root: string, skip = new Set<string>()): Promise<string[]> {
   const entries = await readdir(root, { withFileTypes: true })
   return entries
-    .filter((entry) => entry.isFile() && entry.name.endsWith('.ts') && !skip.has(entry.name))
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.ts')
+      && !/\.(test|spec)\.ts$/.test(entry.name) && !skip.has(entry.name))
     .map((entry) => join(root, entry.name))
     .sort()
 }
@@ -206,4 +207,4 @@ async function main(): Promise<void> {
   console.log(`Built ${registry.items.length} registry items from ${modelIds.length} models.`)
 }
 
-await main()
+if (resolve(process.argv[1] ?? '') === fileURLToPath(import.meta.url)) await main()
