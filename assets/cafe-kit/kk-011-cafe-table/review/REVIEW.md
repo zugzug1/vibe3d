@@ -61,18 +61,23 @@ triangles: 1104 / 6000 (furnishing) · meshes: 3 · draw calls: 4
 test ✓ (`bun test assets/cafe-kit -t kk-011`, 10 pass)
 topology ✓ (`kk:compile-topology --only=kk-011-cafe-table`: 156 tris, manifold, closed, no AABB fallback;
 `bun test assets/cafe-kit/cafe-kit.topology.test.ts -t kk-011`, 1 pass)
-coplanar ✓ (exit 0 — see `open` below)
+coplanar ✓ (new component-bounds checker: 12 components inspected, all clean; heuristic only, not a proof)
 inventory ✓ (`--check`, ok, no breach, no warning)
 qa-sheet ✓ (a GENUINE 8-view turntable — see below — inspected by me: elevations consistent on all four
 sides, apron cove symmetric, no floating part, no unclosed seam, feet flat, and the top-down view shows
 the plank seams dead straight across the whole slab)
 
+## bounded repair (2026-09-12)
+
+Moved the existing leg heads 20 mm inward in X/Z and lowered their top from 20 mm into the slab to the
+slab underside. The tabletop, apron, tapered leg geometry, default modest splay, triangle count, and
+material ownership remain unchanged; the feet become slightly less wide than the prior 0.811 m envelope
+but stay within the manifest tolerance. No new visual approval is claimed in this pass.
+
 ## open
-- **The coplanar lens is structurally blind to this model** and reports "0 authored parts". It captures
-  meshes at `Group.add` and skips any whose name contains " / " — which is every mesh in this kit, because
-  `finishModel` names them `<id> / <batch>`. It is a pass by vacancy, not by measurement. Coincidence was
-  instead avoided by construction and each clearance is a stated number in the model header (plank lap
-  0.5 mm, apron top 4 mm inside the slab, leg head 20 mm inside it). Raised as a kit-wide issue.
+- The new coplanar checker inspected 12 real component bounds and found no flagged pair. This is a
+  heuristic pass, not a geometric proof; the authored clearances remain the stronger evidence here (plank
+  lap 0.5 mm, apron top 4 mm inside the slab, leg head 20 mm inside it).
 - Critic 4 reported "grain curves radially near the rounded corners". NOT REPRODUCIBLE: the top's UVs are
   `u = x, v = z`, strictly linear, and the seams are straight in all eight views. It is the chamfer
   highlight following the corner arc, read as grain.

@@ -121,10 +121,12 @@ const BRACKET_RUN = 0.135
 const LEG_TOP = 0.048
 const LEG_FOOT = 0.027
 const LEG_BEVEL = 0.005
-/** Head of the leg, buried 20 mm into the slab so no joint line floats under the top. */
-const LEG_HEAD_Y = TOP_UNDER + 0.02
-const LEG_X = RAIL_OUT_X
-const LEG_Z = RAIL_OUT_Z
+/** Leg heads seat against the slab underside instead of rising 20 mm into its visible edge. */
+const LEG_HEAD_Y = TOP_UNDER
+/** Pull the heads beneath the tabletop's overhang so the stance reads as splayed support, not vertical edge trim. */
+const LEG_HEAD_INSET = 0.02
+const LEG_X = RAIL_OUT_X - LEG_HEAD_INSET
+const LEG_Z = RAIL_OUT_Z - LEG_HEAD_INSET
 /** Splay in Z is scaled from the X splay by the aspect, so the leg rakes along the table's diagonal. */
 const SPLAY_Z_RATIO = D / W
 

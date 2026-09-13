@@ -42,9 +42,18 @@ shaded lay, the faded top cushion — are per-vertex multipliers, not extra mate
 textures: none.
 
 triangles: 10462 / 15000               meshes: 15
-gates: test ✓ (10 pass) · topology ✓ (manifold, closed, 972-tri hull) · coplanar ✓ (15 authored parts,
-clean) · inventory ✓ (warn: 4 materials, see above) · qa-sheet ✓ (8 views looked at: the lattice seats on
-the deck in back and right, the ramp meets its post, nothing floats above the top platform)
+gates: test ✓ (10 pass) · topology ✓ (manifold, closed, 972-tri hull) · coplanar ✓ (88 recovered
+components, clean after a 10 mm deck-board edge reveal) · inventory ✓ (warn: 4 materials, see above) ·
+qa-sheet ✓ (8 existing views; no new visual approval claimed)
+
+checker note (2026-09-12): the two recovered-component flags at z.min/max=±0.400 were genuine deck-board /
+perimeter-rail coplanar end faces. The board field now stops 10 mm inside the perimeter rail; the rail keeps
+the declared 1.00 × 0.80 m footprint.
+
+bounded repair (2026-09-12): reduced the sisal post's radial alternation from 1.00/0.79 to 1.00/0.94.
+This keeps the existing posts, ferrules, anchors, triangle budget, and assembly while removing the
+conspicuous zigzag silhouette; rope microtexture remains deferred to the shared material path. No new
+visual approval is claimed in this pass.
 
 open: two of the three cushions are lathe-crowned but none is button-tufted; the reference's tufting is
 not modelled. The cedar reads as a warm grey rather than the reference's red-brown — a kk-core palette

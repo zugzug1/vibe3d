@@ -190,6 +190,10 @@ function ratioTo(hex: number, baseHex: number): [number, number, number] {
   ]
 }
 
+/** Sparse painted decoration from the reference, carried as colour on existing glaze vertices. */
+const DECOR_VERMILION = ratioTo(TOKEN.VERMILION, DERIVED.GLAZE_IVORY)
+const DECOR_INDIGO = ratioTo(TOKEN.INDIGO, DERIVED.GLAZE_IVORY)
+
 function lerp3(
   a: readonly [number, number, number],
   b: readonly [number, number, number],
@@ -290,6 +294,15 @@ function buildBody(stations: readonly Station[]): BufferGeometry {
   const iron = ratioTo(RIM_IRON, DERIVED.GLAZE_IVORY)
   const interior = ratioTo(INTERIOR, DERIVED.GLAZE_IVORY)
 
+  const decorate = (tone: [number, number, number], theta: number, y: number, station: number): [number, number, number] => {
+    if (station < 7 || station > 12) return tone
+    const yN = clamp01((y - 0.018) / 0.06)
+    const band = Math.sin(Math.PI * yN) ** 0.7
+    const branch = Math.pow(Math.max(0, Math.cos(2.2 * theta + 8.5 * yN + 0.8)), 20) * band * 0.12
+    const blossom = Math.pow(Math.max(0, Math.cos(4.1 * theta - 1.2 * yN + 1.4)), 26) * band * 0.2
+    return lerp3(lerp3(tone, DECOR_INDIGO, branch), DECOR_VERMILION, blossom)
+  }
+
   // Profile stations, not heights, own the zone boundaries: the glaze line is the top of the trimmed
   // foot (7/8) and the iron flashing is the rim band (15–20), wherever those stations end up sitting.
   const zoneOf = (i: number): [number, number, number] => {
@@ -324,10 +337,11 @@ function buildBody(stations: readonly Station[]): BufferGeometry {
       uvs[v * 2 + 1] = i / (rings - 1)
       const mottle = 1 + (glazeMottle(theta, station.y) - 1) * mottleDepth
       const value = mottle * crevice
-      const tone = stainable > 0 ? lerp3(zone, iron, stainable * rimStain(theta)) : zone
-      colours[v * 3] = tone[0] * value
-      colours[v * 3 + 1] = tone[1] * value
-      colours[v * 3 + 2] = tone[2] * value
+       const tone = stainable > 0 ? lerp3(zone, iron, stainable * rimStain(theta)) : zone
+       const decorated = decorate(tone, theta, station.y, i)
+       colours[v * 3] = decorated[0] * value
+       colours[v * 3 + 1] = decorated[1] * value
+       colours[v * 3 + 2] = decorated[2] * value
       v++
     }
   }

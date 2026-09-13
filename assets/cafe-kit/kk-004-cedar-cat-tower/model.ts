@@ -216,15 +216,15 @@ function plate(
 }
 
 /**
- * A sisal post: a solid of revolution whose profile alternates in and out every 18 mm, so the coil reads
- * as a wound rope at café distance instead of a smooth dowel that only the texture could rescue.
+ * A sisal post: a near-cylindrical solid of revolution with restrained radial variation. Rope microtexture
+ * is deferred to the shared material path; the silhouette should remain a post, not a zigzag.
  */
 function ropePost(radius: number, y0: number, y1: number, x: number, z: number): BufferGeometry {
   const turns = Math.max(4, Math.round((y1 - y0) / 0.026))
   const profile: Array<readonly [number, number]> = [[0, 0.0001]]
   for (let i = 0; i <= turns; i += 1) {
     const t = 0.004 + (i / turns) * 0.992
-    profile.push([t, i % 2 === 0 ? 1 : 0.79])
+    profile.push([t, i % 2 === 0 ? 1 : 0.94])
   }
   profile.push([1, 0.0001])
   const geometry = revolve(profile, { yBot: y0, yTop: y1, scaleW: radius, segments: 14 })
@@ -351,9 +351,13 @@ export function createModel(options: KkCatTowerOptions = {}): KkCatTowerInstance
     // Plank deck: seven boards with an open seam, so the deck reads as joinery and not a slab.
     const planks = 7
     const gap = 0.006
-    const plankW = (D - gap * (planks - 1)) / planks
+    // Leave a 10 mm reveal where the deck boards meet the perimeter rail.  The
+    // boards used to terminate on the rail's outer ±Z planes, creating real
+    // same-facing coplanar end faces rather than a seated plank joint.
+    const edgeReveal = 0.01
+    const plankW = (D - edgeReveal * 2 - gap * (planks - 1)) / planks
     for (let i = 0; i < planks; i += 1) {
-      const z0 = -D / 2 + i * (plankW + gap)
+      const z0 = -D / 2 + edgeReveal + i * (plankW + gap)
       cedar.push(span(-W / 2 + 0.055, W / 2 - 0.055, 0.03, DECK, z0, z0 + plankW, 0.006))
     }
     // Perimeter rail carrying the planks, and four corner feet lifting the whole deck.

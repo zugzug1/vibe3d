@@ -54,12 +54,12 @@ export function mixToken(a: number, b: number, amount: number): number {
  * vertex-colour pass and a material can agree on "what colour is cedar" without a second definition.
  */
 export const DERIVED = {
-  /** Softened cedar: ivory sunk a third of the way to charcoal, then warmed by the ivory's own cast. */
-  CEDAR: mixToken(TOKEN.IVORY, TOKEN.CHARCOAL, 0.42),
+  /** Softened cedar: restrained vermilion warms ivory before charcoal lowers its value. */
+  CEDAR: mixToken(mixToken(TOKEN.IVORY, TOKEN.VERMILION, 0.48), TOKEN.CHARCOAL, 0.42),
   /** Shadowed / oiled cedar — drawer sides, undersides, end grain. */
-  CEDAR_DARK: mixToken(TOKEN.IVORY, TOKEN.CHARCOAL, 0.62),
+  CEDAR_DARK: mixToken(mixToken(TOKEN.IVORY, TOKEN.VERMILION, 0.48), TOKEN.CHARCOAL, 0.62),
   /** Fresh-planed cedar highlight for a worn edge. */
-  CEDAR_LIGHT: mixToken(TOKEN.IVORY, TOKEN.CHARCOAL, 0.28),
+  CEDAR_LIGHT: mixToken(mixToken(TOKEN.IVORY, TOKEN.VERMILION, 0.32), TOKEN.CHARCOAL, 0.25),
   /** Washi and paper labels: ivory lifted a touch. */
   WASHI: shade(TOKEN.IVORY, 0.12),
   /** Tatami: moss lifted toward ivory (dried igusa rush). */

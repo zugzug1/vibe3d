@@ -4,14 +4,22 @@
 import sharp from 'sharp'
 
 class PixelData {
-  constructor(readonly data: Uint8ClampedArray, readonly width: number, readonly height: number) {
+  readonly data: Uint8ClampedArray
+  readonly width: number
+  readonly height: number
+  constructor(data: Uint8ClampedArray, width: number, height: number) {
     if (data.length !== width * height * 4) throw new Error('Invalid RGBA image length')
+    this.data = data
+    this.width = width
+    this.height = height
   }
 }
 
 class DataCanvas {
   private pixels?: PixelData
-  constructor(public width: number, public height: number) {}
+  width: number
+  height: number
+  constructor(width: number, height: number) { this.width = width; this.height = height }
   getContext(kind: string) {
     if (kind !== '2d') throw new Error('GLB CLI adapter supports only 2D data textures')
     return {

@@ -44,9 +44,14 @@ deck, gauge dial. No material clones, no baked light direction.
 textures: none — flat palette plus the vertex ramp carries this piece.
 
 triangles: 5368 / 15000                meshes: 14
-gates: test ✓ (10 pass) · topology ✓ (manifold, closed, 896-tri hull) · coplanar ✓ (14 authored parts,
-clean) · inventory ✓ (ok, no warnings) · qa-sheet ✓ (8 views looked at: back, underside and top all
-close; nothing floating)
+gates: test ✓ (10 pass) · topology ✓ (manifold, closed, 896-tri hull) · coplanar source repair ✓ (rear
+posts/back board, divider end laps, and machine crown/body no longer share the reported planes) · inventory
+✓ (ok, no warnings) · qa-sheet ✓ (8 existing views; no new visual approval claimed)
+
+checker note (2026-09-12): the recovered-component checker still reports two y.max=0.860 candidates at
+(-0.41, 0.86, -0.02) and (0.22, 0.86, 0.30). Direct source inspection finds only bbox overlap from
+separate carcass/top-edge members at those samples; their authored top faces do not overlap over area, so
+these are justified bounds false positives and were not moved merely to satisfy the heuristic.
 
 open: DERIVED.CEDAR is `mixToken(IVORY, CHARCOAL, 0.42)`, which renders as a warm GREY, not cedar — the
 reference's saturated red-brown is out of reach of the five tokens without a warm derivation. Raised as

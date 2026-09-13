@@ -291,8 +291,9 @@ const FOLD_RADII: readonly number[] = [0.016, 0.05, 0.005, 0.009, 0.042, 0.006]
  */
 function swell(x: number, z: number, amp: number): number {
   return amp * (
-    Math.cos(14 * x + 0.7) * Math.cos(17 * z - 0.4)
-    + 0.45 * Math.cos(27 * x - 19 * z + 1.8)
+    0.72 * Math.cos(14 * x + 0.7) * Math.cos(17 * z - 0.4)
+    + 0.28 * Math.cos(27 * x - 19 * z + 1.8)
+    + 0.18 * Math.sin(11 * x + 23 * z + 0.9)
   )
 }
 
@@ -381,8 +382,8 @@ function softSlab(m: Mesher, outline: readonly Pt[], o: SlabOptions): void {
 /** A patch pocket: a thin proud slab whose open back is sunk into its host so it is never rasterised. */
 function patchPocket(m: Mesher, outline: readonly Pt[], hostTop: (x: number, z: number) => number): void {
   const n = outline.length
-  const proud = 0.0038
-  const sunk = 0.0025
+  const proud = 0.0028
+  const sunk = 0.0020
   const ring = (scale: number, lift: number, tone: number): number[] =>
     outline.map(([x, z], i) => {
       const sx = x * scale
@@ -395,8 +396,8 @@ function patchPocket(m: Mesher, outline: readonly Pt[], hostTop: (x: number, z: 
   // panel behind it, which is precisely how the last revision read.
   const foot = ring(1, -sunk, 0.16)
   const lip = ring(1, proud, 0.34)
-  const face = ring(0.994, proud + 0.0004, 0.68)
-  const inner = ring(0.72, proud + 0.0012, 0.8)
+  const face = ring(0.994, proud + 0.0003, 0.68)
+  const inner = ring(0.72, proud + 0.0009, 0.8)
   for (let i = 0; i < n; i++) {
     const j = (i + 1) % n
     m.quad(foot[i]!, lip[i]!, lip[j]!, foot[j]!)
@@ -404,7 +405,7 @@ function patchPocket(m: Mesher, outline: readonly Pt[], hostTop: (x: number, z: 
     m.quad(face[i]!, inner[i]!, inner[j]!, face[j]!)
   }
   const apex = m.vertex(
-    new Vector3(0, hostTop(0, 0) + proud + 0.0015, 0),
+    new Vector3(0, hostTop(0, 0) + proud + 0.0011, 0),
     0.5,
     0.5,
     clothColour(0, 0, 0.82),

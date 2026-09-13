@@ -44,9 +44,13 @@ textures: washiFibreTexture 256 on the washi slot, tiled 4 × 8. Paper is the on
 colour cannot carry — fibre is what separates washi from card — and 256 is well inside the 1024 ceiling.
 
 triangles: 1476 / 15000                meshes: 17
-gates: test ✓ (10 pass) · topology ✓ (manifold, declared-open, 80-tri hull) · coplanar ✓ (17 authored
-parts, clean) · inventory ✓ (ok) · qa-sheet ✓ (8 views looked at: back shows plain paper on all three
-leaves as intended, top confirms the C, no clipping at any joint)
+gates: test ✓ (10 pass) · topology ✓ (manifold, declared-open, 80-tri hull) · coplanar ✓ (45 recovered
+components; two justified bounds false positives) · inventory ✓ (ok) · qa-sheet ✓ (8 existing views; no
+new visual approval claimed)
+
+checker note (2026-09-12): the z.min/z.max=-0.254/-0.219 candidates near (-0.01, 0.31, -0.25/-0.22)
+come from disconnected center-leaf frame members whose bounding boxes overlap. Their actual front/back
+faces meet only at member seams; there is no overlapping same-facing surface area, so no geometry was moved.
 
 open: the washi reads cool rather than the reference's warm ivory — DERIVED.WASHI is `shade(IVORY, 0.12)`
 and the preview's indigo fill light cools it. A kk-core palette question, not warmed locally.

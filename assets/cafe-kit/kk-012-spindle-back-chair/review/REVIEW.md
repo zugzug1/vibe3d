@@ -64,7 +64,7 @@ triangles: 4236 / 6000 (furnishing) · meshes: 3 · draw calls: 4
 test ✓ (`bun test assets/cafe-kit -t kk-012`, 10 pass)
 topology ✓ (`kk:compile-topology --only=kk-012-spindle-back-chair`: 972 tris, manifold, closed, no AABB
 fallback; `bun test assets/cafe-kit/cafe-kit.topology.test.ts -t kk-012`, 1 pass)
-coplanar ✓ (exit 0 — see `open`)
+coplanar ✓ (new component-bounds checker: 14 components inspected, all clean; heuristic only, not a proof)
 inventory ✓ (`--check`, ok, no breach, no warning)
 qa-sheet ✓ (8 views inspected by me — see `open` for what that inspection settled)
 
@@ -104,7 +104,6 @@ is a genuine turntable, and the front elevation is the view that proves the spin
   view") does not appear in any panel of the regenerated sheet.
 - The earlier real error, fixed at iteration 2: the medial stretcher's ends ran 1.12 × past the side
   stretchers' axes and poked a ~20 mm stub through them.
-- **The coplanar lens is structurally blind to this model** and reports "0 authored parts" — it skips any
-  mesh whose name contains " / ", which `finishModel` gives every mesh in this kit. A pass by vacancy.
-  Coincidence was avoided by construction instead, with each clearance a stated number in the header.
-  Raised as a kit-wide issue.
+- The new coplanar checker inspected 14 real component bounds and found no flagged pair. This is a heuristic
+  pass, not a geometric proof; the authored clearances remain the stronger evidence for the bow landings,
+  leg joints, and stretcher ends.

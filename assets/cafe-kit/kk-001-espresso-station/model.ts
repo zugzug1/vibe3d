@@ -322,7 +322,9 @@ export function createModel(options: KkEspressoStationOptions = {}): KkEspressoS
     for (const sx of [-1, 1] as const) {
       for (const sz of [-1, 1] as const) {
         const cx = sx * (POST_OUT - 0.04)
-        const cz = sz > 0 ? POST_FRONT - 0.04 : BACK + 0.04
+      // Rear posts stand proud of the back board too; ending both at BACK
+      // made their outward faces share the board's plane.
+      const cz = sz > 0 ? POST_FRONT - 0.04 : BACK + 0.03
         cedar.push(box(0.08, 0.86, 0.08, 0.01, cx, 0.43, cz))
       }
     }
@@ -337,7 +339,9 @@ export function createModel(options: KkEspressoStationOptions = {}): KkEspressoS
       cedar.push(span(fx, fx + 0.012, 0.78, 0.86, BACK + 0.02, FRONT - 0.02, 0.004))
       cedar.push(span(fx, fx + 0.012, 0.085, 0.165, BACK + 0.02, FRONT - 0.02, 0.004))
     }
-    cedar.push(span(DIVIDER - 0.03, DIVIDER + 0.02, 0.06, 0.86, BACK, FRONT - 0.015))
+    // Keep the divider lapped inside the back/front carcass faces instead of
+    // presenting two long same-facing planes at each end of the join.
+    cedar.push(span(DIVIDER - 0.03, DIVIDER + 0.02, 0.06, 0.86, BACK + 0.02, FRONT - 0.035))
     cedar.push(span(-SIDE, SIDE, 0.06, 0.085, BACK, FRONT - 0.015))
 
     // Boarded cabinet front, right of the divider: backing sheet, nine boards, then the proud frame.
@@ -481,7 +485,7 @@ export function createModel(options: KkEspressoStationOptions = {}): KkEspressoS
 
     // A crown casing standing proud of the case, and the brushed cup-warming deck with its rail — the
     // machine's top closes on the riser's 1.35 m rather than breaking above it.
-    steel.push(span(x0 - 0.008, x1 + 0.008, M_TOP - 0.065, M_TOP, M_BACK, M_FRONT + 0.008, 0.01))
+    steel.push(span(x0 - 0.008, x1 + 0.008, M_TOP - 0.065, M_TOP + 0.02, M_BACK + 0.02, M_FRONT + 0.008, 0.01))
     lit.push(span(x0, x1, M_TOP, M_TOP + 0.018, M_BACK, M_FRONT, 0.006))
     steel.push(span(x0, x1, M_TOP + 0.018, M_TOP + 0.05, M_BACK, M_BACK + 0.018, 0.005))
     for (const sx of [-1, 1] as const) {

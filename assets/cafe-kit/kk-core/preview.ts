@@ -138,6 +138,27 @@ export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions
   )
   camera.lookAt(target[0], target[1], target[2])
   camera.updateProjectionMatrix()
+  if (framing === 'close') {
+    // Explicit artist distances can crop wide props or low-hanging feet.
+    // Preserve angle/target, but enforce a 10% NDC margin around all box corners.
+    camera.updateMatrixWorld(true)
+    const tangent = Math.tan(fov * Math.PI / 360) * 0.9
+    let retreat = 0
+    for (const x of [box.min.x, box.max.x]) {
+      for (const y of [box.min.y, box.max.y]) {
+        for (const z of [box.min.z, box.max.z]) {
+          const p = new Vector3(x, y, z).applyMatrix4(camera.matrixWorldInverse)
+          retreat = Math.max(retreat, Math.abs(p.x) / (tangent * aspect) + p.z,
+            Math.abs(p.y) / tangent + p.z, p.z + camera.near * 2)
+        }
+      }
+    }
+    if (retreat > 0) {
+      const away = camera.position.clone().sub(new Vector3(...target)).normalize()
+      camera.position.addScaledVector(away, retreat)
+      camera.updateMatrixWorld(true)
+    }
+  }
   scene.add(camera)
 
   return {
