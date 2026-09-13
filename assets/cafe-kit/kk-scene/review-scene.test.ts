@@ -2,6 +2,37 @@ import { expect, test } from 'bun:test'
 import { Box3, Vector3 } from 'three/webgpu'
 import { createCafeScene } from './review-scene.ts'
 
+test('storytelling props sit on their assigned table surfaces', async () => {
+  const scene = await createCafeScene()
+  try {
+    scene.root.updateMatrixWorld(true)
+    const supports: Array<[string, number[]]> = [
+      ['kk-011-cafe-table', [33, 34, 35]],
+      ['kk-013-low-tea-table', [31, 32, 45]],
+      ['cafe-scene / service-support', [39, 40]],
+      ['cafe-scene / adoption-desk', [41, 42, 43, 48]],
+      ['cafe-scene / care-support', [47, 50]],
+    ]
+    for (const [supportName, numbers] of supports) {
+      const support = scene.root.getObjectByName(supportName)
+      expect(support).toBeDefined()
+      const surface = new Box3().setFromObject(support!)
+      for (const n of numbers) {
+        const id = scene.ids.find(id => Number(id.slice(3, 6)) === n)
+        if (!id) continue // Partial production scenes remain usable; inventory enforces all 50.
+        const object = scene.root.getObjectByName(id)
+        expect(object).toBeDefined()
+        const prop = new Box3().setFromObject(object!)
+        expect(prop.min.y, id).toBeCloseTo(surface.max.y, 3)
+        expect(prop.min.x).toBeGreaterThanOrEqual(surface.min.x - 0.001)
+        expect(prop.max.x).toBeLessThanOrEqual(surface.max.x + 0.001)
+        expect(prop.min.z).toBeGreaterThanOrEqual(surface.min.z - 0.001)
+        expect(prop.max.z).toBeLessThanOrEqual(surface.max.z + 0.001)
+      }
+    }
+  } finally { scene.dispose() }
+})
+
 test('café mounts lantern and seats table/cushion on the tatami instead of the floor', async () => {
   const scene = await createCafeScene()
   try {

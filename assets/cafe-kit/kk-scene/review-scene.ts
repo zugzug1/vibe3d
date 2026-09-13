@@ -99,7 +99,7 @@ const CAFE_LAYOUT: Record<number, { x: number; y?: number; z: number; yaw: numbe
   25: { x: -2.9, z: 1.0, yaw: Math.PI / 2 },  // adoption cabinet, left wall
   27: { x: -2.8, z: -1.6, yaw: Math.PI / 2 }, // waste cabinet, rear face at wall
   31: { x: 2.45, y: 0.515, z: 1.5, yaw: 0 },
-  32: { x: 2.3, y: 0.515, z: 1.5, yaw: 0 },
+  32: { x: 2.3, y: 0.511, z: 1.5, yaw: 0 }, // approved caddy geometry begins 4 mm above its pivot
   33: { x: -0.77, y: 0.72, z: 0.32, yaw: 0 },
   34: { x: -0.48, y: 0.72, z: 0.32, yaw: 0 },
   35: { x: -0.6, y: 0.72, z: 0.58, yaw: 0 },
