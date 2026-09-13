@@ -1,0 +1,13 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": [
+    "kk-007-washi-pendant-lantern/model.ts",
+    "kk-009-engawa-lounge-platform/model.ts",
+    "kk-010-cafe-entrance-assembly/model.ts",
+    "kk-013-low-tea-table/model.ts",
+    "kk-014-zabuton-cushion/model.ts",
+    "kk-015-service-trolley/model.ts",
+    "kk-018-handwashing-basin/model.ts"
+  ]
+}

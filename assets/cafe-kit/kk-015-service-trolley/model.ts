@@ -15,7 +15,8 @@ function block(size: [number, number, number], position: [number, number, number
 
 export function createModel(options: KkTrolleyOptions = {}): KkTrolleyInstance {
   const config: KkTrolleyConfig = { dressing: options.dressing ?? true }
-  const bundle = acquireSurfaceMaterials<Slot>({ cedar: 'cedar', cedarDark: 'cedar', indigo: 'fabric' }, options.materials); const materials = bundle.materials
+  const bundle = acquireSurfaceMaterials<'cedar' | 'cedarDark' | 'indigo'>({ cedar: 'cedar', cedarDark: 'cedar', indigo: 'fabric' }, options.materials)
+  const materials = bundle.materials as Record<Slot, Material>
   const root = new Group(); root.name = ID; const parts = { frame: new Group(), trays: new Group(), wheels: new Group(), handle: new Group() }
   const content = new Map<Group, Group>()
   Object.entries(parts).forEach(([name, group]) => { group.name = `${ID} / ${name}`; const generated = new Group(); generated.name = `${ID} / ${name} / generated`; group.add(generated); content.set(group, generated); root.add(group) })
@@ -24,27 +25,40 @@ export function createModel(options: KkTrolleyOptions = {}): KkTrolleyInstance {
   const rebuild = (): void => {
     content.forEach((group) => group.clear()); generated.splice(0).forEach((geometry) => geometry.dispose())
     const frame: BufferGeometry[] = []
-    for (const x of [-0.32, 0.32]) for (const z of [-0.145, 0.145]) {
-      frame.push(block([0.055, 0.22, 0.055], [x, 0.14, z], 0.004))
-      frame.push(block([0.055, 0.28, 0.055], [x, 0.43, z], 0.004))
+    for (const x of [-0.30, 0.30]) for (const z of [-0.174, 0.174]) {
+      // One continuous timber from the caster mounting plate into the upper tray.
+      frame.push(block([0.052, 0.535, 0.052], [x, 0.4125, z], 0.004))
     }
     emit(parts.frame, 'cedar-uprights', 'cedarDark', frame)
     const trayParts: BufferGeometry[] = []
-    for (const y of [0.29, 0.59]) {
-      trayParts.push(block([0.64, 0.035, 0.45], [0, y, 0], 0.005))
-      trayParts.push(block([0.66, 0.07, 0.035], [0, y + 0.045, -0.2075], 0.004), block([0.66, 0.07, 0.035], [0, y + 0.045, 0.2075], 0.004))
-      trayParts.push(block([0.035, 0.07, 0.385], [-0.31, y + 0.045, 0], 0.004), block([0.035, 0.07, 0.385], [0.31, y + 0.045, 0], 0.004))
+    for (const y of [0.225, 0.625]) {
+      trayParts.push(block([0.68, 0.028, 0.43], [0, y, 0], 0.003))
+      trayParts.push(block([0.70, 0.065, 0.03], [0, y + 0.028, -0.21], 0.003), block([0.70, 0.065, 0.03], [0, y + 0.028, 0.21], 0.003))
+      trayParts.push(block([0.03, 0.065, 0.395], [-0.335, y + 0.028, 0], 0.003), block([0.03, 0.065, 0.395], [0.335, y + 0.028, 0], 0.003))
     }
     emit(parts.trays, 'two-raised-service-trays', 'cedar', trayParts)
-    const wheels: BufferGeometry[] = []
-    for (const x of [-0.332, 0.332]) for (const z of [-0.149, 0.149]) {
-      const wheel = new CylinderGeometry(0.058, 0.058, 0.036, 16); wheel.rotateZ(Math.PI / 2); wheel.translate(x, 0.058, z); wheels.push(wheel)
-      const tread = new TorusGeometry(0.052, 0.006, 8, 16); tread.rotateY(Math.PI / 2); tread.translate(x, 0.058, z); wheels.push(tread)
-      wheels.push(block([0.018, 0.13, 0.028], [x, 0.14, z], 0.002), block([0.035, 0.018, 0.035], [x, 0.075, z], 0.002))
+    const wheels: BufferGeometry[] = []; const forks: BufferGeometry[] = []
+    for (const x of [-0.30, 0.30]) for (const z of [-0.174, 0.174]) {
+      const wheel = new CylinderGeometry(0.047, 0.047, 0.025, 24); wheel.rotateZ(Math.PI / 2); wheel.translate(x, 0.05, z); wheels.push(wheel)
+      const tread = new TorusGeometry(0.043, 0.007, 8, 24); tread.rotateY(Math.PI / 2); tread.translate(x, 0.05, z); wheels.push(tread)
+      // Two cheeks straddle the tire with clearance; an axle passes through their bottoms.
+      for (const side of [-1, 1]) forks.push(block([0.009, 0.077, 0.020], [x + side * 0.021, 0.0865, z], 0.002))
+      forks.push(block([0.052, 0.022, 0.044], [x, 0.135, z], 0.003))
+      const axle = new CylinderGeometry(0.010, 0.010, 0.059, 12); axle.rotateZ(Math.PI / 2); axle.translate(x, 0.05, z); forks.push(axle)
     }
-    emit(parts.wheels, 'rubber-wheels-and-axle-forks', 'ink', wheels)
-    const curve = new CatmullRomCurve3([new Vector3(-0.30, 0.64, -0.17), new Vector3(-0.30, 0.783, -0.18), new Vector3(0, 0.828, -0.18), new Vector3(0.30, 0.783, -0.18), new Vector3(0.30, 0.64, -0.17)])
-    emit(parts.handle, 'curved-push-handle', 'cedar', [new TubeGeometry(curve, 16, 0.022, 8, false)])
+    emit(parts.wheels, 'vertical rubber tires', 'ink', wheels)
+    emit(parts.wheels, 'fitted caster forks and axles', 'cedarDark', forks)
+    const curve = new CatmullRomCurve3([new Vector3(-0.30, 0.66, -0.174), new Vector3(-0.30, 0.765, -0.174), new Vector3(-0.25, 0.815, -0.174), new Vector3(0, 0.832, -0.174), new Vector3(0.25, 0.815, -0.174), new Vector3(0.30, 0.765, -0.174), new Vector3(0.30, 0.66, -0.174)])
+    const handle = new TubeGeometry(curve, 32, 0.018, 8, false)
+    handle.computeBoundingBox(); handle.translate(0, 0.85 - handle.boundingBox!.max.y, 0)
+    emit(parts.handle, 'curved-push-handle', 'cedar', [handle])
+    const pegs: BufferGeometry[] = []
+    for (const y of [0.25, 0.65]) for (const x of [-0.30, 0.30]) {
+      const peg = new CylinderGeometry(0.006, 0.006, 0.009, 8); peg.rotateX(Math.PI / 2); peg.translate(x, y, 0.224); pegs.push(peg)
+    }
+    // Peg ends stop at the original depth datum, with their shanks seated in the rails.
+    pegs.forEach((g) => g.translate(0, 0, -0.0045))
+    emit(parts.trays, 'pegged tray joints', 'cedarDark', pegs)
     // The old floating blue block is intentionally removed; draped cloth awaits a reviewed soft-shell pass.
   }
   rebuild()

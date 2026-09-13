@@ -1,16 +1,14 @@
-# kk-010 Cafe entrance assembly
+# kk-010 Cafe entrance assembly — bounded repair
+Status: repaired source, final preview inspected; user acceptance pending.
+Coordinator subsequently exported/reimported the GLB (530784 bytes), inspected
+the close view, and captured source/GLB gameplay views. Shared 277-test gate and
+direct seven-model TypeScript check pass. User acceptance remains pending.
 
-Status: renderable source checkpoint; no visual acceptance claimed.
+Exact meter envelope: 1.40 W × 0.30 D × 2.20 H. Public frame/roof/noren/hardware anchors remain stable.
+A continuous pitched roof seats on the lintel, ridge support and rafters. Rod plates overlap the posts, sockets carry the rod, and six actual folded straps wrap over it. The seated-cat silhouette and seal are tessellated onto the cloth surface. The split and lower clearance remain open.
 
-- Exact target envelope: 1.40 x 0.30 x 2.20 m; current measured envelope matches exactly.
-- Tall cedar portal has slender posts, foot blocks, lintel, shallow roof cap/eaves, brass noren rod, split folded indigo panels, hanging loops, and a small vermilion emblem.
-- Panel folds are lightweight procedural geometry; no baked ink/cel lighting or scene dressing is included.
-- Roof and foot overlaps were separated after coplanar checking. Public semantic anchors retain consumer attachments across configure rebuilds.
-- The roof now has a continuous support beam, seated shallow slope, and simple cat-shaped vermilion mark; remaining repair queue is visual verification of roof seating and emblem scale.
-- Coordinator inspected source iteration 002 and GLB reimport: **repair queue**.
-  Roof stack is connected now, but the noren rod ends short of the posts with no
-  visible supports. The emblem reads as a small polygon rather than a clear cat;
-  cloth loops remain block-like. No user acceptance claimed.
-- Coordinator derived roof position from rotated bounds to retain exactly 2.20 m
-  height and protected consumer brass textures. GLB: 125,692 bytes.
-- The single visual correction pass is consumed; no automatic escalation.
+Captured and viewed the actual reference, rejected render, early source iteration 003, and final iteration 004 (createPreview, existing kit rig). No score loop, topology build, GLB export or commit.
+Final preview: .asset-forge/previews/kk-010-cafe-entrance-assembly/iteration-004/beauty.png
+
+Validation: roof ray height and structural overlap; rod/socket/plate/post contact; rays through strap openings and strap-to-rod clearance; ink triangle-centroid offsets against the actual cloth. Shared ownership, exact envelope, budget, placement, override and dispose tests pass. Targeted TypeScript and coplanar heuristic pass.
+Approximation: simplified continuous roof covering and timber foot blocks; reference side lanterns, masonry and painted weathering omitted. Cloth remains static.

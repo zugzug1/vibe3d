@@ -13,3 +13,22 @@ bound tatami panels are visible; the very low guard and simplified joinery follo
 the original 0.30 m height, not the reference's taller apparent railing. Tatami
 fibers remain a surface approximation. GLB: 199,100 bytes. Pending user visual
 approval; technical checks are not an appearance signoff.
+
+## Renewed repair — 2026-09-13
+
+Miguel included this model in the rejected seven-asset batch. Rebuilt the deck
+as a shallow framed platform with seated mats, thin indigo textile binding,
+connected low rear/side rails and a rounded step with visible feet and overlapping
+riser. Retained exactly 2.00 x 1.50 x 0.30 m; this limits the railing height well
+below the reference and is an intentional dimensional approximation.
+
+Independent bounded visual check: advisory 80/100, no claimed acceptance. Its
+step-support concern prompted the riser/feet refinement. Raycast regression checks
+verify the mat substrate, exposed textile borders and riser-to-apron overlap;
+the low rail penetrates its host frame. Source iteration 003 was inspected before
+that final step refinement. No global palette change, elaborate wood knots or
+ink outlines. User visual approval remains pending.
+
+Final source iteration 004 and GLB close inspected after the riser refinement.
+GLB: 217,960 bytes; source and reimported gameplay captures archived. The exact
+envelope, ray contact checks and targeted TypeScript gate pass.

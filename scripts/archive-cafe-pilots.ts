@@ -1,6 +1,6 @@
 /** Archive the approved-plan pilot gate; never label it as the finished 50-asset kit. */
 import { createHash } from 'node:crypto'
-import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs'
+import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import sharp from 'sharp'
 
@@ -35,6 +35,9 @@ function copy(source: string, relative: string): void {
 for (const id of ids) {
   const captures = [['', 'close.png'], ['-gameplay', 'gameplay.png']]
   if (reimported) captures.push(['-glb', 'glb-close.png'], ['-glb-gameplay', 'glb-gameplay.png'])
+  if (reimported && existsSync(join(root, '.asset-forge/previews', id + '-glb-inspection', 'latest.png'))) {
+    captures.push(['-glb-inspection', 'glb-inspection.png'])
+  }
   for (const [suffix, name] of captures) {
     const image = join(root, '.asset-forge/previews', id + suffix, 'latest.png')
     const { info } = await sharp(image).raw().toBuffer({ resolveWithObject: true })
@@ -48,6 +51,13 @@ for (const id of ids) {
   }
   copy(glb, `${id}/${id}.glb`)
   copy(join(root, 'assets/cafe-kit', id, 'model.ts'), `${id}/model.ts`)
+  // Keep local runtime helpers (e.g. cloth.ts) with their editable model source.
+  for (const entry of readdirSync(join(root, 'assets/cafe-kit', id), { withFileTypes: true })) {
+    if (entry.isFile() && entry.name.endsWith('.ts') && entry.name !== 'model.ts'
+      && entry.name !== 'compile.ts' && !/\.(test|spec)\.ts$/.test(entry.name)) {
+      copy(join(root, 'assets/cafe-kit', id, entry.name), `${id}/${entry.name}`)
+    }
+  }
   copy(join(root, 'assets/cafe-kit', id, `${id}.vtopo`), `${id}/${id}.vtopo`)
   copy(join(root, 'assets/cafe-kit', id, 'review/REVIEW.md'), `${id}/REVIEW.md`)
 }
@@ -63,5 +73,6 @@ writeFileSync(join(destination, 'manifest.json'), JSON.stringify({
 }, null, 2) + '\n')
 writeFileSync(join(destination, 'SHA256SUMS'), entries.map((e) => `${e.sha256}  ${e.path}`).join('\n') + '\n')
 writeFileSync(join(destination, 'README.md'), `# Café-kit: ${selected ? 'production batch review' : batch ? 'batch 01 repair review' : 'seven-pilot approval gate'}\n\nNot the completed 50-asset collection. Visual approval is pending.\n\n`
-  + ids.map((id) => `## ${id}\n\n![Close view](${id}/${reimported ? 'glb-close.png' : 'close.png'})\n\n[Gameplay view](${id}/${reimported ? 'glb-gameplay.png' : 'gameplay.png'}) · [GLB](${id}/${id}.glb) · [Review](${id}/REVIEW.md)\n`).join('\n'))
+  + ids.map((id) => `## ${id}\n\n![Close view](${id}/${reimported ? 'glb-close.png' : 'close.png'})\n\n[Gameplay view](${id}/${reimported ? 'glb-gameplay.png' : 'gameplay.png'}) · [GLB](${id}/${id}.glb) · [Review](${id}/REVIEW.md)`
+    + (entries.some(e => e.path === `${id}/glb-inspection.png`) ? ` · [Cavity inspection](${id}/glb-inspection.png)` : '') + '\n').join('\n'))
 console.log(`Archived ${ids.length} assets, ${entries.length} checksum-verified files: ${destination}`)

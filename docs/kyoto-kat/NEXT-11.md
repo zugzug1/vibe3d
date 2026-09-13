@@ -230,3 +230,56 @@ Local review archive:
 Sources import repository shared modules; this is not a standalone source kit or
 a remotely downloadable path. Do not merge, publish, deploy or expand production
 while these recurring construction defects remain unresolved.
+
+### All-seven focused repair authorized — 2026-09-13
+
+Miguel rejected the quality of the draft batch and explicitly included 009/013
+in renewed repair scope. Neither of those two is accepted. Preserve the immutable
+draft archive and all 15 prior approvals; no expansion to the remaining 28.
+
+One Astra-low worker owns 007/010/014/015/018. The coordinator owns the separate
+009/013 repair group and integration, without duplicating the worker's work.
+No new framework, standing critic, score-chasing loop or automatic escalation.
+Renderer ownership is handed off explicitly to keep source captures serial.
+
+Repair priorities are construction and readable material/silhouette, not hidden
+detail counts. New 009 tests raycast mat supports and exposed cloth borders; 013
+tests check both top-to-trestle contacts and stretcher engagement. Original metric
+targets remain authoritative, including the very low 0.30 m total platform height.
+All new repaired previews will still require Miguel's visual approval.
+
+### Seven repairs ready for approval
+
+One Astra-low builder completed the five structural repairs; coordinator rebuilt
+009/013, with one short Luna-low independent check of that pair. No other model
+assignments or repeated scoring loops. Both agents stopped. The independent pair
+scores (80/85) are advisory; the step-support concern resulted in an overlapping
+riser and more visible feet, not an acceptance claim.
+
+Coordinator inspected all seven final source and reimported GLB close captures.
+Lantern ribs/retainers follow the shade; entrance roof, rod and loops are supported;
+cushion tuft/seams/ties are exposed; trolley posts/trays/casters are connected;
+basin cavity, tap and towel are rebuilt. Platform/table construction is slimmer
+and seated. A separate high-angle GLB inspection confirms the basin cavity/drain.
+Source iterations: 004 for all except 013 (003). Shared pale palette retained.
+Reference artwork, ink contours and fine weathering remain simplified or omitted.
+
+- 277 affected tests pass, including stronger contact and visible-surface checks.
+- `bunx tsc -p assets/cafe-kit/tsconfig.repairs.json` directly checks all seven
+  sources and passes. Root Node typecheck does not directly include these models;
+  its five existing unrelated errors remain. Full-project typecheck is not green.
+- Existing registry builds 24 items from 22 models; no new runtime framework.
+- Seven fresh topology sidecars and embedded-texture GLBs exported; all seven
+  coplanar bounds checks pass. Largest-island topology is not full collision coverage.
+- All final close/gameplay source and GLB captures completed without renderer
+  shutdown errors. Other-engine compatibility and named-phone FPS remain pending.
+- Archive includes local runtime helpers such as cloth.ts, and the extra basin
+  inspection image. Shared repository modules are still required for editable source.
+
+GLB bytes by ID: 007 454940; 009 217960; 010 530784; 013 187616;
+014 221120; 015 411584; 018 345496.
+
+New local-only package:
+`/Volumes/zug1/kyoto-kat-kit/pilot-review/seven-repairs-2026-09-13-v1/README.md`.
+Prior rejected archive remains unchanged. Overall status: 15 approved, seven
+repaired awaiting approval, 28 unstarted. No merge, release, main push or deployment.

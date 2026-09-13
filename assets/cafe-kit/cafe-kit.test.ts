@@ -170,6 +170,8 @@ describe.each(ids)('%s', (id) => {
     const model = factory()
     model.root.position.set(2, 3, -4)
     model.root.rotation.set(0.1, 0.4, -0.2)
+    // Match a game that has already rendered/moved this instance before configure.
+    model.root.updateMatrixWorld(true)
     const attachments = Object.values(model.parts).map((anchor) => {
       const group = anchor as unknown as import('three/webgpu').Group
       const child = new Mesh(new BufferGeometry(), new MeshStandardMaterial())

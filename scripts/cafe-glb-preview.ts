@@ -75,12 +75,14 @@ export async function reimportCafeGlb(bytes: Uint8Array) {
   }
 }
 
-async function preview(aspect: number, framing: 'close' | 'cafe') {
+async function preview(aspect: number, framing: 'close' | 'cafe', pitch?: number) {
   const id = process.env.KK_GLB_ID ?? ''
   if (!/^kk-\d{3}-[a-z0-9-]+$/.test(id)) throw new Error('Set KK_GLB_ID to a café-kit asset ID')
   const model = await reimportCafeGlb(await readFile(resolve('dist/cafe-kit-glb', `${id}.glb`)))
   console.log(`Reimported ${id}: ${model.textureCount} texture objects`)
-  return createKkPreview(model, { aspect, framing })
+  return createKkPreview(model, { aspect, framing, pitch })
 }
 export const createPreview = ({ aspect }: { aspect: number }) => preview(aspect, 'close')
 export const createCafePreview = ({ aspect }: { aspect: number }) => preview(aspect, 'cafe')
+/** Higher inspection view for open cavities; leaves standard approval cameras unchanged. */
+export const createInspectionPreview = ({ aspect }: { aspect: number }) => preview(aspect, 'close', Math.PI / 3)

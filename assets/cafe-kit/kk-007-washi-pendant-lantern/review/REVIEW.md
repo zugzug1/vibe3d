@@ -1,16 +1,14 @@
-# kk-007 Washi pendant lantern
+# kk-007 Washi pendant lantern — bounded repair
+Status: repaired source, final preview inspected; user acceptance pending.
+Coordinator subsequently exported/reimported the GLB (454940 bytes), inspected
+the close view, and captured source/GLB gameplay views. Shared 277-test gate and
+direct seven-model TypeScript check pass. User acceptance remains pending.
 
-Status: renderable source checkpoint; no visual acceptance claimed.
+Exact meter envelope: 0.60 W × 0.60 D × 0.50 H. Public mount/shade/ribs anchors and root placement remain stable.
+Paper and ribs share a truncated ellipsoid with the required sqrt(1-t*t) cross-section. Rolled collars lap the paper cut edges; a socket bridge supports the cord above the open shade. The repair seam follows the same surface.
 
-- Exact target envelope: 0.60 x 0.60 x 0.50 m; current inventory envelope: 0.60 x 0.60 x 0.50 m.
-- Broad oval washi globe uses a shared paper surface map, twelve profile-fitted horizontal ribs, round untextured brass retaining rings, a repaired seam, and a documented `root.userData.attachment = 'mount'` anchor.
-- Mount and bottom ring are authored inside grounded local bounds for shared tests; the lantern remains a hanging asset through its mount anchor.
-- Floral artwork is intentionally omitted; the seam and rib construction carry the reference read without baked decoration.
-- Repair queue after next capture: verify the fitted rib/cap read from the coordinator camera; no optional artwork is planned in this pass.
-- Coordinator inspected source iteration 002 and GLB reimport: **repair queue**.
-  The ribs are NOT profile-fitted despite the earlier implementation note. Their
-  radius omits the sphere cross-section factor `sqrt(1 - t*t)`; upper/lower rings
-  float away from the paper. Retaining ring and seam also float. Do not accept.
-- Coordinator fixed submillimeter envelope drift and prevented mutation of
-  consumer brass textures; regression checks pass. GLB: 259,808 bytes.
-- The single visual correction pass is consumed; no automatic escalation.
+Captured and viewed the actual reference, rejected render, early source iteration 003, and final iteration 004 (createPreview, existing kit rig). No score loop, topology build, GLB export or commit.
+Final preview: .asset-forge/previews/kk-007-washi-pendant-lantern/iteration-004/beauty.png
+
+Validation: ray probes compare all rib radii and seam samples with the actual triangulated paper at rib counts 8/12/18; exact bounds and the 15k budget are asserted. Shared ownership, placement, override and dispose tests pass. Coplanar heuristic passes.
+Approximation: no floral ink, rivets, interior bulb or electrical simulation. The open collar/bridge is deliberately simpler than the reference's covered upper fitting.
