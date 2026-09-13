@@ -4,6 +4,8 @@ Branch: `feat/kyoto-kat-kit` in `zugzug1/vibe3d` only. This is an in-progress co
 
 ## Saved batches
 
+- Coffee preparation: `/Volumes/zug1/kyoto-kat-kit/pilot-review/coffee-preparation-2026-09-13-v1/README.md` — 036, 037, 038. 37 checksum-verified files. Bean-cylinder replacement, mapped-spout UVs and lathe-normal checks completed. Grinder contrast shadow concern remains explicitly recorded; appearance approval pending.
+
 - Service and memory: `/Volumes/zug1/kyoto-kat-kit/pilot-review/storytelling-first-five-2026-09-13-v1/README.md` — 031, 035, 039, 041, 042. 57 checksum-verified files, source and GLB reimport views. Appearance approval pending. The ledger gameplay reimport and photo-display source close capture wrote valid decoded PNGs before Dawn teardown SIGSEGV; these are not clean process exits.
 
 - Earlier approved-source reimports: `/Volumes/zug1/kyoto-kat-kit/pilot-review/approved-reimports-2026-09-13-v1/README.md` — 001, 002, 004, 006, 008, 011, 032, 033, 034, 040. 84 checksum-verified copied files; fresh GLBs and reimport previews close previous handoff gaps. Existing source appearance approvals are retained; the archive's conservative generic pending label does not revoke them.
