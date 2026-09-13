@@ -5,7 +5,7 @@
  * to a manifold surface, then emits LOD + collision claims measured by
  * measureIntegrity — never asserted.
  *
- * Not shipped as a published @kyoto-kat/kyoto-kat-core export (terrain/shared import).
+ * Not shipped as a published @cafe-kit/kyoto-kat-core export (terrain/shared import).
  */
 import {
   COMPILED_TOPOLOGY_FORMAT,
@@ -25,7 +25,7 @@ import {
 import type { ReducedSurface } from '../../../assets/terrain/shared/unwrap.ts'
 import { Box3, BufferGeometry, Matrix4, Object3D, Vector3 } from 'three'
 
-export const KK_TOPOLOGY_COMPILER_HASH = 'kyoto-kat-topology@1'
+export const KK_TOPOLOGY_COMPILER_HASH = 'cafe-kit-topology@1'
 export const KK_TOPOLOGY_PROFILE = 'game'
 
 export type TopologyRole = 'hull' | 'detail' | 'scatter'

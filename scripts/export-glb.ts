@@ -5,7 +5,7 @@
  *   node --import tsx scripts/export-glb.ts --id kk-004-cedar-cat-tower
  *   node --import tsx scripts/export-glb.ts --all                      # every kyoto-kat model
  *   node --import tsx scripts/export-glb.ts --all --root assets/f1-prototypes --out dist/f1-glb
- *   options: --out <dir> (default dist/kyoto-kat-glb) · --texture-size <px> (default 512)
+ *   options: --out <dir> (default dist/cafe-kit-glb) · --texture-size <px> (default 512)
  *
  * Writes <out>/<id>.glb and prints bytes. Exit 1 if any export throws.
  */
@@ -18,8 +18,8 @@ const option = (name: string, fallback: string): string => {
   const index = argv.indexOf(name)
   return index >= 0 && argv[index + 1] ? argv[index + 1]! : fallback
 }
-const root = resolve(option('--root', 'assets/kyoto-kat'))
-const out = resolve(option('--out', 'dist/kyoto-kat-glb'))
+const root = resolve(option('--root', 'assets/cafe-kit'))
+const out = resolve(option('--out', 'dist/cafe-kit-glb'))
 const textureSize = Number(option('--texture-size', '512'))
 const idIndex = argv.indexOf('--id')
 const ids = argv.includes('--all')

@@ -1,4 +1,4 @@
-# @kyoto-kat/registry
+# @cafe-kit/registry
 
 ## 0.0.1
 

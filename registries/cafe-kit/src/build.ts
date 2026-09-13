@@ -12,7 +12,7 @@ import { categoryFromId, tierFromId } from './categories.ts'
 
 const registryRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 const repositoryRoot = resolve(registryRoot, '../..')
-const prototypesRoot = join(repositoryRoot, 'assets/kyoto-kat')
+const prototypesRoot = join(repositoryRoot, 'assets/cafe-kit')
 const outputRoot = join(registryRoot, 'dist')
 
 const KIT_CORE = 'kk-core'
@@ -45,7 +45,7 @@ function modelDependency(content: string, modelId: string): string[] {
   const importPattern = /from\s+['"]\.\.\/(kk-[a-z0-9-]+)\//g
   for (const match of content.matchAll(importPattern)) {
     const dependency = match[1]
-    if (dependency && dependency !== modelId) dependencies.add(`@kyoto-kat/${dependency}`)
+    if (dependency && dependency !== modelId) dependencies.add(`@cafe-kit/${dependency}`)
   }
   return [...dependencies]
 }
@@ -63,7 +63,7 @@ async function topologyArtifact(modelId: string): Promise<{ artifact: RegistryAr
     return {
       artifact: {
         path: relative(repositoryRoot, path),
-        target: `{models}/kyoto-kat/${modelId}/${modelId}.vtopo`,
+        target: `{models}/cafe-kit/${modelId}/${modelId}.vtopo`,
         mediaType: COMPILED_TOPOLOGY_MEDIA_TYPE,
         encoding: 'base64',
         content: Buffer.from(bytes).toString('base64'),
@@ -85,12 +85,12 @@ async function buildSupportItem(itemId: string): Promise<RegistryItem> {
   const paths = await collectShippedFiles(directory, KIT_CORE_SKIP)
   const files = await Promise.all(paths.map((path) => registryFile(
     path,
-    `{models}/kyoto-kat/${itemId}/${relative(directory, path).split(sep).join('/')}`,
+    `{models}/cafe-kit/${itemId}/${relative(directory, path).split(sep).join('/')}`,
   )))
   return {
     name: itemId,
     type: 'vibe3d:lib',
-    title: 'Kyoto Kat Core',
+    title: 'Cafe Kit Core',
     description: 'Shared palette, materials, procedural textures, geometry primitives, preview rig and the resource-disposal contract every café prop builds on.',
     dependencies: ['three@>=0.185.0'],
     registryDependencies: [],
@@ -103,13 +103,13 @@ async function buildModelItem(modelId: string): Promise<RegistryItem> {
   const directory = join(prototypesRoot, modelId)
   const paths = await collectShippedFiles(directory)
   const contents = await Promise.all(paths.map((path) => readFile(path, 'utf8')))
-  const dependencies = new Set<string>([`@kyoto-kat/${KIT_CORE}`])
+  const dependencies = new Set<string>([`@cafe-kit/${KIT_CORE}`])
   for (const content of contents) {
     for (const dependency of modelDependency(content, modelId)) dependencies.add(dependency)
   }
   const files = await Promise.all(paths.map((path) => registryFile(
     path,
-    `{models}/kyoto-kat/${modelId}/${relative(directory, path).split(sep).join('/')}`,
+    `{models}/cafe-kit/${modelId}/${relative(directory, path).split(sep).join('/')}`,
   )))
   const title = titleFromId(modelId)
   const category = categoryFromId(modelId)
@@ -129,7 +129,7 @@ async function buildModelItem(modelId: string): Promise<RegistryItem> {
     artifacts: [compiled.artifact],
     representations: {
       source: {
-        entry: `assets/kyoto-kat/${modelId}/model.ts#createModel`,
+        entry: `assets/cafe-kit/${modelId}/model.ts#createModel`,
         capabilities: ['webgpu', 'tsl'],
       },
       compiled: [{
@@ -149,7 +149,7 @@ async function buildModelItem(modelId: string): Promise<RegistryItem> {
       description: `Inspect, configure, and export the ${title.toLocaleLowerCase()} directly from your project.`,
       category,
       tags: [category.toLocaleLowerCase(), tier, 'procedural', 'threejs', 'cafe', 'kyoto'],
-      preview: `assets/kyoto-kat/${modelId}/model.ts#createPreview`,
+      preview: `assets/cafe-kit/${modelId}/model.ts#createPreview`,
       controls: {},
       materialSlots: [],
       parts: [],
@@ -176,10 +176,10 @@ async function main(): Promise<void> {
   items.push({
     name: 'kit',
     type: 'vibe3d:kit',
-    title: 'Kyoto Kat Kit',
+    title: 'Cafe Kit',
     description: 'Procedural 1990s Kyoto cat-café furniture and props, ready to own and adapt: counters, seating, cat furniture, ceramics and storytelling dressing.',
     dependencies: [],
-    registryDependencies: modelIds.map((id) => `@kyoto-kat/${id}`),
+    registryDependencies: modelIds.map((id) => `@cafe-kit/${id}`),
     files: [],
     artifacts: [],
   })
@@ -187,10 +187,10 @@ async function main(): Promise<void> {
   const registry = registrySchema.parse({
     $schema: 'https://vibe3d.dev/schema/registry.json',
     schemaVersion: 2,
-    namespace: '@kyoto-kat',
-    name: 'Kyoto Kat Kit',
+    namespace: '@cafe-kit',
+    name: 'Cafe Kit',
     description: 'A procedural 1990s Kyoto machiya cat-café prop library for Three.js — cedar, washi, tatami, glazed ceramics and indigo textiles, with no branding baked in.',
-    homepage: 'https://vibe3d.dev/kits/kyoto-kat',
+    homepage: 'https://vibe3d.dev/kits/cafe-kit',
     license: 'MIT',
     defaultItem: 'kit',
     compatibility: {

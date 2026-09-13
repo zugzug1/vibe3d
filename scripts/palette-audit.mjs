@@ -17,7 +17,7 @@ import sharp from 'sharp'
 
 const root = resolve('.asset-forge/previews')
 /** Every kit's model root; a kit's assets are audited only once it has previews. */
-const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/kyoto-kat'].map((p) => resolve(p))
+const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/cafe-kit'].map((p) => resolve(p))
 
 /** Anything this dark is preview backdrop, not prop. */
 const BACKDROP = 0.055
@@ -116,7 +116,7 @@ const assets = MODEL_ROOTS
 const rows = (await Promise.all(assets.map(measure))).filter(Boolean)
 for (const row of rows) {
   row.wave = wave.has(row.asset) ? 'cargo'
-    : row.asset.startsWith('kk-') ? 'kyoto-kat'
+    : row.asset.startsWith('kk-') ? 'cafe-kit'
       : row.asset.startsWith('f1-') ? 'f1'
         : 'original'
 }

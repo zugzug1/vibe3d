@@ -14,7 +14,7 @@ import { mkdirSync, writeFileSync } from 'node:fs'
 import { resolve } from 'node:path'
 import { DawnCaptureSession } from './asset-forge/capture/dawn-session.ts'
 import { writePng } from './asset-forge/image.ts'
-import { createCafePreview, createReviewPreview } from '../assets/kyoto-kat/kk-scene/review-scene.ts'
+import { createCafePreview, createReviewPreview } from '../assets/cafe-kit/kk-scene/review-scene.ts'
 
 const argv = process.argv.slice(2)
 const option = (name: string, fallback: number): number => {

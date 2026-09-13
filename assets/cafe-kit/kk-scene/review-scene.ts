@@ -12,7 +12,7 @@
 import { Group } from 'three/webgpu'
 import { listModelIds } from '../kk-core/catalog.ts'
 import { createKkPreview, type KkPreview } from '../kk-core/preview.ts'
-import { tierFromId } from '../../../registries/kyoto-kat/src/categories.ts'
+import { tierFromId } from '../../../registries/cafe-kit/src/categories.ts'
 
 type Instance = { root: Group; update?(dt: number): void; dispose(): void }
 type ModelModule = { createModel: (options?: Record<string, unknown>) => Instance }
@@ -37,7 +37,7 @@ export interface ComposedScene {
 /** Grid by tier: 2.5 m pitch for signature, 1.8 m furnishing, 1.0 m storytelling; rows along -Z. */
 export async function createReviewScene(): Promise<ComposedScene> {
   const root = new Group()
-  root.name = 'kyoto-kat / review scene'
+  root.name = 'cafe-kit / review scene'
   const models = await instantiateAll()
   const pitch = { signature: 2.5, furnishing: 1.8, storytelling: 1.0 } as const
   const rowZ = { signature: 0, furnishing: -4, storytelling: -7 } as const
@@ -101,7 +101,7 @@ const CAFE_LAYOUT: Record<number, { x: number; z: number; yaw: number }> = {
 
 export async function createCafeScene(): Promise<ComposedScene> {
   const root = new Group()
-  root.name = 'kyoto-kat / cafe scene'
+  root.name = 'cafe-kit / cafe scene'
   const models = await instantiateAll()
   let clutter = 0
   for (const { id, model } of models) {

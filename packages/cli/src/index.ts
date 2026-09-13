@@ -50,7 +50,7 @@ async function initialize(cwd: string): Promise<void> {
     registries: {
       '@scifi-kit': { source: 'npm:@scifi-kit/registry', version: 'latest' },
       '@medieval-kit': { source: 'npm:@medieval-kit/registry', version: 'latest' },
-      '@kyoto-kat': { source: 'npm:@kyoto-kat/registry', version: 'latest' },
+      '@cafe-kit': { source: 'npm:@cafe-kit/registry', version: 'latest' },
     },
   }
   const createdConfig = await writeNewFile(configPath, `${JSON.stringify(config, null, 2)}\n`)

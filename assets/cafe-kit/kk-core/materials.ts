@@ -69,7 +69,7 @@ export function acquireKkMaterials(options: KkMaterialOptions = {}): KkMaterialB
   ): MeshStandardMaterial => {
     const override = options.overrides?.[slot]
     if (override) return override
-    const material = new MeshStandardMaterial({ name: `kyoto-kat / ${slot}`, ...parameters })
+    const material = new MeshStandardMaterial({ name: `cafe-kit / ${slot}`, ...parameters })
     owned.push(material)
     return material
   }

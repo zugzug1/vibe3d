@@ -1,5 +1,5 @@
 {
-  "name": "@kyoto-kat/registry",
+  "name": "@cafe-kit/registry",
   "version": "0.0.1",
   "description": "Kyoto Kat — procedural 1990s Kyoto cat-café furniture and props for Vibe3D and Three.js.",
   "type": "module",

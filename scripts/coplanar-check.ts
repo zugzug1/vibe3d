@@ -36,7 +36,7 @@ type Axis = (typeof AXES)[number]
  * Every kit's model root. An id is resolved across all of them; an id that resolves nowhere is an
  * error (exit 2), never a silent SKIP — a check that skips is a check that passed nothing.
  */
-const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/kyoto-kat'] as const
+const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/cafe-kit'] as const
 
 function resolveModel(id: string): string | undefined {
   for (const root of MODEL_ROOTS) {

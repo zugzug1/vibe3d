@@ -18,7 +18,7 @@ const sizeOf = (root: Object3D) => {
   return { box, size: box.getSize(new Vector3()) }
 }
 
-describe('kyoto-kat compiled topology', () => {
+describe('cafe-kit compiled topology', () => {
   test('catalog covers every model.ts', async () => {
     const disk = new Bun.Glob('kk-*/model.ts').scan({ cwd: import.meta.dir })
     const ids: string[] = []

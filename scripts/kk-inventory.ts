@@ -1,7 +1,7 @@
 /**
  * Kyoto Kat inventory + budget gate.
  *
- * Instantiates every `kk-0NN-<slug>/model.ts` under assets/kyoto-kat, measures what the brief asks to be reported —
+ * Instantiates every `kk-0NN-<slug>/model.ts` under assets/cafe-kit, measures what the brief asks to be reported —
  * metric bounds, triangles, mesh primitives, distinct materials, texture slots and sizes, GLB byte size
  * when one has been exported — and FAILS on a tier breach. Budgets are not enforced anywhere else in
  * the repository, so this is the gate.
@@ -17,10 +17,10 @@
 import { existsSync, readdirSync, readFileSync, statSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { Box3, Mesh, Vector3, type BufferGeometry, type Material, type Texture } from 'three/webgpu'
-import { TIER_BUDGET, tierFromId } from '../registries/kyoto-kat/src/categories.ts'
+import { TIER_BUDGET, tierFromId } from '../registries/cafe-kit/src/categories.ts'
 
-const KIT_ROOT = resolve('assets/kyoto-kat')
-const GLB_ROOT = resolve('dist/kyoto-kat-glb')
+const KIT_ROOT = resolve('assets/cafe-kit')
+const GLB_ROOT = resolve('dist/cafe-kit-glb')
 const EXCEPTIONS = resolve('docs/kyoto-kat/exceptions.md')
 
 const argv = process.argv.slice(2)

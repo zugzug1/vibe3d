@@ -7,9 +7,9 @@ masters keep a transparent backdrop).
 
 ## Ownership
 
-- A worker owns exactly its `assets/kyoto-kat/kk-0NN-<slug>/` directories. Nothing else.
-- Coordinator-owned, never edited by a worker: `assets/kyoto-kat/kk-core/`, `assets/kyoto-kat/kk-scene/`,
-  `assets/kyoto-kat/*.test.ts`, `registries/kyoto-kat/`, `docs/kyoto-kat/manifest.json`, every root
+- A worker owns exactly its `assets/cafe-kit/kk-0NN-<slug>/` directories. Nothing else.
+- Coordinator-owned, never edited by a worker: `assets/cafe-kit/kk-core/`, `assets/cafe-kit/kk-scene/`,
+  `assets/cafe-kit/*.test.ts`, `registries/cafe-kit/`, `docs/kyoto-kat/manifest.json`, every root
   config and script. If the core is missing something you need, say so in your report with the exact
   helper you want; do not fork a private copy.
 - One commit per finished asset, `feat(kyoto-kat): kk-0NN <slug>`, touching only that directory.
@@ -18,7 +18,7 @@ masters keep a transparent backdrop).
 ## Directory
 
 ```
-assets/kyoto-kat/kk-0NN-<slug>/
+assets/cafe-kit/kk-0NN-<slug>/
   model.ts               # the asset (see contract below)
   catalog.ts             # optional: export const entry = shell('kk-0NN-<slug>', ['hull-mesh-name'], …)
   kk-0NN-<slug>.vtopo    # compiled sidecar, committed: bun run kk:compile-topology -- --only=kk-0NN-<slug>
@@ -64,7 +64,7 @@ assets/kyoto-kat/kk-0NN-<slug>/
 
 1. Blockout the primary silhouette and major masses from the manifest dimensions. Capture at once:
    ```
-   bun run vibe:model preview --module assets/kyoto-kat/kk-0NN-<slug>/model.ts --export createPreview --asset kk-0NN-<slug> --reference /Volumes/zug1/kyoto-kat-kit/v1/images/kk-0NN.png
+   bun run vibe:model preview --module assets/cafe-kit/kk-0NN-<slug>/model.ts --export createPreview --asset kk-0NN-<slug> --reference /Volumes/zug1/kyoto-kat-kit/v1/images/kk-0NN.png
    ```
 2. Before every critique: `node --import tsx scripts/coplanar-check.ts kk-0NN-<slug>` (exit 0, and it
    must not say FAILED TO LOAD).
@@ -78,12 +78,12 @@ assets/kyoto-kat/kk-0NN-<slug>/
    10 iterations (storytelling: 6). A plateau means change the representation, not grind.
 5. Then the kit gates, all green:
    ```
-   bun test assets/kyoto-kat -t kk-0NN
+   bun test assets/cafe-kit -t kk-0NN
    bun run kk:compile-topology -- --only=kk-0NN-<slug>
-   bun test assets/kyoto-kat/kyoto-kat.topology.test.ts -t kk-0NN
+   bun test assets/cafe-kit/cafe-kit.topology.test.ts -t kk-0NN
    node --import tsx scripts/kk-inventory.ts --only kk-0NN-<slug> --check
    bun run vibe:model preview --module … --export createCafePreview --asset kk-0NN-<slug>-cafe
-   node scripts/qa-sheet.mjs kk-0NN-<slug> assets/kyoto-kat/kk-0NN-<slug>/review/qa-sheet.png
+   node scripts/qa-sheet.mjs kk-0NN-<slug> assets/cafe-kit/kk-0NN-<slug>/review/qa-sheet.png
    ```
    Copy the accepted `beauty.png` (close) and the café capture into `review/`. Look at the 8-view sheet
    yourself: a part floating off its mount or a seam that never closed hides at the hero angle.

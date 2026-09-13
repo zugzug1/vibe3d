@@ -1,13 +1,13 @@
-# @kyoto-kat/registry
+# @cafe-kit/registry
 
 Procedural 1990s Kyoto machiya cat-café furniture and props for Vibe3D and Three.js. Fifty assets in
 three tiers — 10 signature pieces, 20 furnishings, 20 storytelling props — built as direct Three.js
 source from a reviewed concept reference pack (issue zugzug1/vibe3d#6).
 
 ```sh
-bunx vibe3d add @kyoto-kat/kk-004-cedar-cat-tower
+bunx vibe3d add @cafe-kit/kk-004-cedar-cat-tower
 # or install the complete library
-bunx vibe3d add @kyoto-kat
+bunx vibe3d add @cafe-kit
 ```
 
 ## Conventions every model shares

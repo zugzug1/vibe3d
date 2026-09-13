@@ -2,7 +2,7 @@
 //
 // Fifty models are built by parallel workers who each own one `kk-0NN-<slug>/` directory. Nobody edits
 // this file to register a model: every directory with a model.ts is under test the moment it exists.
-// A worker runs its own model with `bun test assets/kyoto-kat -t kk-0NN`.
+// A worker runs its own model with `bun test assets/cafe-kit -t kk-0NN`.
 //
 // The contract is the F1 kit's (rules 15–17 of the vibe-model modeling rules): dispose exactly once,
 // dispose twice safely, keep the root and semantic parts stable across a rebuild, never accumulate
@@ -14,7 +14,7 @@ import { join } from 'node:path'
 import { afterEach, beforeEach, describe, expect, test } from 'bun:test'
 import { Box3, BufferGeometry, Material, Mesh, MeshStandardMaterial, Vector3 } from 'three/webgpu'
 import { listModelIds } from './kk-core/catalog.ts'
-import { TIER_BUDGET, numberFromId, tierFromId } from '../../registries/kyoto-kat/src/categories.ts'
+import { TIER_BUDGET, numberFromId, tierFromId } from '../../registries/cafe-kit/src/categories.ts'
 
 type Instance = {
   root: import('three/webgpu').Group
@@ -102,7 +102,7 @@ afterEach(() => {
   restore = []
 })
 
-describe('kyoto-kat kit', () => {
+describe('cafe-kit kit', () => {
   test('every model directory follows the id contract and has a manifest row', () => {
     for (const id of ids) {
       expect(id).toMatch(/^kk-\d{3}-[a-z0-9-]+$/)
@@ -223,7 +223,7 @@ describe.each(ids)('%s', (id) => {
       if (!mesh.isMesh) return
       expect(mesh.name.startsWith(id)).toBe(true)
       for (const material of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
-        expect((material as Material).name.startsWith('kyoto-kat / ')).toBe(true)
+        expect((material as Material).name.startsWith('cafe-kit / ')).toBe(true)
       }
     })
     model.dispose()

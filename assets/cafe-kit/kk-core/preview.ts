@@ -76,7 +76,7 @@ export const CAFE_FOV = 45
 export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions = {}): KkPreview {
   const framing: KkFraming = options.framing ?? 'close'
   const scene = new Scene()
-  scene.name = 'kyoto-kat / reference preview'
+  scene.name = 'cafe-kit / reference preview'
   scene.background = new Color(TOKEN.IVORY)
   scene.add(model.root)
 
@@ -97,13 +97,13 @@ export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions
     const groundGeo = new PlaneGeometry(28, 28)
     groundGeo.rotateX(-Math.PI / 2)
     const groundMat = new MeshStandardMaterial({
-      name: 'kyoto-kat / preview ground',
+      name: 'cafe-kit / preview ground',
       color: shade(TOKEN.IVORY, -0.08),
       roughness: 0.96,
       metalness: 0,
     })
     const groundMesh = new Mesh(groundGeo, groundMat)
-    groundMesh.name = 'kyoto-kat / preview ground'
+    groundMesh.name = 'cafe-kit / preview ground'
     groundMesh.receiveShadow = true
     groundMesh.userData.excludeFromExport = true
     scene.add(groundMesh)
@@ -130,7 +130,7 @@ export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions
   const aspect = Number.isFinite(options.aspect) && (options.aspect ?? 0) > 0 ? options.aspect! : 1
 
   const camera = new PerspectiveCamera(fov, aspect, 0.05, 200)
-  camera.name = 'kyoto-kat / reference camera'
+  camera.name = 'cafe-kit / reference camera'
   camera.position.set(
     target[0] + Math.sin(yaw) * Math.cos(pitch) * distance,
     target[1] + Math.sin(pitch) * distance,

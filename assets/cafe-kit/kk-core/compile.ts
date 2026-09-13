@@ -1,9 +1,9 @@
 /**
  * Write CompiledTopology sidecars for every Kyoto Kat catalog model.
  *
- *   bun assets/kyoto-kat/kk-core/compile.ts                 # every model
- *   bun assets/kyoto-kat/kk-core/compile.ts --only=<id>     # one worker's model
- *   bun assets/kyoto-kat/kk-core/compile.ts --meshes        # list meshes + topology roles
+ *   bun assets/cafe-kit/kk-core/compile.ts                 # every model
+ *   bun assets/cafe-kit/kk-core/compile.ts --only=<id>     # one worker's model
+ *   bun assets/cafe-kit/kk-core/compile.ts --meshes        # list meshes + topology roles
  */
 import { createHash } from 'node:crypto'
 import { mkdir, writeFile } from 'node:fs/promises'
