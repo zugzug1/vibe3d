@@ -98,7 +98,9 @@ export function ModelPreview({ model }: ModelPreviewProps) {
       const box = new Box3().setFromObject(preview.root)
       const center = box.getCenter(new Vector3())
       const direction = preview.camera.position.clone().sub(controls.target).normalize()
-      const distance = Math.max(box.getSize(new Vector3()).length() * 1.8, 0.4)
+      const verticalHalfFov = preview.camera.fov * Math.PI / 360
+      const halfFov = Math.min(verticalHalfFov, Math.atan(Math.tan(verticalHalfFov) * preview.camera.aspect))
+      const distance = Math.max(box.getSize(new Vector3()).length() * 0.6 / Math.sin(halfFov), 0.4)
       controls.target.copy(center)
       preview.camera.position.copy(center).addScaledVector(direction, distance)
       preview.camera.lookAt(center)
@@ -258,10 +260,17 @@ export function ModelPreview({ model }: ModelPreviewProps) {
   }
 
   return (
+    <div className="model-preview-layout">
     <div className="model-preview" ref={hostRef}>
       <canvas aria-label={`Interactive 3D preview of ${model.name}`} />
       {!ready && !previewError ? <div className="preview-status" aria-live="polite">Loading preview…</div> : null}
       {previewError ? <div className="preview-status preview-status--error" role="alert">Unable to load preview: {previewError}</div> : null}
+      {model.kind === 'f1' ? <Link className="pit-link-button" to={`/scenes/f1-pit?focus=${encodeURIComponent(model.id)}`}>See in the pit</Link> : null}
+      <button type="button" className="export-button" onClick={() => void exportGlb()} disabled={exporting || !ready}>
+        {exporting ? 'Exporting…' : 'Export GLB'}
+      </button>
+    </div>
+    <div className="cafe-model-controls">
       {shapeControls ? (
         <fieldset className="cafe-shape-controls" disabled={!ready}>
           <legend>Café shape</legend>
@@ -294,11 +303,23 @@ export function ModelPreview({ model }: ModelPreviewProps) {
             Tint
             <input
               type="color"
-              value={woodTint}
+              value={/^#[\da-f]{6}$/i.test(woodTint) ? woodTint : DEFAULT_WOOD_TINT}
               onChange={(event) => {
                 const tint = event.target.value
                 setWoodTint(tint)
                 changeWoodFinish({ tint })
+              }}
+            />
+            <input
+              type="text"
+              aria-label="Wood hex color"
+              value={woodTint}
+              maxLength={7}
+              pattern="#[0-9a-fA-F]{6}"
+              onChange={(event) => {
+                const tint = event.target.value
+                setWoodTint(tint)
+                if (/^#[\da-f]{6}$/i.test(tint)) changeWoodFinish({ tint })
               }}
             />
           </label>
@@ -322,18 +343,7 @@ export function ModelPreview({ model }: ModelPreviewProps) {
           {woodError ? <div className="cafe-finish-error" role="alert">{woodError}</div> : null}
         </fieldset>
       ) : null}
-      {model.kind === 'f1' ? (
-        <Link
-          className="pit-link-button"
-          to={`/scenes/f1-pit?focus=${encodeURIComponent(model.id)}`}
-          title="Open this prop in the F1 pit scene"
-        >
-          See in the pit
-        </Link>
-      ) : null}
-      <button type="button" className="export-button" onClick={() => void exportGlb()} disabled={exporting || !ready}>
-        {exporting ? 'Exporting…' : 'Export GLB'}
-      </button>
+    </div>
     </div>
   )
 }

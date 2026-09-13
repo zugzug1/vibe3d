@@ -168,6 +168,10 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .cafe-shape-controls button { min-height: 30px; border: 1px solid #3c4650; border-radius: 6px; color: #e6e9ec; background: #1a2128; font: inherit; cursor: pointer; }
 .cafe-shape-controls button:hover { background: #26313b; }
 .cafe-shape-controls button:disabled { opacity: .6; cursor: default; }
+.cafe-model-controls { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 230px), 1fr)); gap: 12px; margin-top: 12px; }
+.cafe-model-controls:empty { display: none; }
+.cafe-model-controls fieldset { position: static; min-width: 0; }
+.cafe-finish-controls input[type="text"] { grid-column: 1 / -1; min-width: 0; padding: 6px 8px; border: 1px solid #65717c; border-radius: 4px; background: #131a20; color: #e6e9ec; font: inherit; }
 .reference-section { margin-top: 72px; scroll-margin-top: 92px; }
 
 .pit-inspect-page {

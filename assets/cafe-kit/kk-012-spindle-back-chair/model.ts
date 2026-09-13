@@ -85,7 +85,7 @@ const ID = 'kk-012-spindle-back-chair'
 import { shapeConfig, finiteOption, type CafeShapeConfig, type ShapeControls } from '../kk-core/shape-controls.ts'
 export const cafeShapeControls = {
   archSpan: { min: 0.30, max: 0.35, default: 0.336, step: 0.002, label: 'Bow centreline span (m)' },
-  archRise: { min: 0.34, max: 0.49, default: 0.421, step: 0.005, label: 'Bow centreline rise (m)' },
+  archRise: { min: 0.34, max: 0.49, default: 0.421, step: 0.001, label: 'Bow centreline rise (m)' },
   archThickness: { min: 0.024, max: 0.032, default: 0.028, step: 0.001, label: 'Bow diameter (m)' },
 } as const satisfies ShapeControls
 
