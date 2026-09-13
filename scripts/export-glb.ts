@@ -12,6 +12,9 @@
 import { existsSync, mkdirSync, readdirSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
 import { exportStaticGlb } from '../src/asset-forge/generator/glb.ts'
+import { installGlbNodeAdapters } from './glb-node-adapter.ts'
+
+installGlbNodeAdapters()
 
 const argv = process.argv.slice(2)
 const option = (name: string, fallback: string): string => {
@@ -37,21 +40,23 @@ if (!ids.length) {
 mkdirSync(out, { recursive: true })
 let failed = false
 for (const id of ids) {
+  let model: { root: import('three/webgpu').Object3D; dispose: () => void } | undefined
   try {
     const mod = await import(join(root, id, 'model.ts')) as {
       createModel: (options?: Record<string, unknown>) => { root: import('three/webgpu').Object3D; dispose: () => void }
     }
-    const model = mod.createModel()
+    model = mod.createModel()
     model.root.updateMatrixWorld(true)
     const blob = await exportStaticGlb(model.root, { textureSize })
     const bytes = new Uint8Array(await blob.arrayBuffer())
     const path = join(out, `${id}.glb`)
     writeFileSync(path, bytes)
-    model.dispose()
     console.log(`${id}: ${bytes.byteLength} bytes -> ${path}`)
   } catch (error) {
     failed = true
     console.error(`${id}: EXPORT FAILED — ${(error as Error).message}`)
+  } finally {
+    model?.dispose()
   }
 }
 process.exit(failed ? 1 : 0)
