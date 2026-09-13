@@ -16,14 +16,13 @@ import {
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js'
 import { exportStaticGlb } from '../../../src/asset-forge/generator/glb.ts'
 import type { CafeShapeInstance, CatalogModel, ModelPreview as PreviewInstance } from './catalog.ts'
-import type { CafeShapeConfig, ShapeControls } from '../../../assets/cafe-kit/kk-core/shape-controls.ts'
+import { controlValues, type CafeControls } from './cafe-controls.ts'
 import { createKkPreview } from '../../../assets/cafe-kit/kk-core/preview.ts'
 import { setCafeWoodFinish, type CafeWoodFinish } from '../../../assets/cafe-kit/kk-core/materials.ts'
 import { DERIVED } from '../../../assets/cafe-kit/kk-core/palette.ts'
 
 const DEFAULT_WOOD_TINT = `#${new Color(DERIVED.CEDAR).getHexString()}`
 const DEFAULT_WOOD_ROUGHNESS = 0.78
-const SHAPE_KEYS = ['archSpan', 'archRise', 'archThickness'] as const
 interface ModelPreviewProps {
   model: CatalogModel
 }
@@ -46,8 +45,8 @@ export function ModelPreview({ model }: ModelPreviewProps) {
   const [woodTint, setWoodTint] = useState(DEFAULT_WOOD_TINT)
   const [woodRoughness, setWoodRoughness] = useState(DEFAULT_WOOD_ROUGHNESS)
   const [woodMaterialCount, setWoodMaterialCount] = useState<number | undefined>(undefined)
-  const [shapeControls, setShapeControls] = useState<ShapeControls | undefined>(undefined)
-  const [shapeValues, setShapeValues] = useState<Partial<Record<keyof CafeShapeConfig, number>>>({})
+  const [shapeControls, setShapeControls] = useState<CafeControls | undefined>(undefined)
+  const [shapeValues, setShapeValues] = useState<Record<string, number>>({})
   const [woodError, setWoodError] = useState<string | undefined>(undefined)
   const instanceRef = useRef<CafeShapeInstance | undefined>(undefined)
   const woodPatchRef = useRef<CafeWoodFinish>({})
@@ -122,21 +121,22 @@ export function ModelPreview({ model }: ModelPreviewProps) {
       const module = await model.load()
       if (stopped) return
       const aspect = Math.max(host.clientWidth, 1) / Math.max(host.clientHeight, 1)
-      let loadedShapeControls: ShapeControls | undefined
-      let loadedShapeValues: Partial<Record<keyof CafeShapeConfig, number>> = {}
-      if (model.kind === 'cafe-kit' && module.cafeShapeControls && module.createModel) {
+      let loadedShapeControls: CafeControls | undefined
+      let loadedShapeValues: Record<string, number> = {}
+      if (model.kind === 'cafe-kit' && module.createModel) {
         instance = module.createModel()
-        preview = createKkPreview(instance, { aspect })
-        loadedShapeControls = module.cafeShapeControls
-        const config = instance.getConfig()
-        loadedShapeValues = { archSpan: config.archSpan, archRise: config.archRise, archThickness: config.archThickness }
+        preview = createKkPreview(instance, { aspect, lighting: 'contrast' })
+        loadedShapeControls = module.cafeShapeControls ?? module.structureControls
+        if (loadedShapeControls) loadedShapeValues = controlValues(loadedShapeControls, instance.getConfig())
       } else {
         preview = await module.createPreview({ aspect })
       }
       const terrain = model.kind === 'terrain'
       renderer.toneMapping = terrain ? AgXToneMapping : ACESFilmicToneMapping
-      renderer.toneMappingExposure = terrain ? 1.05 : 1.32
-      if (!terrain) {
+      // Browser canvas output needs its own exposure calibration; keep the reference light ratios.
+      renderer.toneMappingExposure = terrain ? 1.05 : model.kind === 'cafe-kit' ? 3.2 : 1.32
+      renderer.shadowMap.enabled = model.kind === 'cafe-kit'
+      if (!terrain && model.kind !== 'cafe-kit') {
         preview.scene.background = new Color(0x4b5660)
         const studioLights = new Group()
         studioLights.name = 'vibe3d-docs-studio-lighting'
@@ -225,14 +225,14 @@ export function ModelPreview({ model }: ModelPreviewProps) {
     setWoodRoughness(DEFAULT_WOOD_ROUGHNESS)
   }
 
-  const configureShape = (key: keyof CafeShapeConfig, value: number) => {
+  const configureShape = (key: string, value: number) => {
     const instance = instanceRef.current
     const preview = previewRef.current
     if (!instance || !preview || !shapeControls) return
     try {
       instance.configure({ [key]: value })
       const config = instance.getConfig()
-      setShapeValues({ archSpan: config.archSpan, archRise: config.archRise, archThickness: config.archThickness })
+      setShapeValues(controlValues(shapeControls, config))
       const patch = woodPatchRef.current
       if (patch.tint !== undefined || patch.roughness !== undefined) setCafeWoodFinish(preview.root, patch)
       reframeRef.current()
@@ -244,7 +244,7 @@ export function ModelPreview({ model }: ModelPreviewProps) {
 
   const resetShape = () => {
     if (!shapeControls) return
-    for (const key of SHAPE_KEYS) configureShape(key, shapeControls[key].default)
+    for (const key of Object.keys(shapeControls)) configureShape(key, shapeControls[key]!.default)
   }
 
   const exportGlb = async () => {
@@ -274,8 +274,8 @@ export function ModelPreview({ model }: ModelPreviewProps) {
       {shapeControls ? (
         <fieldset className="cafe-shape-controls" disabled={!ready}>
           <legend>Café shape</legend>
-          {SHAPE_KEYS.map((key) => {
-            const control = shapeControls[key]
+          {Object.keys(shapeControls).map((key) => {
+            const control = shapeControls[key]!
             const value = shapeValues[key] ?? control.default
             return (
               <label key={key}>

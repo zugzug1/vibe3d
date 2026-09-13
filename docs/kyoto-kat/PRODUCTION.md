@@ -25,7 +25,7 @@ Each batch: inspect references and original dimensions → early silhouette → 
 
 ## Review package
 
-Current source inventory: 27 of 50; 23 remain unstarted. The 15 previously approved appearances remain approved. The seven earlier repairs and five new utility/adoption models require explicit appearance approval. Controls are implemented and tested without changing approved default geometry. Current batch uses an opt-in contrast-lighting review alongside legacy captures; this is not a mobile performance claim.
+Checkpoint `da602b1`: 34 of 50 sources, exported and reimported; 16 storytelling props remain in production. The 15 previously approved appearances remain approved. The seven earlier repairs and twelve new models require explicit appearance approval. Controls are implemented and tested without changing approved default geometry. Batches use opt-in contrast-lighting reviews alongside legacy captures; this is not a mobile performance claim.
 
 Use the existing preview pipeline and `scripts/archive-cafe-pilots.ts`. Each batch gets a unique directory under `/Volumes/zug1/kyoto-kat-kit/pilot-review/`, with README, close/gameplay previews, reimport previews, source helpers, topology and checksums. Local drive paths are not remote download links. Present the batch with asset IDs and unresolved findings; record Miguel's approval separately.
 
