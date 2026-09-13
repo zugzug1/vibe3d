@@ -47,10 +47,14 @@ interface Row {
   warnings: string[]
   artifacts: Record<string, string | null>
   appearance: 'approved' | 'pending'
+  intendedDimensions: { width: number; depth: number; height: number } | null
 }
 
 // Explicit user approvals only; source existence and critic scores are not approval.
 const approved = new Set([1, 2, 3, 4, 5, 6, 8, 11, 12, 16, 17, 32, 33, 34, 40])
+const brief = JSON.parse(readFileSync(resolve('docs/kyoto-kat/manifest.json'), 'utf8')) as {
+  items: Array<{ id: string; dimensions_m: { width: number; depth: number; height: number } }>
+}
 
 const exceptions = new Set<string>(
   existsSync(EXCEPTIONS)
@@ -111,6 +115,13 @@ for (const id of ids) {
   const budget = TIER_BUDGET[tier]
   const breaches: string[] = []
   const warnings: string[] = []
+  const target = brief.items.find(item => item.id === id.slice(0, 6))?.dimensions_m
+  if (!target) breaches.push('missing original modeling target')
+  else for (const [axis, measured] of [['width', size.x], ['depth', size.z], ['height', size.y]] as const) {
+    if (Math.abs(measured - target[axis]) > Math.max(0.005, target[axis] * 0.05)) {
+      warnings.push(`${axis} ${round(measured)} differs from original ${target[axis]} m; verify pose or approved exception`)
+    }
+  }
   if (!meshes || !Number.isFinite(triangles) || triangles <= 0) breaches.push('empty or invalid geometry')
   if (![size.x, size.y, size.z].every(value => Number.isFinite(value) && value > 0)) breaches.push('invalid dimensions')
   if (triangles > budget.triangles) breaches.push(`triangles ${Math.round(triangles)} > ${budget.triangles}`)
@@ -161,6 +172,7 @@ for (const id of ids) {
     warnings,
     artifacts,
     appearance: approved.has(Number(id.slice(3, 6))) ? 'approved' : 'pending',
+    intendedDimensions: target ? { width: target.width, depth: target.depth, height: target.height } : null,
   })
   model.dispose()
 }

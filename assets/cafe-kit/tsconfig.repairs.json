@@ -14,6 +14,7 @@
     "kk-021-wall-cat-walkway/model.ts",
     "kk-024-ventilated-litter-enclosure/model.ts",
     "kk-025-adoption-notice-cabinet/model.ts",
-    "kk-027-waste-sorting-cabinet/model.ts"
+    "kk-027-waste-sorting-cabinet/model.ts",
+    "kk-scene/review-scene.ts"
   ]
 }

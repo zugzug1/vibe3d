@@ -20,11 +20,24 @@ test('finish applies across the discovered collection without replacing geometry
       })
     }
     capture(); const beforeGeometry = [...geometryIds]; const beforeMaps = [...maps]
+    const original = new Map<MeshStandardMaterial, { color: string; roughness: number }>()
+    model.root.traverse((object: Mesh) => {
+      if (!object.isMesh) return
+      for (const material of Array.isArray(object.material) ? object.material : [object.material]) {
+        if (material instanceof MeshStandardMaterial) original.set(material, {
+          color: material.color.getHexString(), roughness: material.roughness,
+        })
+      }
+    })
     setCafeWoodFinish(model.root, { tint: '#788468', roughness: 0.65 })
     capture()
     expect(geometryIds).toEqual(beforeGeometry)
     expect(maps).toEqual(beforeMaps)
     setCafeWoodFinish(model.root, { tint: null, roughness: null })
+    for (const [material, defaults] of original) {
+      expect(material.color.getHexString()).toBe(defaults.color)
+      expect(material.roughness).toBe(defaults.roughness)
+    }
     model.dispose()
   }
 })

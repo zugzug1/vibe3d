@@ -39,7 +39,7 @@ for (const [name, factory] of [['review', createReviewPreview], ['cafe', createC
     await session.settle()
     const png = resolve(outDir, `${name}.png`)
     await writePng(png, capture.image)
-    const models = (preview.root as { children: unknown[] }).children.length
+    const models = Number(preview.root.userData.modelCount ?? preview.root.children.length)
     results.push({ scene: name, models, drawCalls: capture.drawCalls, triangles: capture.triangles, png })
     if (capture.drawCalls > maxDraws || capture.triangles > maxTris) failed = true
   } finally {
