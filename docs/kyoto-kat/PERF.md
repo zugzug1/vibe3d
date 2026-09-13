@@ -4,6 +4,8 @@ Phone acceptance: **pending**. No named physical midrange phone has been tested.
 
 ## Desktop observations, 2026-09-13
 
+- Frozen 50-source checkpoint `be0cd34`: review 79 draws / 167,941 rendered triangles; furnished café 80 draws / 172,393 triangles at 1280×720. Both are below the engineering caps. The measurement process returned exit 1 after writing both PNGs and counters, so this is not a clean process pass or an fps measurement. Source geometry inventory is 167,722 triangles; rendered totals also include scene furniture, cards and rendering passes.
+
 - Before static scene batching: 27 assets, café capture 779 draws / 118,899 rendered triangles.
 - During production, after batching and adding room/support furniture: 34 sources present, café capture 60 draws / 145,107 rendered triangles; review 59 draws / 140,655 triangles. Sources were still undergoing repairs, so this is a provisional measurement, not the final frozen collection or a like-for-like benchmark.
 - Renderer: headless Dawn, Apple M4 / Metal on macOS 26.4.1; 1280×720. Scene target: at most 120 draws and 310,000 triangles. This is a local engineering target, not a hardware guarantee.

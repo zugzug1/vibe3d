@@ -1,8 +1,13 @@
 # Café-kit review index
 
-Branch: `feat/kyoto-kat-kit` in `zugzug1/vibe3d` only. This is an in-progress collection, not an OSS release or a claim of phone performance.
+Branch: `feat/kyoto-kat-kit` in `zugzug1/vibe3d` only. All 50 source/export sets are delivered; appearance approval, phone performance and OSS release clearance remain separate gates.
+
+Combined package: `/Volumes/zug1/kyoto-kat-kit/pilot-review/collection-2026-09-13-v1/README.md`. See COMPLETION.md for checks and limitations.
 
 ## Saved batches
+
+- Final atmosphere/service: `/Volumes/zug1/kyoto-kat-kit/pilot-review/atmosphere-service-2026-09-13-v1/README.md` — 043, 047, 048, 049; 47 verified files. Grooming-tool readability and radio material ownership repaired.
+- Final seasonal/care: `/Volumes/zug1/kyoto-kat-kit/pilot-review/seasonal-care-2026-09-13-v1/README.md` — 044, 045, 046, 050; 48 verified files. Closed bell loop, maple silhouettes, woven surfaces and cloth containment repaired. Bell source/reimport close captures wrote valid PNGs before renderer teardown SIGSEGV; not clean process exits.
 
 - Coffee preparation: `/Volumes/zug1/kyoto-kat-kit/pilot-review/coffee-preparation-2026-09-13-v1/README.md` — 036, 037, 038. 37 checksum-verified files. Bean-cylinder replacement, mapped-spout UVs and lathe-normal checks completed. Grinder contrast shadow concern remains explicitly recorded; appearance approval pending.
 

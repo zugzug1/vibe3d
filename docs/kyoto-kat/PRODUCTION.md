@@ -25,7 +25,7 @@ Each batch: inspect references and original dimensions → early silhouette → 
 
 ## Review package
 
-Checkpoint `ed5d1b2`: 42 of 50 sources, exported, reimported and archived; the final eight atmosphere/care props remain in production. The 15 previously approved appearances remain approved. Other sources require explicit appearance approval. Controls are implemented and tested without changing approved default geometry. Batches use opt-in contrast-lighting reviews alongside legacy captures; this is not a mobile performance claim. The grinder's remaining contrast shadow concern is recorded in its review rather than marked fixed.
+Source checkpoint `be0cd34`: all 50 sources, topology sidecars, GLBs and source/reimport previews delivered in batches. Frozen integration: 700 tests pass; complete inventory passes with 167,722 source triangles; registry builds 52 items from 50 models; docs build and focused source typechecks pass. The 15 previously approved appearances remain approved. Other sources require explicit appearance approval. Controls are implemented and tested without changing approved default geometry. The grinder's remaining contrast shadow concern is recorded in its review rather than marked fixed. See COMPLETION.md for the combined package and remaining gates.
 
 Use the existing preview pipeline and `scripts/archive-cafe-pilots.ts`. Each batch gets a unique directory under `/Volumes/zug1/kyoto-kat-kit/pilot-review/`, with README, close/gameplay previews, reimport previews, source helpers, topology and checksums. Local drive paths are not remote download links. Present the batch with asset IDs and unresolved findings; record Miguel's approval separately.
 
