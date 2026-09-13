@@ -1,10 +1,11 @@
 import { categoryFromId as f1CategoryFromId } from '../../../registries/f1-kit/src/categories.ts'
+import { categoryFromId as kkCategoryFromId } from '../../../registries/kyoto-kat/src/categories.ts'
 
 export interface CatalogModel {
   id: string
   name: string
   category: string
-  kind: 'prototype' | 'terrain' | 'f1'
+  kind: 'prototype' | 'terrain' | 'f1' | 'kyoto-kat'
   description: string
   load: () => Promise<ModelModule>
   loadSource: () => Promise<string>
@@ -28,6 +29,7 @@ const modules = {
   // evaluation scenes use *-scene.ts and are intentionally not matched here.
   ...import.meta.glob<ModelModule>('../../../assets/terrain/*/model.ts'),
   ...import.meta.glob<ModelModule>('../../../assets/f1-prototypes/*/model.ts'),
+  ...import.meta.glob<ModelModule>('../../../assets/kyoto-kat/kk-*/model.ts'),
 }
 const sources = {
   ...import.meta.glob<string>(
@@ -40,6 +42,10 @@ const sources = {
   ),
   ...import.meta.glob<string>(
     '../../../assets/f1-prototypes/*/model.ts',
+    { query: '?raw', import: 'default' },
+  ),
+  ...import.meta.glob<string>(
+    '../../../assets/kyoto-kat/kk-*/model.ts',
     { query: '?raw', import: 'default' },
   ),
 }
@@ -116,6 +122,7 @@ const title = (id: string) => words(id).map((word) => word[0]?.toUpperCase() + w
 function categoryFor(id: string, kind: CatalogModel['kind']): string {
   if (kind === 'terrain') return 'Terrain'
   if (kind === 'f1' || id.startsWith('f1-')) return f1CategoryFromId(id)
+  if (kind === 'kyoto-kat') return kkCategoryFromId(id)
   if (cargoLogisticsIds.has(id)) return 'Cargo & Logistics'
   if (/wall|room|shell|roof|ceiling|floor|facade|column|door|window/.test(id)) return 'Architecture'
   if (/pipe|vent|duct|drain|gauge|generator|tank|pump/.test(id)) return 'Infrastructure'
@@ -126,12 +133,15 @@ function categoryFor(id: string, kind: CatalogModel['kind']): string {
 
 export const catalog = Object.entries(modules)
   .map(([path, load]) => {
-    const match = path.match(/assets\/(prototypes|terrain|f1-prototypes)\/([^/]+)\/model\.ts$/)
+    const match = path.match(/assets\/(prototypes|terrain|f1-prototypes|kyoto-kat)\/([^/]+)\/model\.ts$/)
     const folder = match?.[1]
     const id = match?.[2]
     if (!id || !folder) throw new Error(`Unable to identify model at ${path}`)
     const kind: CatalogModel['kind'] =
-      folder === 'terrain' ? 'terrain' : folder === 'f1-prototypes' ? 'f1' : 'prototype'
+      folder === 'terrain' ? 'terrain'
+        : folder === 'f1-prototypes' ? 'f1'
+          : folder === 'kyoto-kat' ? 'kyoto-kat'
+            : 'prototype'
     return {
       id,
       name: title(id),
@@ -144,8 +154,9 @@ export const catalog = Object.entries(modules)
   })
   .sort((a, b) => a.name.localeCompare(b.name))
 
-export const scifiCatalog = catalog.filter((model) => model.kind !== 'f1')
+export const scifiCatalog = catalog.filter((model) => model.kind !== 'f1' && model.kind !== 'kyoto-kat')
 export const f1Catalog = catalog.filter((model) => model.kind === 'f1')
+export const kyotoKatCatalog = catalog.filter((model) => model.kind === 'kyoto-kat')
 
 /** Assembled F1 Kit pit — not a single model.ts; opens the inspect playground. */
 export const f1PitScene = {

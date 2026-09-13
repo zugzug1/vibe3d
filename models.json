@@ -18,6 +18,10 @@
     "@medieval-kit": {
       "source": "npm:@medieval-kit/registry",
       "version": "latest"
+    },
+    "@kyoto-kat": {
+      "source": "file:registries/kyoto-kat/dist/registry.json",
+      "version": "workspace"
     }
   }
 }

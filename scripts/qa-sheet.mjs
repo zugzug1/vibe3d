@@ -44,7 +44,13 @@ const cell = 512
 // The camera-override modules have to sit beside the prototypes for their
 // relative imports to resolve, and several of these run at once during a wave
 // review, so each run gets its own directory to delete on the way out.
-const viewRoot = resolve('assets/prototypes', `.qa-views-${process.pid}`)
+const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/kyoto-kat']
+const modelRoot = MODEL_ROOTS.find((root) => existsSync(resolve(root, asset, 'model.ts')))
+if (!modelRoot) {
+  console.error(`qa-sheet: no model.ts for ${asset} under ${MODEL_ROOTS.join(', ')}`)
+  process.exit(2)
+}
+const viewRoot = resolve(modelRoot, `.qa-views-${process.pid}`)
 
 function render(modulePath, file) {
   return new Promise((done, fail) => {

@@ -25,19 +25,42 @@
  *         node --import tsx scripts/coplanar-check.ts --all
  * Exits 1 if any pair exceeds --max-area (default 0.02 m2).
  */
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { Box3, Group, Mesh } from 'three/webgpu'
 
 const EPS = 1e-4
 const AXES = ['x', 'y', 'z'] as const
 type Axis = (typeof AXES)[number]
 
+/**
+ * Every kit's model root. An id is resolved across all of them; an id that resolves nowhere is an
+ * error (exit 2), never a silent SKIP — a check that skips is a check that passed nothing.
+ */
+const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/kyoto-kat'] as const
+
+function resolveModel(id: string): string | undefined {
+  for (const root of MODEL_ROOTS) {
+    if (existsSync(`${root}/${id}/model.ts`)) return `../${root}/${id}/model.ts`
+  }
+  return undefined
+}
+
 const argv = process.argv.slice(2)
 const maxAreaArg = argv.findIndex((a) => a === '--max-area')
 const MAX_AREA = maxAreaArg >= 0 ? Number(argv[maxAreaArg + 1]) : 0.02
 const ids = argv[0] === '--all'
-  ? readdirSync('assets/prototypes', { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+  ? MODEL_ROOTS.flatMap((root) => existsSync(root)
+    ? readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && existsSync(`${root}/${d.name}/model.ts`))
+      .map((d) => d.name)
+    : [])
   : argv.filter((a) => !a.startsWith('--') && a !== String(MAX_AREA))
+
+const unresolved = ids.filter((id) => !resolveModel(id))
+if (unresolved.length) {
+  console.error(`coplanar-check: no model.ts for ${unresolved.join(', ')} under ${MODEL_ROOTS.join(', ')}`)
+  process.exit(2)
+}
 
 if (ids.length === 0) {
   console.error('usage: coplanar-check.ts <model-id> [...] | --all   [--max-area 0.02]')
@@ -110,11 +133,12 @@ for (const id of ids) {
   capturing = true
   let model: { root: Group; dispose(): void }
   try {
-    const mod = await import(`../assets/prototypes/${id}/model.ts`)
+    const mod = await import(resolveModel(id)!)
     model = mod.createModel()
   } catch (error) {
     capturing = false
-    console.log(`\n== ${id}: SKIPPED (${(error as Error).message.split('\n')[0]})`)
+    console.error(`\n== ${id}: FAILED TO LOAD (${(error as Error).message.split('\n')[0]})`)
+    failed = true
     continue
   }
   capturing = false

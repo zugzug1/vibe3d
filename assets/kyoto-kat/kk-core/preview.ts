@@ -1,0 +1,158 @@
+import {
+  Box3,
+  Color,
+  DirectionalLight,
+  Group,
+  HemisphereLight,
+  Mesh,
+  MeshStandardMaterial,
+  PerspectiveCamera,
+  PlaneGeometry,
+  Scene,
+  Vector3,
+} from 'three/webgpu'
+
+import type { Vec3 } from './parts.ts'
+import { DERIVED, TOKEN, shade } from './palette.ts'
+
+/**
+ * The kit's single deterministic capture rig, plus the two framings the brief asks for.
+ *
+ * Fifty props photographed under fifty light rigs cannot be judged against each other. Every model.ts
+ * calls this rather than hand-writing lights, so the only thing that varies per prop is framing.
+ *
+ * - `close`  — product-reference three-quarter, auto-distance from the model's diagonal. What the
+ *   img2threejs comparison sheet and the vibe-model critic look at.
+ * - `cafe`   — the gameplay camera: 35° elevation, a fixed 4.5 m from the target, 45° fov, ivory ground
+ *   card. What the asset has to read at inside Kyoto Kat.
+ *
+ * The backdrop is the reference pack's neutral ivory (the concept PNGs sit on ivory) so a side-by-side
+ * with the reference compares like with like. Soft upper-left key matches the reference prompt.
+ */
+
+export type KkFraming = 'close' | 'cafe'
+
+export interface KkPreviewOptions {
+  readonly aspect?: number
+  readonly framing?: KkFraming
+  /** Point the camera looks at, in model space. Defaults to the model's bounding-box centre. */
+  readonly target?: Vec3
+  /** Camera distance from the target, in metres. Overrides the framing's default. */
+  readonly distance?: number
+  /** Turntable angle in radians. 0 faces the model's +Z. */
+  readonly yaw?: number
+  /** Elevation in radians above the horizon. */
+  readonly pitch?: number
+  readonly fov?: number
+  /** Ivory receive card. On by default under `cafe`, off under `close`. */
+  readonly ground?: boolean
+  readonly bloom?: boolean
+}
+
+export interface KkPreviewModel {
+  readonly root: Group
+  lookAt?(camera: PerspectiveCamera): void
+  update?(deltaSeconds: number): void
+  dispose(): void
+}
+
+export interface KkPreview {
+  readonly scene: Scene
+  readonly root: Group
+  readonly camera: PerspectiveCamera
+  readonly bloom?: boolean
+  update(deltaSeconds: number): void
+  dispose(): void
+}
+
+/** Front-right three-quarter, elevated ~20°, as the reference prompt specifies. */
+export const DEFAULT_YAW = 0.72
+export const DEFAULT_PITCH = 0.35
+/** Gameplay camera. */
+export const CAFE_PITCH = 0.61
+export const CAFE_DISTANCE = 4.5
+export const CAFE_FOV = 45
+
+export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions = {}): KkPreview {
+  const framing: KkFraming = options.framing ?? 'close'
+  const scene = new Scene()
+  scene.name = 'kyoto-kat / reference preview'
+  scene.background = new Color(TOKEN.IVORY)
+  scene.add(model.root)
+
+  scene.add(new HemisphereLight(shade(TOKEN.IVORY, 0.3), shade(DERIVED.CEDAR_DARK, -0.3), 0.55))
+  const key = new DirectionalLight(shade(TOKEN.IVORY, 0.4), 2.0)
+  key.position.set(-6, 8, 7)
+  scene.add(key)
+  const fill = new DirectionalLight(shade(TOKEN.INDIGO, 0.5), 0.5)
+  fill.position.set(7, 2.4, 5.5)
+  scene.add(fill)
+  const rim = new DirectionalLight(shade(TOKEN.IVORY, 0.2), 0.6)
+  rim.position.set(4.5, 6, -7)
+  scene.add(rim)
+
+  const extras: Array<{ dispose: () => void }> = []
+  const ground = options.ground ?? framing === 'cafe'
+  if (ground) {
+    const groundGeo = new PlaneGeometry(28, 28)
+    groundGeo.rotateX(-Math.PI / 2)
+    const groundMat = new MeshStandardMaterial({
+      name: 'kyoto-kat / preview ground',
+      color: shade(TOKEN.IVORY, -0.08),
+      roughness: 0.96,
+      metalness: 0,
+    })
+    const groundMesh = new Mesh(groundGeo, groundMat)
+    groundMesh.name = 'kyoto-kat / preview ground'
+    groundMesh.receiveShadow = true
+    groundMesh.userData.excludeFromExport = true
+    scene.add(groundMesh)
+    extras.push({
+      dispose: () => {
+        scene.remove(groundMesh)
+        groundGeo.dispose()
+        groundMat.dispose()
+      },
+    })
+  }
+
+  // Frame from the model's own box so a worker never has to guess a distance.
+  model.root.updateMatrixWorld(true)
+  const box = new Box3().setFromObject(model.root as never)
+  const centre = box.getCenter(new Vector3())
+  const diagonal = Math.max(0.2, box.getSize(new Vector3()).length())
+
+  const target: Vec3 = options.target ?? [centre.x, centre.y, centre.z]
+  const distance = options.distance ?? (framing === 'cafe' ? CAFE_DISTANCE : diagonal * 1.6)
+  const yaw = options.yaw ?? DEFAULT_YAW
+  const pitch = options.pitch ?? (framing === 'cafe' ? CAFE_PITCH : DEFAULT_PITCH)
+  const fov = options.fov ?? (framing === 'cafe' ? CAFE_FOV : 30)
+  const aspect = Number.isFinite(options.aspect) && (options.aspect ?? 0) > 0 ? options.aspect! : 1
+
+  const camera = new PerspectiveCamera(fov, aspect, 0.05, 200)
+  camera.name = 'kyoto-kat / reference camera'
+  camera.position.set(
+    target[0] + Math.sin(yaw) * Math.cos(pitch) * distance,
+    target[1] + Math.sin(pitch) * distance,
+    target[2] + Math.cos(yaw) * Math.cos(pitch) * distance,
+  )
+  camera.lookAt(target[0], target[1], target[2])
+  camera.updateProjectionMatrix()
+  scene.add(camera)
+
+  return {
+    scene,
+    root: model.root,
+    camera,
+    bloom: options.bloom,
+    update: (deltaSeconds: number) => {
+      model.lookAt?.(camera)
+      model.update?.(deltaSeconds)
+    },
+    dispose: () => {
+      for (const extra of extras) extra.dispose()
+      scene.remove(model.root)
+      model.dispose()
+    },
+  }
+}
