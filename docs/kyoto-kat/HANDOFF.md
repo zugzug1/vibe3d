@@ -1,12 +1,12 @@
 # Kyoto Kat: 50-item production handoff
 
-Target: zugzug1/vibe3d (personal fork). Branch: feat/kyoto-kat-asset-workflow.
+Target: zugzug1/vibe3d (personal fork). Active branch: feat/kyoto-kat-kit.
 Reference archive: /Volumes/zug1/kyoto-kat-kit/v1/
 Local archive paths require access to this Mac and mounted drive.
 
 ## Deliverable
 Build 50 distinct editable Three.js assets and portable textured GLBs from the references.
-This handoff supplies raster references; it does not claim any 3D assets have been built.
+Production is underway in the existing `@cafe-kit` registry. See PRODUCTION.md and REVIEW-INDEX.md for saved checkpoints and review packages; inventory.json and delivery-manifest.json describe measured artifacts. Do not restart the kit from these original instructions.
 Use 10 signature pieces, 20 furnishings, and 20 storytelling props.
 
 ## Art direction
@@ -22,15 +22,15 @@ Read .agents/skills/vibe-model/SKILL.md and its required references before hard-
 Author direct Three.js createModel factories following existing registry contracts.
 Use bun run vibe:model preview for deterministic comparison, scripts/coplanar-check.ts
 for geometry checks, and the shared portable GLB exporter for standard PBR output.
-Use registries/scifi-kit as a registry implementation reference, while creating a separate
-Kyoto kit rather than inserting cafe objects into the Sci-Fi collection.
+Reuse `registries/cafe-kit`, `assets/cafe-kit/kk-core`, and the existing docs/export tooling.
+Do not insert café objects into the Sci-Fi collection or introduce another registry framework.
 Cloth, foliage and woven forms need suitable geometry approaches beyond hard-surface primitives.
 
 ## Production
-First complete kk-001, kk-004, kk-008, kk-034 and kk-040.
-Review silhouette, proportions, material values and construction before batching the rest.
+The pilots and approved examples already exist. Preserve them and finish in disjoint batches.
+Review silhouette, proportions, material values and construction before accepting each batch.
 Keep editable sources, GLBs, previews, bounds, triangle/material/texture stats, and review notes
-linked by stable asset ID in the manifest. Source/export/preview fields remain null until produced.
+linked by stable asset ID in delivery-manifest.json. Original manifest.json remains reference provenance; its historical null production fields are superseded by the delivery manifest.
 Use meters, Y-up, consistent forward direction, ground-centered pivots for furniture;
 document attachment pivots for hanging and wall-mounted objects.
 Expose separately identifiable components, semantic names, and simple collision guidance.
@@ -53,6 +53,8 @@ Repository code is MIT; do not assume generated art or third-party inputs inheri
 Do not deploy to the live Spawn world as part of this issue.
 
 ## Roster
+
+Checkboxes below denote final collection acceptance, not mere source existence; see the production ledger for granular status.
 - [ ] kk-001 — Espresso station: stepped cedar counter with compact brushed metal espresso machine and worn brass controls
 - [ ] kk-002 — Matcha preparation station: inset tray, bamboo whisk cradle and softly irregular bowl
 - [ ] kk-003 — Wagashi display cabinet: low glazed cedar case with sliding doors and tiered pastry trays
@@ -103,4 +105,3 @@ Do not deploy to the live Spawn world as part of this issue.
 - [ ] kk-048 — Loyalty stamp kit: wooden stamp, ink pad and blank stacked cards
 - [ ] kk-049 — Neighborhood map frame: folded stylized street plan under simple timber frame without text
 - [ ] kk-050 — Mending basket: patched indigo cloth, thread and rounded sewing box
-

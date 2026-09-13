@@ -278,9 +278,12 @@ export function createModel(options: KkCafeTableOptions = {}): KkCafeTableInstan
     splay: Math.min(0.09, Math.max(0, options.splay ?? defaults.splay)),
   }
 
-  const bundle = acquireKkMaterials({ overrides: options.materials })
+  const bundle = acquireKkMaterials()
   const kit = bundle.materials
-  const materialSlots: Record<Slot, Material> = { cedar: kit.cedar, cedarDark: kit.cedarDark }
+  const materialSlots: Record<Slot, Material> = {
+    cedar: options.materials?.cedar ?? kit.cedar,
+    cedarDark: options.materials?.cedarDark ?? kit.cedarDark,
+  }
 
   // Softened cedar is a broad, near-flat surface here — 0.8 m of tabletop is the model's hero face, and
   // a flat colour reads as plastic at café range. One shared 256 px grain map, never applied over a

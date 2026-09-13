@@ -258,7 +258,7 @@ function F1KitPage() {
 
 function CafeKitPage() {
   const count = cafeKitCatalog.length
-  return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="Cafe Kit"><p>{count} procedural 1990s Kyoto cat-café furnishings and props, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @cafe-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=cafe-kit">Browse Kyoto Kat models <ArrowRight /></Link></div>
+  return <div className="kit-page"><PageIntro eyebrow="Production preview · review pending" title="Cafe Kit"><p>{count} procedural 1990s Kyoto cat-café furnishings and props, built for Three.js. Visual acceptance, phone performance and art redistribution clearance are tracked separately from source availability.</p></PageIntro><CodeBlock>{'bunx vibe3d add @cafe-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>model sources</span></div><div><b>Three.js</b><span>engine</span></div><div><b>Pending</b><span>release clearance</span></div></div><Link className="primary-button" to="/models?kit=cafe-kit">Browse Kyoto Kat models <ArrowRight /></Link></div>
 }
 
 function DocumentationShell() {
