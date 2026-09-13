@@ -10,6 +10,7 @@ import {
   Matrix4,
   Mesh,
   MeshPhysicalMaterial,
+  MeshStandardMaterial,
   RepeatWrapping,
   RGBAFormat,
   SRGBColorSpace,
@@ -177,7 +178,8 @@ function prepareGeometryForExport(root: Object3D, context: BakeContext): void {
     const materials = Array.isArray(object.material) ? object.material : [object.material]
     const usesUv = materials.some(materialUsesUv)
     const usesNormalMap = materials.some((material) => (
-      material instanceof MeshPhysicalMaterial && material.normalMap !== null
+      // Physical materials inherit Standard; both require portable tangent frames.
+      material instanceof MeshStandardMaterial && material.normalMap !== null
     ))
     const variantKey = `${usesUv ? 'uv' : 'no-uv'}/${usesNormalMap ? 'tangent' : 'no-tangent'}`
     object.geometry = geometryVariant(object.geometry, variantKey, context, (geometry) => {

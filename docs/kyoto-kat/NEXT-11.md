@@ -60,3 +60,43 @@ Sources, topology sidecars, GLBs, and close/gameplay previews checkpointed at:
 Local archive is not remotely accessible. Passing technical checks do not prove
 visual quality; default topology hull selection is not full collision coverage.
 Target-viewer reimport and mobile validation remain pending.
+
+## Authorized bench/shelf repair and surface detail
+
+Miguel approved the proposed focused repair: one Astra-low builder for 005/016,
+construction first, then reusable exportable material detail. No additional
+assets or automatic escalation. The shared surface helper is opt-in for these
+two models; approved models retain their material appearance.
+
+Coordinator added a Three GLTFLoader reimport preview path. Its Node adapter
+decodes embedded image bytes with sharp, retaining standard glTF geometry,
+materials, samplers and texture transforms. External image/buffer requests are
+rejected. Regression tests verify actual exported texture pixels and geometry
+survive reimport. This is not proof of another engine's rendering or phone fps.
+
+## Bench/shelf repair checkpoint
+
+One Astra-low builder completed the bounded repair. Coordinator inspected final
+source close/gameplay captures and exported/reimported close captures. Construction
+defects above are addressed; these remain pending Miguel's visual approval.
+The retained kit palette is lighter than the reference, with no painted motifs,
+reference edge wear, cats or plants. This is not a reference-fidelity signoff.
+
+- 005: 7,048 triangles; GLB 618,864 bytes; 1.61 x 0.56 x 1.42 m envelope.
+  Height remains above the original manifest's 0.85 m target, as documented in review.
+- 016: 4,716 triangles; GLB 403,440 bytes; 1.00 x 0.25 x 1.20 m envelope.
+- Opt-in 128-square color/roughness/normal maps preserve other approved models.
+- 176 affected tests pass, registry builds, both topology sidecars regenerate,
+  and coplanar bounds checks inspect 76/36 parts. These checks are not full
+  collision coverage or exact surface-intersection proofs.
+- Export adapter now supports the installed exporter's RGBA channel packing;
+  existing tangent preparation also handles MeshStandardMaterial. Tests verify
+  real model exports and actual embedded PBR pixels without mutating source geometry.
+- Node typecheck has only the five existing F1/render-headless errors.
+- Phone performance and other engine viewers remain unverified. No deployment.
+
+Review package (local-only):
+`/Volumes/zug1/kyoto-kat-kit/pilot-review/bench-shelf-textured-2026-09-12-v1/README.md`.
+Includes source and GLB close/gameplay captures, GLBs, per-asset sources/reviews,
+topology sidecars and verified copy checksums. Sources require this repo's shared
+modules; the package is not a standalone source distribution.

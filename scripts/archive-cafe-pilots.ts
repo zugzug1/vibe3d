@@ -5,6 +5,8 @@ import { join, resolve } from 'node:path'
 import sharp from 'sharp'
 
 const root = process.cwd()
+const reimported = process.argv[4] === '--reimported'
+if (process.argv[4] && !reimported) throw new Error('Unknown archive option')
 const batch = process.argv[3] === '--batch-01'
 const selected = process.argv[3]?.startsWith('--ids=') ? process.argv[3].slice(6).split(',') : undefined
 if (process.argv[3] && !batch && !selected) throw new Error('Unknown archive selection')
@@ -31,7 +33,9 @@ function copy(source: string, relative: string): void {
   entries.push({ path: relative, sha256: sha(target) })
 }
 for (const id of ids) {
-  for (const [suffix, name] of [['', 'close.png'], ['-gameplay', 'gameplay.png']]) {
+  const captures = [['', 'close.png'], ['-gameplay', 'gameplay.png']]
+  if (reimported) captures.push(['-glb', 'glb-close.png'], ['-glb-gameplay', 'glb-gameplay.png'])
+  for (const [suffix, name] of captures) {
     const image = join(root, '.asset-forge/previews', id + suffix, 'latest.png')
     const { info } = await sharp(image).raw().toBuffer({ resolveWithObject: true })
     if (info.width !== 1024 || info.height !== 1024) throw new Error(`Invalid capture: ${image}`)
@@ -53,10 +57,11 @@ if (selected) copy(join(root, 'docs/kyoto-kat/NEXT-11.md'), 'NEXT-11.md')
 writeFileSync(join(destination, 'manifest.json'), JSON.stringify({
   status: batch || selected ? 'batch-review-pending' : 'pilot-approval-pending', assetCount: ids.length, collectionTarget: 50,
   sourceCheckout: root, sourceBranch: 'feat/kyoto-kat-kit',
-  note: 'Model source imports shared kit modules from the checkout; this is not a standalone source distribution. GLB headers and preview pixels checked; target-viewer reimport and mobile testing pending.',
+  reimported,
+  note: 'Model source imports shared kit modules from the checkout; this is not a standalone source distribution. GLB headers and preview pixels checked. ' + (reimported ? 'Includes Three GLTFLoader reimport renders with Node image decoding; other engines and mobile performance remain unverified.' : 'Target-viewer reimport and mobile testing pending.'),
   files: entries,
 }, null, 2) + '\n')
 writeFileSync(join(destination, 'SHA256SUMS'), entries.map((e) => `${e.sha256}  ${e.path}`).join('\n') + '\n')
 writeFileSync(join(destination, 'README.md'), `# Café-kit: ${selected ? 'production batch review' : batch ? 'batch 01 repair review' : 'seven-pilot approval gate'}\n\nNot the completed 50-asset collection. Visual approval is pending.\n\n`
-  + ids.map((id) => `## ${id}\n\n![Close view](${id}/close.png)\n\n[Gameplay view](${id}/gameplay.png) · [GLB](${id}/${id}.glb) · [Review](${id}/REVIEW.md)\n`).join('\n'))
+  + ids.map((id) => `## ${id}\n\n![Close view](${id}/${reimported ? 'glb-close.png' : 'close.png'})\n\n[Gameplay view](${id}/${reimported ? 'glb-gameplay.png' : 'gameplay.png'}) · [GLB](${id}/${id}.glb) · [Review](${id}/REVIEW.md)\n`).join('\n'))
 console.log(`Archived ${ids.length} assets, ${entries.length} checksum-verified files: ${destination}`)
