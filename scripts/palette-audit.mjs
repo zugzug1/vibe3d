@@ -16,7 +16,8 @@ import sharp from 'sharp'
  */
 
 const root = resolve('.asset-forge/previews')
-const prototypes = resolve('assets/prototypes')
+/** Every kit's model root; a kit's assets are audited only once it has previews. */
+const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/cafe-kit'].map((p) => resolve(p))
 
 /** Anything this dark is preview backdrop, not prop. */
 const BACKDROP = 0.055
@@ -109,9 +110,16 @@ const wave = new Set(
     .split(/\s+/),
 )
 
-const assets = readdirSync(prototypes).filter((id) => existsSync(join(prototypes, id, 'model.ts')))
+const assets = MODEL_ROOTS
+  .filter((prototypes) => existsSync(prototypes))
+  .flatMap((prototypes) => readdirSync(prototypes).filter((id) => existsSync(join(prototypes, id, 'model.ts'))))
 const rows = (await Promise.all(assets.map(measure))).filter(Boolean)
-for (const row of rows) row.wave = wave.has(row.asset) ? 'cargo' : 'original'
+for (const row of rows) {
+  row.wave = wave.has(row.asset) ? 'cargo'
+    : row.asset.startsWith('kk-') ? 'cafe-kit'
+      : row.asset.startsWith('f1-') ? 'f1'
+        : 'original'
+}
 
 const cargo = rows.filter((row) => row.wave === 'cargo')
 const original = rows.filter((row) => row.wave === 'original')

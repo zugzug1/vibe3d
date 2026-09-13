@@ -25,19 +25,43 @@
  *         node --import tsx scripts/coplanar-check.ts --all
  * Exits 1 if any pair exceeds --max-area (default 0.02 m2).
  */
-import { readdirSync } from 'node:fs'
+import { existsSync, readdirSync } from 'node:fs'
 import { Box3, Group, Mesh } from 'three/webgpu'
+import { collectMergedParts, requirePartCoverage } from './coplanar-parts.ts'
 
 const EPS = 1e-4
 const AXES = ['x', 'y', 'z'] as const
 type Axis = (typeof AXES)[number]
 
+/**
+ * Every kit's model root. An id is resolved across all of them; an id that resolves nowhere is an
+ * error (exit 2), never a silent SKIP — a check that skips is a check that passed nothing.
+ */
+const MODEL_ROOTS = ['assets/prototypes', 'assets/f1-prototypes', 'assets/cafe-kit'] as const
+
+function resolveModel(id: string): string | undefined {
+  for (const root of MODEL_ROOTS) {
+    if (existsSync(`${root}/${id}/model.ts`)) return `../${root}/${id}/model.ts`
+  }
+  return undefined
+}
+
 const argv = process.argv.slice(2)
 const maxAreaArg = argv.findIndex((a) => a === '--max-area')
 const MAX_AREA = maxAreaArg >= 0 ? Number(argv[maxAreaArg + 1]) : 0.02
 const ids = argv[0] === '--all'
-  ? readdirSync('assets/prototypes', { withFileTypes: true }).filter((d) => d.isDirectory()).map((d) => d.name)
+  ? MODEL_ROOTS.flatMap((root) => existsSync(root)
+    ? readdirSync(root, { withFileTypes: true })
+      .filter((d) => d.isDirectory() && existsSync(`${root}/${d.name}/model.ts`))
+      .map((d) => d.name)
+    : [])
   : argv.filter((a) => !a.startsWith('--') && a !== String(MAX_AREA))
+
+const unresolved = ids.filter((id) => !resolveModel(id))
+if (unresolved.length) {
+  console.error(`coplanar-check: no model.ts for ${unresolved.join(', ')} under ${MODEL_ROOTS.join(', ')}`)
+  process.exit(2)
+}
 
 if (ids.length === 0) {
   console.error('usage: coplanar-check.ts <model-id> [...] | --all   [--max-area 0.02]')
@@ -50,7 +74,7 @@ if (ids.length === 0) {
 const parts: Array<{ box: Box3; mat: string }> = []
 const realAdd = Group.prototype.add
 let capturing = false
-;(Group.prototype as unknown as { add: (...o: unknown[]) => Group }).add = function (this: Group, ...objects: never[]) {
+Group.prototype.add = function (this: Group, ...objects: Parameters<Group['add']>) {
   if (capturing) {
     for (const object of objects as unknown[]) {
       if (object instanceof Mesh && !String(object.name).includes(' / ')) {
@@ -110,14 +134,30 @@ for (const id of ids) {
   capturing = true
   let model: { root: Group; dispose(): void }
   try {
-    const mod = await import(`../assets/prototypes/${id}/model.ts`)
+    const mod = await import(resolveModel(id)!)
     model = mod.createModel()
   } catch (error) {
     capturing = false
-    console.log(`\n== ${id}: SKIPPED (${(error as Error).message.split('\n')[0]})`)
+    console.error(`\n== ${id}: FAILED TO LOAD (${(error as Error).message.split('\n')[0]})`)
+    failed = true
     continue
   }
   capturing = false
+
+  // Café assets batch geometries before Mesh construction; the legacy add-hook
+  // cannot observe those solids. Recover disconnected components from the root.
+  try {
+    if (resolveModel(id)!.includes('/cafe-kit/')) {
+      parts.length = 0
+      parts.push(...collectMergedParts(model.root))
+    }
+    requirePartCoverage(parts, id)
+  } catch (error) {
+    console.error(`\n== ${id}: COVERAGE FAILURE (${(error as Error).message})`)
+    model.dispose()
+    failed = true
+    continue
+  }
 
   const hits: Hit[] = []
   for (let i = 0; i < parts.length; i += 1) {
@@ -161,7 +201,7 @@ for (const id of ids) {
   }
   hits.sort((p, q) => q.area - p.area)
   const verdict = hits.length === 0 ? 'clean' : `${hits.length} FAIL`
-  console.log(`\n== ${id}: ${parts.length} authored parts, ${verdict} (>= ${MAX_AREA} m2 VISIBLE)`)
+  console.log(`\n== ${id}: ${parts.length} inspected parts, ${verdict} (>= ${MAX_AREA} m2 VISIBLE; bounds heuristic, not exact surface proof)`)
   for (const h of hits.slice(0, 20)) {
     const hidden = h.total > h.area + 1e-6 ? ` (of ${h.total.toFixed(3)} shared)` : ''
     console.log(`   ${h.area.toFixed(3)} m2 visible${hidden}  ${h.axis}.${h.side}=${h.plane.toFixed(3)}  at (${h.at})  ${h.a} <-> ${h.b}`)

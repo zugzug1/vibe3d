@@ -1,0 +1,1935 @@
+[
+  {
+    "id": "kk-001-espresso-station",
+    "tier": "signature",
+    "width": 1.8,
+    "depth": 0.75,
+    "height": 1.35,
+    "triangles": 5368,
+    "meshes": 14,
+    "materials": 3,
+    "textures": [],
+    "glbBytes": 593892,
+    "movable": [
+      "portafilter",
+      "steamWand"
+    ],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-001-espresso-station/model.ts",
+      "topology": "assets/cafe-kit/kk-001-espresso-station/kk-001-espresso-station.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-001-espresso-station.glb",
+      "preview": ".asset-forge/previews/kk-001-espresso-station/latest.png",
+      "gameplay": ".asset-forge/previews/kk-001-espresso-station-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-001-espresso-station-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-001-espresso-station-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-001-espresso-station/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 1.8,
+      "depth": 0.75,
+      "height": 1.35
+    }
+  },
+  {
+    "id": "kk-002-matcha-station",
+    "tier": "signature",
+    "width": 0.8,
+    "depth": 0.553,
+    "height": 0.448,
+    "triangles": 11192,
+    "meshes": 15,
+    "materials": 8,
+    "textures": [],
+    "glbBytes": 818108,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "height 0.448 differs from original 0.9 m; verify pose or approved exception",
+      "8 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-002-matcha-station/model.ts",
+      "topology": "assets/cafe-kit/kk-002-matcha-station/kk-002-matcha-station.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-002-matcha-station.glb",
+      "preview": ".asset-forge/previews/kk-002-matcha-station/latest.png",
+      "gameplay": ".asset-forge/previews/kk-002-matcha-station-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-002-matcha-station-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-002-matcha-station-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-002-matcha-station/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.8,
+      "depth": 0.55,
+      "height": 0.9
+    }
+  },
+  {
+    "id": "kk-003-wagashi-display-cabinet",
+    "tier": "signature",
+    "width": 1.2,
+    "depth": 0.5,
+    "height": 1.1,
+    "triangles": 13220,
+    "meshes": 153,
+    "materials": 8,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 904916,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 13220 within 15 % of 15000",
+      "8 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-003-wagashi-display-cabinet/model.ts",
+      "topology": "assets/cafe-kit/kk-003-wagashi-display-cabinet/kk-003-wagashi-display-cabinet.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-003-wagashi-display-cabinet.glb",
+      "preview": ".asset-forge/previews/kk-003-wagashi-display-cabinet/latest.png",
+      "gameplay": ".asset-forge/previews/kk-003-wagashi-display-cabinet-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-003-wagashi-display-cabinet-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-003-wagashi-display-cabinet-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-003-wagashi-display-cabinet/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 1.2,
+      "depth": 0.5,
+      "height": 1.1
+    }
+  },
+  {
+    "id": "kk-004-cedar-cat-tower",
+    "tier": "signature",
+    "width": 1,
+    "depth": 0.8,
+    "height": 1.682,
+    "triangles": 10462,
+    "meshes": 15,
+    "materials": 4,
+    "textures": [],
+    "glbBytes": 1145012,
+    "movable": [
+      "ramp"
+    ],
+    "breaches": [],
+    "warnings": [
+      "4 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-004-cedar-cat-tower/model.ts",
+      "topology": "assets/cafe-kit/kk-004-cedar-cat-tower/kk-004-cedar-cat-tower.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-004-cedar-cat-tower.glb",
+      "preview": ".asset-forge/previews/kk-004-cedar-cat-tower/latest.png",
+      "gameplay": ".asset-forge/previews/kk-004-cedar-cat-tower-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-004-cedar-cat-tower-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-004-cedar-cat-tower-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-004-cedar-cat-tower/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 1,
+      "depth": 0.8,
+      "height": 1.65
+    }
+  },
+  {
+    "id": "kk-005-machiya-window-bench",
+    "tier": "signature",
+    "width": 1.6,
+    "depth": 0.55,
+    "height": 0.85,
+    "triangles": 7048,
+    "meshes": 76,
+    "materials": 5,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 618988,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "5 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-005-machiya-window-bench/model.ts",
+      "topology": "assets/cafe-kit/kk-005-machiya-window-bench/kk-005-machiya-window-bench.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-005-machiya-window-bench.glb",
+      "preview": ".asset-forge/previews/kk-005-machiya-window-bench/latest.png",
+      "gameplay": ".asset-forge/previews/kk-005-machiya-window-bench-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-005-machiya-window-bench-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-005-machiya-window-bench-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-005-machiya-window-bench/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 1.6,
+      "depth": 0.55,
+      "height": 0.85
+    }
+  },
+  {
+    "id": "kk-006-feeding-station",
+    "tier": "signature",
+    "width": 0.466,
+    "depth": 0.276,
+    "height": 0.115,
+    "triangles": 2372,
+    "meshes": 3,
+    "materials": 2,
+    "textures": [],
+    "glbBytes": 173712,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "width 0.466 differs from original 0.5 m; verify pose or approved exception",
+      "depth 0.276 differs from original 0.3 m; verify pose or approved exception",
+      "height 0.115 differs from original 0.18 m; verify pose or approved exception"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-006-feeding-station/model.ts",
+      "topology": "assets/cafe-kit/kk-006-feeding-station/kk-006-feeding-station.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-006-feeding-station.glb",
+      "preview": ".asset-forge/previews/kk-006-feeding-station/latest.png",
+      "gameplay": ".asset-forge/previews/kk-006-feeding-station-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-006-feeding-station-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-006-feeding-station-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-006-feeding-station/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.5,
+      "depth": 0.3,
+      "height": 0.18
+    }
+  },
+  {
+    "id": "kk-007-washi-pendant-lantern",
+    "tier": "signature",
+    "width": 0.6,
+    "depth": 0.6,
+    "height": 0.5,
+    "triangles": 11968,
+    "meshes": 25,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 454940,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-007-washi-pendant-lantern/model.ts",
+      "topology": "assets/cafe-kit/kk-007-washi-pendant-lantern/kk-007-washi-pendant-lantern.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-007-washi-pendant-lantern.glb",
+      "preview": ".asset-forge/previews/kk-007-washi-pendant-lantern/latest.png",
+      "gameplay": ".asset-forge/previews/kk-007-washi-pendant-lantern-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-007-washi-pendant-lantern-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-007-washi-pendant-lantern-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-007-washi-pendant-lantern/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.6,
+      "depth": 0.6,
+      "height": 0.5
+    }
+  },
+  {
+    "id": "kk-008-shoji-folding-screen",
+    "tier": "signature",
+    "width": 1.833,
+    "depth": 0.507,
+    "height": 1.7,
+    "triangles": 1476,
+    "meshes": 17,
+    "materials": 3,
+    "textures": [
+      "map 256×256"
+    ],
+    "glbBytes": 216696,
+    "movable": [
+      "panelLeft",
+      "panelRight"
+    ],
+    "breaches": [],
+    "warnings": [
+      "depth 0.507 differs from original 0.45 m; verify pose or approved exception"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-008-shoji-folding-screen/model.ts",
+      "topology": "assets/cafe-kit/kk-008-shoji-folding-screen/kk-008-shoji-folding-screen.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-008-shoji-folding-screen.glb",
+      "preview": ".asset-forge/previews/kk-008-shoji-folding-screen/latest.png",
+      "gameplay": ".asset-forge/previews/kk-008-shoji-folding-screen-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-008-shoji-folding-screen-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-008-shoji-folding-screen-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-008-shoji-folding-screen/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 1.8,
+      "depth": 0.45,
+      "height": 1.7
+    }
+  },
+  {
+    "id": "kk-009-engawa-lounge-platform",
+    "tier": "signature",
+    "width": 2,
+    "depth": 1.5,
+    "height": 0.3,
+    "triangles": 1232,
+    "meshes": 5,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 217960,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-009-engawa-lounge-platform/model.ts",
+      "topology": "assets/cafe-kit/kk-009-engawa-lounge-platform/kk-009-engawa-lounge-platform.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-009-engawa-lounge-platform.glb",
+      "preview": ".asset-forge/previews/kk-009-engawa-lounge-platform/latest.png",
+      "gameplay": ".asset-forge/previews/kk-009-engawa-lounge-platform-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-009-engawa-lounge-platform-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-009-engawa-lounge-platform-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-009-engawa-lounge-platform/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 2,
+      "depth": 1.5,
+      "height": 0.3
+    }
+  },
+  {
+    "id": "kk-010-cafe-entrance-assembly",
+    "tier": "signature",
+    "width": 1.4,
+    "depth": 0.3,
+    "height": 2.2,
+    "triangles": 7072,
+    "meshes": 33,
+    "materials": 5,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 530784,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "5 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-010-cafe-entrance-assembly/model.ts",
+      "topology": "assets/cafe-kit/kk-010-cafe-entrance-assembly/kk-010-cafe-entrance-assembly.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-010-cafe-entrance-assembly.glb",
+      "preview": ".asset-forge/previews/kk-010-cafe-entrance-assembly/latest.png",
+      "gameplay": ".asset-forge/previews/kk-010-cafe-entrance-assembly-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-010-cafe-entrance-assembly-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-010-cafe-entrance-assembly-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-010-cafe-entrance-assembly/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 1.4,
+      "depth": 0.3,
+      "height": 2.2
+    }
+  },
+  {
+    "id": "kk-011-cafe-table",
+    "tier": "furnishing",
+    "width": 0.807,
+    "depth": 0.657,
+    "height": 0.72,
+    "triangles": 1104,
+    "meshes": 3,
+    "materials": 2,
+    "textures": [
+      "map 256×256"
+    ],
+    "glbBytes": 168016,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-011-cafe-table/model.ts",
+      "topology": "assets/cafe-kit/kk-011-cafe-table/kk-011-cafe-table.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-011-cafe-table.glb",
+      "preview": ".asset-forge/previews/kk-011-cafe-table/latest.png",
+      "gameplay": ".asset-forge/previews/kk-011-cafe-table-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-011-cafe-table-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-011-cafe-table-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-011-cafe-table/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.8,
+      "depth": 0.65,
+      "height": 0.72
+    }
+  },
+  {
+    "id": "kk-012-spindle-back-chair",
+    "tier": "furnishing",
+    "width": 0.45,
+    "depth": 0.48,
+    "height": 0.85,
+    "triangles": 4236,
+    "meshes": 3,
+    "materials": 2,
+    "textures": [
+      "map 256×256"
+    ],
+    "glbBytes": 468492,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-012-spindle-back-chair/model.ts",
+      "topology": "assets/cafe-kit/kk-012-spindle-back-chair/kk-012-spindle-back-chair.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-012-spindle-back-chair.glb",
+      "preview": ".asset-forge/previews/kk-012-spindle-back-chair/latest.png",
+      "gameplay": ".asset-forge/previews/kk-012-spindle-back-chair-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-012-spindle-back-chair-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-012-spindle-back-chair-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-012-spindle-back-chair/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.45,
+      "depth": 0.48,
+      "height": 0.85
+    }
+  },
+  {
+    "id": "kk-013-low-tea-table",
+    "tier": "furnishing",
+    "width": 0.9,
+    "depth": 0.6,
+    "height": 0.35,
+    "triangles": 976,
+    "meshes": 4,
+    "materials": 2,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 187616,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-013-low-tea-table/model.ts",
+      "topology": "assets/cafe-kit/kk-013-low-tea-table/kk-013-low-tea-table.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-013-low-tea-table.glb",
+      "preview": ".asset-forge/previews/kk-013-low-tea-table/latest.png",
+      "gameplay": ".asset-forge/previews/kk-013-low-tea-table-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-013-low-tea-table-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-013-low-tea-table-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-013-low-tea-table/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.9,
+      "depth": 0.6,
+      "height": 0.35
+    }
+  },
+  {
+    "id": "kk-014-zabuton-cushion",
+    "tier": "furnishing",
+    "width": 0.5,
+    "depth": 0.5,
+    "height": 0.1,
+    "triangles": 5824,
+    "meshes": 17,
+    "materials": 2,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 221120,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 5824 within 15 % of 6000"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-014-zabuton-cushion/model.ts",
+      "topology": "assets/cafe-kit/kk-014-zabuton-cushion/kk-014-zabuton-cushion.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-014-zabuton-cushion.glb",
+      "preview": ".asset-forge/previews/kk-014-zabuton-cushion/latest.png",
+      "gameplay": ".asset-forge/previews/kk-014-zabuton-cushion-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-014-zabuton-cushion-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-014-zabuton-cushion-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-014-zabuton-cushion/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.5,
+      "depth": 0.5,
+      "height": 0.1
+    }
+  },
+  {
+    "id": "kk-015-service-trolley",
+    "tier": "furnishing",
+    "width": 0.7,
+    "depth": 0.45,
+    "height": 0.85,
+    "triangles": 3480,
+    "meshes": 6,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 411584,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-015-service-trolley/model.ts",
+      "topology": "assets/cafe-kit/kk-015-service-trolley/kk-015-service-trolley.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-015-service-trolley.glb",
+      "preview": ".asset-forge/previews/kk-015-service-trolley/latest.png",
+      "gameplay": ".asset-forge/previews/kk-015-service-trolley-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-015-service-trolley-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-015-service-trolley-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-015-service-trolley/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.7,
+      "depth": 0.45,
+      "height": 0.85
+    }
+  },
+  {
+    "id": "kk-016-cup-shelving-unit",
+    "tier": "furnishing",
+    "width": 1,
+    "depth": 0.25,
+    "height": 1.2,
+    "triangles": 4716,
+    "meshes": 36,
+    "materials": 5,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 403440,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "5 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-016-cup-shelving-unit/model.ts",
+      "topology": "assets/cafe-kit/kk-016-cup-shelving-unit/kk-016-cup-shelving-unit.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-016-cup-shelving-unit.glb",
+      "preview": ".asset-forge/previews/kk-016-cup-shelving-unit/latest.png",
+      "gameplay": ".asset-forge/previews/kk-016-cup-shelving-unit-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-016-cup-shelving-unit-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-016-cup-shelving-unit-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-016-cup-shelving-unit/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 1,
+      "depth": 0.25,
+      "height": 1.2
+    }
+  },
+  {
+    "id": "kk-017-sliding-door-pantry",
+    "tier": "furnishing",
+    "width": 0.85,
+    "depth": 0.45,
+    "height": 1.8,
+    "triangles": 4320,
+    "meshes": 70,
+    "materials": 6,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 538156,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "6 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-017-sliding-door-pantry/model.ts",
+      "topology": "assets/cafe-kit/kk-017-sliding-door-pantry/kk-017-sliding-door-pantry.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-017-sliding-door-pantry.glb",
+      "preview": ".asset-forge/previews/kk-017-sliding-door-pantry/latest.png",
+      "gameplay": ".asset-forge/previews/kk-017-sliding-door-pantry-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-017-sliding-door-pantry-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-017-sliding-door-pantry-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-017-sliding-door-pantry/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.85,
+      "depth": 0.45,
+      "height": 1.8
+    }
+  },
+  {
+    "id": "kk-018-handwashing-basin",
+    "tier": "furnishing",
+    "width": 0.65,
+    "depth": 0.45,
+    "height": 0.9,
+    "triangles": 4912,
+    "meshes": 30,
+    "materials": 6,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 345496,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "6 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-018-handwashing-basin/model.ts",
+      "topology": "assets/cafe-kit/kk-018-handwashing-basin/kk-018-handwashing-basin.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-018-handwashing-basin.glb",
+      "preview": ".asset-forge/previews/kk-018-handwashing-basin/latest.png",
+      "gameplay": ".asset-forge/previews/kk-018-handwashing-basin-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-018-handwashing-basin-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-018-handwashing-basin-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-018-handwashing-basin/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.65,
+      "depth": 0.45,
+      "height": 0.9
+    }
+  },
+  {
+    "id": "kk-019-ceramic-umbrella-stand",
+    "tier": "furnishing",
+    "width": 0.25,
+    "depth": 0.25,
+    "height": 0.5,
+    "triangles": 4864,
+    "meshes": 1,
+    "materials": 1,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 207204,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-019-ceramic-umbrella-stand/model.ts",
+      "topology": "assets/cafe-kit/kk-019-ceramic-umbrella-stand/kk-019-ceramic-umbrella-stand.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-019-ceramic-umbrella-stand.glb",
+      "preview": ".asset-forge/previews/kk-019-ceramic-umbrella-stand/latest.png",
+      "gameplay": ".asset-forge/previews/kk-019-ceramic-umbrella-stand-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-019-ceramic-umbrella-stand-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-019-ceramic-umbrella-stand-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-019-ceramic-umbrella-stand/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.25,
+      "depth": 0.25,
+      "height": 0.5
+    }
+  },
+  {
+    "id": "kk-020-shoe-cubby-rack",
+    "tier": "furnishing",
+    "width": 0.9,
+    "depth": 0.3,
+    "height": 0.6,
+    "triangles": 1092,
+    "meshes": 39,
+    "materials": 2,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 248304,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-020-shoe-cubby-rack/model.ts",
+      "topology": "assets/cafe-kit/kk-020-shoe-cubby-rack/kk-020-shoe-cubby-rack.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-020-shoe-cubby-rack.glb",
+      "preview": ".asset-forge/previews/kk-020-shoe-cubby-rack/latest.png",
+      "gameplay": ".asset-forge/previews/kk-020-shoe-cubby-rack-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-020-shoe-cubby-rack-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-020-shoe-cubby-rack-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-020-shoe-cubby-rack/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.9,
+      "depth": 0.3,
+      "height": 0.6
+    }
+  },
+  {
+    "id": "kk-021-wall-cat-walkway",
+    "tier": "furnishing",
+    "width": 1.4,
+    "depth": 0.3,
+    "height": 1,
+    "triangles": 4560,
+    "meshes": 44,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 459188,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-021-wall-cat-walkway/model.ts",
+      "topology": "assets/cafe-kit/kk-021-wall-cat-walkway/kk-021-wall-cat-walkway.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-021-wall-cat-walkway.glb",
+      "preview": ".asset-forge/previews/kk-021-wall-cat-walkway/latest.png",
+      "gameplay": ".asset-forge/previews/kk-021-wall-cat-walkway-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-021-wall-cat-walkway-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-021-wall-cat-walkway-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-021-wall-cat-walkway/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 1.4,
+      "depth": 0.3,
+      "height": 1
+    }
+  },
+  {
+    "id": "kk-022-scratching-column",
+    "tier": "furnishing",
+    "width": 0.45,
+    "depth": 0.45,
+    "height": 0.8,
+    "triangles": 5688,
+    "meshes": 11,
+    "materials": 5,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 286508,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 5688 within 15 % of 6000",
+      "5 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-022-scratching-column/model.ts",
+      "topology": "assets/cafe-kit/kk-022-scratching-column/kk-022-scratching-column.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-022-scratching-column.glb",
+      "preview": ".asset-forge/previews/kk-022-scratching-column/latest.png",
+      "gameplay": ".asset-forge/previews/kk-022-scratching-column-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-022-scratching-column-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-022-scratching-column-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-022-scratching-column/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.45,
+      "depth": 0.45,
+      "height": 0.8
+    }
+  },
+  {
+    "id": "kk-023-cat-sleeping-basket",
+    "tier": "furnishing",
+    "width": 0.5,
+    "depth": 0.4,
+    "height": 0.2,
+    "triangles": 5376,
+    "meshes": 30,
+    "materials": 2,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 228680,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 5376 within 15 % of 6000"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-023-cat-sleeping-basket/model.ts",
+      "topology": "assets/cafe-kit/kk-023-cat-sleeping-basket/kk-023-cat-sleeping-basket.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-023-cat-sleeping-basket.glb",
+      "preview": ".asset-forge/previews/kk-023-cat-sleeping-basket/latest.png",
+      "gameplay": ".asset-forge/previews/kk-023-cat-sleeping-basket-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-023-cat-sleeping-basket-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-023-cat-sleeping-basket-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-023-cat-sleeping-basket/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.5,
+      "depth": 0.4,
+      "height": 0.2
+    }
+  },
+  {
+    "id": "kk-024-ventilated-litter-enclosure",
+    "tier": "furnishing",
+    "width": 0.7,
+    "depth": 0.5,
+    "height": 0.5,
+    "triangles": 2396,
+    "meshes": 67,
+    "materials": 5,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 546012,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "5 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-024-ventilated-litter-enclosure/model.ts",
+      "topology": "assets/cafe-kit/kk-024-ventilated-litter-enclosure/kk-024-ventilated-litter-enclosure.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-024-ventilated-litter-enclosure.glb",
+      "preview": ".asset-forge/previews/kk-024-ventilated-litter-enclosure/latest.png",
+      "gameplay": ".asset-forge/previews/kk-024-ventilated-litter-enclosure-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-024-ventilated-litter-enclosure-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-024-ventilated-litter-enclosure-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-024-ventilated-litter-enclosure/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.7,
+      "depth": 0.5,
+      "height": 0.5
+    }
+  },
+  {
+    "id": "kk-025-adoption-notice-cabinet",
+    "tier": "furnishing",
+    "width": 0.65,
+    "depth": 0.2,
+    "height": 1,
+    "triangles": 2202,
+    "meshes": 61,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 395976,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "7 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-025-adoption-notice-cabinet/model.ts",
+      "topology": "assets/cafe-kit/kk-025-adoption-notice-cabinet/kk-025-adoption-notice-cabinet.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-025-adoption-notice-cabinet.glb",
+      "preview": ".asset-forge/previews/kk-025-adoption-notice-cabinet/latest.png",
+      "gameplay": ".asset-forge/previews/kk-025-adoption-notice-cabinet-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-025-adoption-notice-cabinet-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-025-adoption-notice-cabinet-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-025-adoption-notice-cabinet/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.65,
+      "depth": 0.2,
+      "height": 1
+    }
+  },
+  {
+    "id": "kk-026-cash-register-counter",
+    "tier": "furnishing",
+    "width": 0.6,
+    "depth": 0.5,
+    "height": 1.05,
+    "triangles": 3064,
+    "meshes": 79,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 473560,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "7 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-026-cash-register-counter/model.ts",
+      "topology": "assets/cafe-kit/kk-026-cash-register-counter/kk-026-cash-register-counter.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-026-cash-register-counter.glb",
+      "preview": ".asset-forge/previews/kk-026-cash-register-counter/latest.png",
+      "gameplay": ".asset-forge/previews/kk-026-cash-register-counter-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-026-cash-register-counter-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-026-cash-register-counter-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-026-cash-register-counter/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.6,
+      "depth": 0.5,
+      "height": 1.05
+    }
+  },
+  {
+    "id": "kk-027-waste-sorting-cabinet",
+    "tier": "furnishing",
+    "width": 0.7,
+    "depth": 0.4,
+    "height": 0.75,
+    "triangles": 1428,
+    "meshes": 14,
+    "materials": 4,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 326972,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "4 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-027-waste-sorting-cabinet/model.ts",
+      "topology": "assets/cafe-kit/kk-027-waste-sorting-cabinet/kk-027-waste-sorting-cabinet.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-027-waste-sorting-cabinet.glb",
+      "preview": ".asset-forge/previews/kk-027-waste-sorting-cabinet/latest.png",
+      "gameplay": ".asset-forge/previews/kk-027-waste-sorting-cabinet-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-027-waste-sorting-cabinet-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-027-waste-sorting-cabinet-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-027-waste-sorting-cabinet/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.7,
+      "depth": 0.4,
+      "height": 0.75
+    }
+  },
+  {
+    "id": "kk-028-coat-and-bag-stand",
+    "tier": "furnishing",
+    "width": 0.5,
+    "depth": 0.5,
+    "height": 1.6,
+    "triangles": 1096,
+    "meshes": 10,
+    "materials": 2,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 136512,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-028-coat-and-bag-stand/model.ts",
+      "topology": "assets/cafe-kit/kk-028-coat-and-bag-stand/kk-028-coat-and-bag-stand.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-028-coat-and-bag-stand.glb",
+      "preview": ".asset-forge/previews/kk-028-coat-and-bag-stand/latest.png",
+      "gameplay": ".asset-forge/previews/kk-028-coat-and-bag-stand-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-028-coat-and-bag-stand-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-028-coat-and-bag-stand-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-028-coat-and-bag-stand/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.5,
+      "depth": 0.5,
+      "height": 1.6
+    }
+  },
+  {
+    "id": "kk-029-garden-planter",
+    "tier": "furnishing",
+    "width": 0.7,
+    "depth": 0.3,
+    "height": 0.45,
+    "triangles": 1724,
+    "meshes": 60,
+    "materials": 6,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 358592,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "6 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-029-garden-planter/model.ts",
+      "topology": "assets/cafe-kit/kk-029-garden-planter/kk-029-garden-planter.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-029-garden-planter.glb",
+      "preview": ".asset-forge/previews/kk-029-garden-planter/latest.png",
+      "gameplay": ".asset-forge/previews/kk-029-garden-planter-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-029-garden-planter-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-029-garden-planter-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-029-garden-planter/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.7,
+      "depth": 0.3,
+      "height": 0.45
+    }
+  },
+  {
+    "id": "kk-030-exterior-menu-stand",
+    "tier": "furnishing",
+    "width": 0.55,
+    "depth": 0.5,
+    "height": 1,
+    "triangles": 1412,
+    "meshes": 34,
+    "materials": 6,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 269916,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "6 materials (kit guideline ≤ 3); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-030-exterior-menu-stand/model.ts",
+      "topology": "assets/cafe-kit/kk-030-exterior-menu-stand/kk-030-exterior-menu-stand.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-030-exterior-menu-stand.glb",
+      "preview": ".asset-forge/previews/kk-030-exterior-menu-stand/latest.png",
+      "gameplay": ".asset-forge/previews/kk-030-exterior-menu-stand-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-030-exterior-menu-stand-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-030-exterior-menu-stand-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-030-exterior-menu-stand/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.55,
+      "depth": 0.5,
+      "height": 1
+    }
+  },
+  {
+    "id": "kk-031-matcha-whisk-and-holder",
+    "tier": "storytelling",
+    "width": 0.1,
+    "depth": 0.1,
+    "height": 0.14,
+    "triangles": 1824,
+    "meshes": 35,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 203388,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1824 within 15 % of 2000",
+      "3 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-031-matcha-whisk-and-holder/model.ts",
+      "topology": "assets/cafe-kit/kk-031-matcha-whisk-and-holder/kk-031-matcha-whisk-and-holder.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-031-matcha-whisk-and-holder.glb",
+      "preview": ".asset-forge/previews/kk-031-matcha-whisk-and-holder/latest.png",
+      "gameplay": ".asset-forge/previews/kk-031-matcha-whisk-and-holder-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-031-matcha-whisk-and-holder-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-031-matcha-whisk-and-holder-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-031-matcha-whisk-and-holder/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.1,
+      "depth": 0.1,
+      "height": 0.14
+    }
+  },
+  {
+    "id": "kk-032-tea-caddy",
+    "tier": "storytelling",
+    "width": 0.118,
+    "depth": 0.118,
+    "height": 0.153,
+    "triangles": 1288,
+    "meshes": 7,
+    "materials": 2,
+    "textures": [],
+    "glbBytes": 98260,
+    "movable": [],
+    "breaches": [],
+    "warnings": [],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-032-tea-caddy/model.ts",
+      "topology": "assets/cafe-kit/kk-032-tea-caddy/kk-032-tea-caddy.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-032-tea-caddy.glb",
+      "preview": ".asset-forge/previews/kk-032-tea-caddy/latest.png",
+      "gameplay": ".asset-forge/previews/kk-032-tea-caddy-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-032-tea-caddy-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-032-tea-caddy-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-032-tea-caddy/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.12,
+      "depth": 0.12,
+      "height": 0.16
+    }
+  },
+  {
+    "id": "kk-033-kyusu-teapot",
+    "tier": "storytelling",
+    "width": 0.166,
+    "depth": 0.151,
+    "height": 0.123,
+    "triangles": 1878,
+    "meshes": 12,
+    "materials": 4,
+    "textures": [],
+    "glbBytes": 52972,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "width 0.166 differs from original 0.19 m; verify pose or approved exception",
+      "depth 0.151 differs from original 0.14 m; verify pose or approved exception",
+      "triangles 1878 within 15 % of 2000",
+      "4 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-033-kyusu-teapot/model.ts",
+      "topology": "assets/cafe-kit/kk-033-kyusu-teapot/kk-033-kyusu-teapot.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-033-kyusu-teapot.glb",
+      "preview": ".asset-forge/previews/kk-033-kyusu-teapot/latest.png",
+      "gameplay": ".asset-forge/previews/kk-033-kyusu-teapot-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-033-kyusu-teapot-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-033-kyusu-teapot-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-033-kyusu-teapot/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.19,
+      "depth": 0.14,
+      "height": 0.12
+    }
+  },
+  {
+    "id": "kk-034-repaired-cup",
+    "tier": "storytelling",
+    "width": 0.09,
+    "depth": 0.09,
+    "height": 0.101,
+    "triangles": 1770,
+    "meshes": 2,
+    "materials": 2,
+    "textures": [],
+    "glbBytes": 47932,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "width 0.09 differs from original 0.1 m; verify pose or approved exception",
+      "depth 0.09 differs from original 0.1 m; verify pose or approved exception",
+      "triangles 1770 within 15 % of 2000"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-034-repaired-cup/model.ts",
+      "topology": "assets/cafe-kit/kk-034-repaired-cup/kk-034-repaired-cup.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-034-repaired-cup.glb",
+      "preview": ".asset-forge/previews/kk-034-repaired-cup/latest.png",
+      "gameplay": ".asset-forge/previews/kk-034-repaired-cup-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-034-repaired-cup-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-034-repaired-cup-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-034-repaired-cup/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.1,
+      "depth": 0.1,
+      "height": 0.1
+    }
+  },
+  {
+    "id": "kk-035-wagashi-serving-plate",
+    "tier": "storytelling",
+    "width": 0.25,
+    "depth": 0.2,
+    "height": 0.07,
+    "triangles": 1828,
+    "meshes": 9,
+    "materials": 4,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 197316,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1828 within 15 % of 2000",
+      "4 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-035-wagashi-serving-plate/model.ts",
+      "topology": "assets/cafe-kit/kk-035-wagashi-serving-plate/kk-035-wagashi-serving-plate.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-035-wagashi-serving-plate.glb",
+      "preview": ".asset-forge/previews/kk-035-wagashi-serving-plate/latest.png",
+      "gameplay": ".asset-forge/previews/kk-035-wagashi-serving-plate-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-035-wagashi-serving-plate-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-035-wagashi-serving-plate-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-035-wagashi-serving-plate/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.25,
+      "depth": 0.2,
+      "height": 0.07
+    }
+  },
+  {
+    "id": "kk-036-coffee-bean-jar",
+    "tier": "storytelling",
+    "width": 0.14,
+    "depth": 0.14,
+    "height": 0.24,
+    "triangles": 1900,
+    "meshes": 88,
+    "materials": 4,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 139880,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1900 within 15 % of 2000",
+      "4 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-036-coffee-bean-jar/model.ts",
+      "topology": "assets/cafe-kit/kk-036-coffee-bean-jar/kk-036-coffee-bean-jar.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-036-coffee-bean-jar.glb",
+      "preview": ".asset-forge/previews/kk-036-coffee-bean-jar/latest.png",
+      "gameplay": ".asset-forge/previews/kk-036-coffee-bean-jar-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-036-coffee-bean-jar-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-036-coffee-bean-jar-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-036-coffee-bean-jar/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.14,
+      "depth": 0.14,
+      "height": 0.24
+    }
+  },
+  {
+    "id": "kk-037-manual-coffee-grinder",
+    "tier": "storytelling",
+    "width": 0.14,
+    "depth": 0.14,
+    "height": 0.25,
+    "triangles": 1472,
+    "meshes": 33,
+    "materials": 4,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 162016,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "4 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-037-manual-coffee-grinder/model.ts",
+      "topology": "assets/cafe-kit/kk-037-manual-coffee-grinder/kk-037-manual-coffee-grinder.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-037-manual-coffee-grinder.glb",
+      "preview": ".asset-forge/previews/kk-037-manual-coffee-grinder/latest.png",
+      "gameplay": ".asset-forge/previews/kk-037-manual-coffee-grinder-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-037-manual-coffee-grinder-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-037-manual-coffee-grinder-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-037-manual-coffee-grinder/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.14,
+      "depth": 0.14,
+      "height": 0.25
+    }
+  },
+  {
+    "id": "kk-038-gooseneck-kettle",
+    "tier": "storytelling",
+    "width": 0.26,
+    "depth": 0.15,
+    "height": 0.22,
+    "triangles": 1488,
+    "meshes": 8,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 230560,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "3 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-038-gooseneck-kettle/model.ts",
+      "topology": "assets/cafe-kit/kk-038-gooseneck-kettle/kk-038-gooseneck-kettle.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-038-gooseneck-kettle.glb",
+      "preview": ".asset-forge/previews/kk-038-gooseneck-kettle/latest.png",
+      "gameplay": ".asset-forge/previews/kk-038-gooseneck-kettle-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-038-gooseneck-kettle-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-038-gooseneck-kettle-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-038-gooseneck-kettle/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.26,
+      "depth": 0.15,
+      "height": 0.22
+    }
+  },
+  {
+    "id": "kk-039-indigo-serving-tray",
+    "tier": "storytelling",
+    "width": 0.4,
+    "depth": 0.28,
+    "height": 0.04,
+    "triangles": 1448,
+    "meshes": 6,
+    "materials": 3,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 236652,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "3 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-039-indigo-serving-tray/model.ts",
+      "topology": "assets/cafe-kit/kk-039-indigo-serving-tray/kk-039-indigo-serving-tray.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-039-indigo-serving-tray.glb",
+      "preview": ".asset-forge/previews/kk-039-indigo-serving-tray/latest.png",
+      "gameplay": ".asset-forge/previews/kk-039-indigo-serving-tray-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-039-indigo-serving-tray-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-039-indigo-serving-tray-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-039-indigo-serving-tray/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.4,
+      "depth": 0.28,
+      "height": 0.04
+    }
+  },
+  {
+    "id": "kk-040-folded-apron",
+    "tier": "storytelling",
+    "width": 0.329,
+    "depth": 0.272,
+    "height": 0.079,
+    "triangles": 1296,
+    "meshes": 2,
+    "materials": 2,
+    "textures": [],
+    "glbBytes": 36192,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "width 0.329 differs from original 0.35 m; verify pose or approved exception",
+      "depth 0.272 differs from original 0.3 m; verify pose or approved exception",
+      "height 0.079 differs from original 0.05 m; verify pose or approved exception"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-040-folded-apron/model.ts",
+      "topology": "assets/cafe-kit/kk-040-folded-apron/kk-040-folded-apron.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-040-folded-apron.glb",
+      "preview": ".asset-forge/previews/kk-040-folded-apron/latest.png",
+      "gameplay": ".asset-forge/previews/kk-040-folded-apron-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-040-folded-apron-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-040-folded-apron-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-040-folded-apron/review/REVIEW.md"
+    },
+    "appearance": "approved",
+    "intendedDimensions": {
+      "width": 0.35,
+      "depth": 0.3,
+      "height": 0.05
+    }
+  },
+  {
+    "id": "kk-041-cat-adoption-ledger",
+    "tier": "storytelling",
+    "width": 0.4,
+    "depth": 0.28,
+    "height": 0.04,
+    "triangles": 988,
+    "meshes": 44,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 161352,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "7 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-041-cat-adoption-ledger/model.ts",
+      "topology": "assets/cafe-kit/kk-041-cat-adoption-ledger/kk-041-cat-adoption-ledger.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-041-cat-adoption-ledger.glb",
+      "preview": ".asset-forge/previews/kk-041-cat-adoption-ledger/latest.png",
+      "gameplay": ".asset-forge/previews/kk-041-cat-adoption-ledger-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-041-cat-adoption-ledger-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-041-cat-adoption-ledger-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-041-cat-adoption-ledger/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.4,
+      "depth": 0.28,
+      "height": 0.04
+    }
+  },
+  {
+    "id": "kk-042-instant-photo-display",
+    "tier": "storytelling",
+    "width": 0.45,
+    "depth": 0.08,
+    "height": 0.3,
+    "triangles": 1464,
+    "meshes": 76,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 262844,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "7 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-042-instant-photo-display/model.ts",
+      "topology": "assets/cafe-kit/kk-042-instant-photo-display/kk-042-instant-photo-display.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-042-instant-photo-display.glb",
+      "preview": ".asset-forge/previews/kk-042-instant-photo-display/latest.png",
+      "gameplay": ".asset-forge/previews/kk-042-instant-photo-display-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-042-instant-photo-display-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-042-instant-photo-display-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-042-instant-photo-display/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.45,
+      "depth": 0.08,
+      "height": 0.3
+    }
+  },
+  {
+    "id": "kk-043-transistor-radio",
+    "tier": "storytelling",
+    "width": 0.25,
+    "depth": 0.1,
+    "height": 0.15,
+    "triangles": 1956,
+    "meshes": 49,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 279964,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1956 within 15 % of 2000",
+      "7 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-043-transistor-radio/model.ts",
+      "topology": "assets/cafe-kit/kk-043-transistor-radio/kk-043-transistor-radio.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-043-transistor-radio.glb",
+      "preview": ".asset-forge/previews/kk-043-transistor-radio/latest.png",
+      "gameplay": ".asset-forge/previews/kk-043-transistor-radio-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-043-transistor-radio-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-043-transistor-radio-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-043-transistor-radio/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.25,
+      "depth": 0.1,
+      "height": 0.15
+    }
+  },
+  {
+    "id": "kk-044-ceramic-wind-bell",
+    "tier": "storytelling",
+    "width": 0.09,
+    "depth": 0.09,
+    "height": 0.4,
+    "triangles": 1212,
+    "meshes": 8,
+    "materials": 5,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 182300,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "5 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-044-ceramic-wind-bell/model.ts",
+      "topology": "assets/cafe-kit/kk-044-ceramic-wind-bell/kk-044-ceramic-wind-bell.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-044-ceramic-wind-bell.glb",
+      "preview": ".asset-forge/previews/kk-044-ceramic-wind-bell/latest.png",
+      "gameplay": ".asset-forge/previews/kk-044-ceramic-wind-bell-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-044-ceramic-wind-bell-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-044-ceramic-wind-bell-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-044-ceramic-wind-bell/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.09,
+      "depth": 0.09,
+      "height": 0.4
+    }
+  },
+  {
+    "id": "kk-045-maple-branch-vase",
+    "tier": "storytelling",
+    "width": 0.25,
+    "depth": 0.25,
+    "height": 0.55,
+    "triangles": 1592,
+    "meshes": 18,
+    "materials": 4,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 187072,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "4 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-045-maple-branch-vase/model.ts",
+      "topology": "assets/cafe-kit/kk-045-maple-branch-vase/kk-045-maple-branch-vase.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-045-maple-branch-vase.glb",
+      "preview": ".asset-forge/previews/kk-045-maple-branch-vase/latest.png",
+      "gameplay": ".asset-forge/previews/kk-045-maple-branch-vase-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-045-maple-branch-vase-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-045-maple-branch-vase-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-045-maple-branch-vase/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.25,
+      "depth": 0.25,
+      "height": 0.55
+    }
+  },
+  {
+    "id": "kk-046-cat-toy-basket",
+    "tier": "storytelling",
+    "width": 0.3,
+    "depth": 0.25,
+    "height": 0.35,
+    "triangles": 1958,
+    "meshes": 31,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 133668,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1958 within 15 % of 2000",
+      "7 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-046-cat-toy-basket/model.ts",
+      "topology": "assets/cafe-kit/kk-046-cat-toy-basket/kk-046-cat-toy-basket.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-046-cat-toy-basket.glb",
+      "preview": ".asset-forge/previews/kk-046-cat-toy-basket/latest.png",
+      "gameplay": ".asset-forge/previews/kk-046-cat-toy-basket-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-046-cat-toy-basket-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-046-cat-toy-basket-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-046-cat-toy-basket/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.3,
+      "depth": 0.25,
+      "height": 0.35
+    }
+  },
+  {
+    "id": "kk-047-grooming-box",
+    "tier": "storytelling",
+    "width": 0.3,
+    "depth": 0.2,
+    "height": 0.2,
+    "triangles": 1900,
+    "meshes": 60,
+    "materials": 4,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 279424,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1900 within 15 % of 2000",
+      "4 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-047-grooming-box/model.ts",
+      "topology": "assets/cafe-kit/kk-047-grooming-box/kk-047-grooming-box.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-047-grooming-box.glb",
+      "preview": ".asset-forge/previews/kk-047-grooming-box/latest.png",
+      "gameplay": ".asset-forge/previews/kk-047-grooming-box-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-047-grooming-box-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-047-grooming-box-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-047-grooming-box/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.3,
+      "depth": 0.2,
+      "height": 0.2
+    }
+  },
+  {
+    "id": "kk-048-loyalty-stamp-kit",
+    "tier": "storytelling",
+    "width": 0.2,
+    "depth": 0.15,
+    "height": 0.08,
+    "triangles": 764,
+    "meshes": 26,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 190932,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "7 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-048-loyalty-stamp-kit/model.ts",
+      "topology": "assets/cafe-kit/kk-048-loyalty-stamp-kit/kk-048-loyalty-stamp-kit.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-048-loyalty-stamp-kit.glb",
+      "preview": ".asset-forge/previews/kk-048-loyalty-stamp-kit/latest.png",
+      "gameplay": ".asset-forge/previews/kk-048-loyalty-stamp-kit-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-048-loyalty-stamp-kit-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-048-loyalty-stamp-kit-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-048-loyalty-stamp-kit/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.2,
+      "depth": 0.15,
+      "height": 0.08
+    }
+  },
+  {
+    "id": "kk-049-neighborhood-map-frame",
+    "tier": "storytelling",
+    "width": 0.45,
+    "depth": 0.03,
+    "height": 0.35,
+    "triangles": 1868,
+    "meshes": 45,
+    "materials": 8,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 267176,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1868 within 15 % of 2000",
+      "8 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-049-neighborhood-map-frame/model.ts",
+      "topology": "assets/cafe-kit/kk-049-neighborhood-map-frame/kk-049-neighborhood-map-frame.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-049-neighborhood-map-frame.glb",
+      "preview": ".asset-forge/previews/kk-049-neighborhood-map-frame/latest.png",
+      "gameplay": ".asset-forge/previews/kk-049-neighborhood-map-frame-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-049-neighborhood-map-frame-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-049-neighborhood-map-frame-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-049-neighborhood-map-frame/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.45,
+      "depth": 0.03,
+      "height": 0.35
+    }
+  },
+  {
+    "id": "kk-050-mending-basket",
+    "tier": "storytelling",
+    "width": 0.3,
+    "depth": 0.25,
+    "height": 0.2,
+    "triangles": 1948,
+    "meshes": 28,
+    "materials": 7,
+    "textures": [
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128",
+      "map 128×128",
+      "normalMap 128×128",
+      "roughnessMap 128×128"
+    ],
+    "glbBytes": 200960,
+    "movable": [],
+    "breaches": [],
+    "warnings": [
+      "triangles 1948 within 15 % of 2000",
+      "7 materials (kit guideline ≤ 2); each costs a draw call"
+    ],
+    "artifacts": {
+      "source": "assets/cafe-kit/kk-050-mending-basket/model.ts",
+      "topology": "assets/cafe-kit/kk-050-mending-basket/kk-050-mending-basket.vtopo",
+      "glb": "dist/cafe-kit-glb/kk-050-mending-basket.glb",
+      "preview": ".asset-forge/previews/kk-050-mending-basket/latest.png",
+      "gameplay": ".asset-forge/previews/kk-050-mending-basket-gameplay/latest.png",
+      "reimport": ".asset-forge/previews/kk-050-mending-basket-glb/latest.png",
+      "reimportGameplay": ".asset-forge/previews/kk-050-mending-basket-glb-gameplay/latest.png",
+      "review": "assets/cafe-kit/kk-050-mending-basket/review/REVIEW.md"
+    },
+    "appearance": "pending",
+    "intendedDimensions": {
+      "width": 0.3,
+      "depth": 0.25,
+      "height": 0.2
+    }
+  }
+]

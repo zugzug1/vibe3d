@@ -1,0 +1,21 @@
+{
+  "extends": "../../tsconfig.json",
+  "compilerOptions": { "types": ["node"] },
+  "include": [
+    "kk-007-washi-pendant-lantern/model.ts",
+    "kk-009-engawa-lounge-platform/model.ts",
+    "kk-010-cafe-entrance-assembly/model.ts",
+    "kk-011-cafe-table/model.ts",
+    "kk-012-spindle-back-chair/model.ts",
+    "kk-013-low-tea-table/model.ts",
+    "kk-014-zabuton-cushion/model.ts",
+    "kk-015-service-trolley/model.ts",
+    "kk-018-handwashing-basin/model.ts",
+    "kk-020-shoe-cubby-rack/model.ts",
+    "kk-021-wall-cat-walkway/model.ts",
+    "kk-024-ventilated-litter-enclosure/model.ts",
+    "kk-025-adoption-notice-cabinet/model.ts",
+    "kk-027-waste-sorting-cabinet/model.ts",
+    "kk-scene/review-scene.ts"
+  ]
+}

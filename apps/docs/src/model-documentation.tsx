@@ -1,23 +1,12 @@
 import { useEffect, useState } from 'react'
 import { CodeBlock } from './components.tsx'
 import type { CatalogModel } from './catalog.ts'
+import { kitSlug, registryScope, installedImport } from './model-paths.ts'
 
 type InstallMethod = 'command' | 'manual'
 
 function symbolName(id: string): string {
   return id.split('-').map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`).join('')
-}
-
-function kitSlug(model: CatalogModel): 'scifi-kit' | 'f1-kit' {
-  return model.kind === 'f1' ? 'f1-kit' : 'scifi-kit'
-}
-
-function registryScope(model: CatalogModel): '@scifi-kit' | '@f1-kit' {
-  return model.kind === 'f1' ? '@f1-kit' : '@scifi-kit'
-}
-
-function installedImport(model: CatalogModel): string {
-  return `@/models/${kitSlug(model)}/${model.id}/model`
 }
 
 function sourceDependencies(source: string): string[] {
@@ -71,6 +60,8 @@ export function ModelInstallation({ model }: { model: CatalogModel }) {
         <li>Install dependencies with <code>{terrain ? 'bun add three @vibe3djs/terrain' : 'bun add three'}</code>.</li>
         <li>{terrain
           ? <>Copy the entire <code>assets/terrain/{model.id}</code> directory, including its topology and bake artifacts.</>
+          : model.kind === 'cafe-kit'
+            ? <>Copy the complete model directory and shared <code>kk-core</code> support into <code>src/models/cafe-kit</code>, retaining sibling helpers and relative imports.</>
           : isF1
             ? <>Copy shared F1 Kit support (<code>f1-kit-core</code>) into <code>src/models/f1-kit/f1-kit-core</code>.</>
             : <>Copy the shared Sci-Fi Kit runtime into <code>src/lib/vibe3d/scifi-kit</code>.</>}</li>
@@ -106,6 +97,8 @@ export function ModelUsage({ model }: { model: CatalogModel }) {
 
   const tree = terrain
     ? `src/models/scifi-kit/${model.id}/\n├── model.ts\n├── topology.ts\n└── *.{vtopo,vbake}`
+    : model.kind === 'cafe-kit'
+      ? `src/models/cafe-kit/\n├── kk-core/\n└── ${model.id}/\n    ├── model.ts\n    └── local helpers and topology`
     : isF1
       ? `src/\n└── models/f1-kit/\n    ├── f1-kit-core/\n    └── ${model.id}/\n        └── model.ts`
       : `src/\n├── lib/vibe3d/scifi-kit/\n└── models/scifi-kit/${model.id}/\n    └── model.ts`

@@ -13,3 +13,9 @@ models.lock.json
 *.tsbuildinfo
 test-results/
 docs/assets/f1-kit-previews/
+assets/cafe-kit/*/.img2threejs/
+assets/cafe-kit/*/work/
+assets/cafe-kit/.qa-views-*/
+dist/cafe-kit-glb/
+docs/kyoto-kat/previews/
+tmp/

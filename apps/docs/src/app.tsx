@@ -2,7 +2,7 @@ import { ArrowRight, Box, Braces, PackageOpen, Palette, Terminal } from 'lucide-
 import { lazy, Suspense } from 'react'
 import { Link, Navigate, Outlet, Route, Routes, useParams, useSearchParams } from 'react-router-dom'
 import { CodeBlock, DocsLayout, Header, PageIntro } from './components.tsx'
-import { catalog, findModel, f1Catalog, scifiCatalog } from './catalog.ts'
+import { catalog, findModel, f1Catalog, cafeKitCatalog, scifiCatalog } from './catalog.ts'
 import { ModelInstallation, ModelUsage } from './model-documentation.tsx'
 
 const ModelPreview = lazy(async () => {
@@ -196,14 +196,16 @@ function ModelIndex() {
   const query = params.get('q') ?? ''
   const kit = params.get('kit')
   const needle = query.toLowerCase()
-  const pool = kit === 'f1' ? f1Catalog : kit === 'scifi' ? scifiCatalog : catalog
+  const pool = kit === 'f1' ? f1Catalog : kit === 'scifi' ? scifiCatalog : kit === 'cafe-kit' ? cafeKitCatalog : catalog
   const filtered = pool.filter((model) => `${model.name} ${model.category}`.toLowerCase().includes(needle))
-  const eyebrow = kit === 'f1' ? 'F1 Kit' : kit === 'scifi' ? 'Sci-Fi Kit' : 'Source kits · MIT licensed'
+  const eyebrow = kit === 'f1' ? 'F1 Kit' : kit === 'scifi' ? 'Sci-Fi Kit' : kit === 'cafe-kit' ? 'Cafe Kit' : 'Source kits · MIT licensed'
   const title = kit === 'f1'
     ? 'F1 Kit models.'
     : kit === 'scifi'
       ? 'Sci-Fi Kit models.'
-      : 'Models ready to become yours.'
+      : kit === 'cafe-kit'
+        ? 'Cafe Kit models.'
+        : 'Models ready to become yours.'
   return (
     <div className="catalog-page">
       <PageIntro eyebrow={eyebrow} title={title}>
@@ -254,6 +256,11 @@ function F1KitPage() {
   return <div className="kit-page"><PageIntro eyebrow="Reference library · MIT licensed" title="F1 Kit"><p>{count} Formula 1 pit-lane and circuit props, built for Three.js and shipped as source.</p></PageIntro><CodeBlock>{'bunx vibe3d add @f1-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>models</span></div><div><b>Three.js</b><span>engine</span></div><div><b>MIT</b><span>license</span></div></div><Link className="primary-button" to="/models?kit=f1">Browse F1 models <ArrowRight /></Link></div>
 }
 
+function CafeKitPage() {
+  const count = cafeKitCatalog.length
+  return <div className="kit-page"><PageIntro eyebrow="Production preview · review pending" title="Cafe Kit"><p>{count} procedural 1990s Kyoto cat-café furnishings and props, built for Three.js. Visual acceptance, phone performance and art redistribution clearance are tracked separately from source availability.</p></PageIntro><CodeBlock>{'bunx vibe3d add @cafe-kit'}</CodeBlock><div className="kit-stats"><div><b>{count}</b><span>model sources</span></div><div><b>Three.js</b><span>engine</span></div><div><b>Pending</b><span>release clearance</span></div></div><Link className="primary-button" to="/models?kit=cafe-kit">Browse Kyoto Kat models <ArrowRight /></Link></div>
+}
+
 function DocumentationShell() {
   return <><Header /><DocsLayout><Outlet /></DocsLayout></>
 }
@@ -293,6 +300,7 @@ export function App() {
         <Route path="/kits/scifi-kit" element={<SciFiKitPage />} />
         <Route path="/kits/f1-kit" element={<F1KitPage />} />
         <Route path="/kits/racing-kit" element={<Navigate to="/kits/f1-kit" replace />} />
+        <Route path="/kits/cafe-kit" element={<CafeKitPage />} />
       </Route>
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
