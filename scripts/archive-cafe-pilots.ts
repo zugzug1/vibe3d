@@ -1,4 +1,4 @@
-/** Archive the approved-plan pilot gate; never label it as the finished 50-asset kit. */
+/** Archive production artifacts; keep appearance/device/release approval distinct. */
 import { createHash } from 'node:crypto'
 import { copyFileSync, existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs'
 import { join, resolve } from 'node:path'
@@ -24,6 +24,8 @@ const ids = selected ?? (batch
   : ['kk-001-espresso-station', 'kk-004-cedar-cat-tower', 'kk-008-shoji-folding-screen',
   'kk-011-cafe-table', 'kk-012-spindle-back-chair', 'kk-034-repaired-cup', 'kk-040-folded-apron'])
 const entries: Array<{ path: string; sha256: string }> = []
+const fullCollection = ids.length === 50 && new Set(ids.map(id => Number(id.slice(3, 6)))).size === 50
+  && ids.every(id => Number(id.slice(3, 6)) >= 1 && Number(id.slice(3, 6)) <= 50)
 function copy(source: string, relative: string): void {
   const target = join(destination, relative)
   mkdirSync(resolve(target, '..'), { recursive: true })
@@ -83,7 +85,21 @@ for (const document of ['CONTROLS.md', 'PRODUCTION.md', 'PERF.md', 'REVIEW-INDEX
   if (existsSync(source)) copy(source, document)
 }
 if (batch) copy(join(root, 'docs/kyoto-kat/BATCH-01.md'), 'BATCH-01.md')
-if (selected) copy(join(root, 'docs/kyoto-kat/NEXT-11.md'), 'NEXT-11.md')
+if (selected && !fullCollection) copy(join(root, 'docs/kyoto-kat/NEXT-11.md'), 'NEXT-11.md')
+if (fullCollection) {
+  const scenePath = join(root, '.asset-forge/previews/kk-scene')
+  const measurement = JSON.parse(readFileSync(join(scenePath, 'measure.json'), 'utf8'))
+  for (const name of ['review', 'cafe']) {
+    if (!measurement.results?.some((result: { scene: string; models: number }) => result.scene === name && result.models === 50)) {
+      throw new Error(`Full archive requires a measured 50-model ${name} scene`)
+    }
+    const source = join(scenePath, `${name}.png`)
+    const { info } = await sharp(source).raw().toBuffer({ resolveWithObject: true })
+    if (info.width !== 1280 || info.height !== 720) throw new Error(`Invalid scene capture: ${name}`)
+    copy(source, `scenes/${name}.png`)
+  }
+  copy(join(scenePath, 'measure.json'), 'scenes/measure.json')
+}
 writeFileSync(join(destination, 'manifest.json'), JSON.stringify({
   status: batch || selected ? 'batch-review-pending' : 'pilot-approval-pending', assetCount: ids.length, collectionTarget: 50,
   sourceCheckout: root, sourceBranch: 'feat/kyoto-kat-kit',
@@ -92,7 +108,7 @@ writeFileSync(join(destination, 'manifest.json'), JSON.stringify({
   files: entries,
 }, null, 2) + '\n')
 writeFileSync(join(destination, 'SHA256SUMS'), entries.map((e) => `${e.sha256}  ${e.path}`).join('\n') + '\n')
-writeFileSync(join(destination, 'README.md'), `# Café-kit: ${selected ? 'production batch review' : batch ? 'batch 01 repair review' : 'seven-pilot approval gate'}\n\nNot the completed 50-asset collection. Visual approval is pending.\n\n`
+writeFileSync(join(destination, 'README.md'), `# Café-kit: ${fullCollection ? '50-asset production review' : selected ? 'production batch review' : batch ? 'batch 01 repair review' : 'seven-pilot approval gate'}\n\n${fullCollection ? 'All 50 source/export sets are included. Visual approval, physical-phone performance and release clearance remain pending.\n\n[Review scene](scenes/review.png) · [Furnished café](scenes/cafe.png) · [Desktop counters—not phone fps](scenes/measure.json)' : 'Not the completed 50-asset collection. Visual approval is pending.'}\n\n`
   + ids.map((id) => `## ${id}\n\n![Close view](${id}/${reimported ? 'glb-close.png' : 'close.png'})\n\n[Gameplay view](${id}/${reimported ? 'glb-gameplay.png' : 'gameplay.png'}) · [GLB](${id}/${id}.glb) · [Review](${id}/REVIEW.md)`
     + (entries.some(e => e.path === `${id}/glb-inspection.png`) ? ` · [Cavity inspection](${id}/glb-inspection.png)` : '')
     + (entries.some(e => e.path === `${id}/contrast.png`) ? ` · [Contrast lighting](${id}/contrast.png)` : '')
