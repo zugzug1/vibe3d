@@ -7,11 +7,8 @@ import { BufferAttribute, BufferGeometry, Group, LatheGeometry, Mesh, Quaternion
 
 import {
   acquireKkMaterials,
-  bevelDisc,
-  bevelRing,
   createKkPreview,
   finishModel,
-  revolve,
 } from '../kk-core/index.ts'
 
 const ID = 'kk-033-kyusu-teapot'
@@ -37,10 +34,24 @@ export interface KkKyusuInstance {
 }
 
 const DEFAULTS: KkKyusuConfig = { lid: true, handleSide: 1 }
-const Z_AXIS = new Vector3(0, 0, 1)
 const Y_AXIS = new Vector3(0, 1, 0)
 
-/** Four axial rings replace the long default TubeGeometry path for this tiny spout. */
+/** Ordered ceramic section; preserve returning walls and remove zero-area pole faces. */
+function section(points: readonly (readonly [number, number])[], segments: number): BufferGeometry {
+  const geometry = new LatheGeometry(points.map(([r, y]) => new Vector2(r, y)), segments)
+  const p = geometry.getAttribute('position')
+  const source = geometry.getIndex()!
+  const indices: number[] = []
+  for (let i = 0; i < source.count; i += 3) {
+    const ids = [source.getX(i), source.getX(i + 1), source.getX(i + 2)]
+    const [a, b, c] = ids.map(id => new Vector3().fromBufferAttribute(p, id))
+    if (b!.sub(a!).cross(c!.sub(a!)).lengthSq() > 1e-20) indices.push(...ids)
+  }
+  geometry.setIndex(indices)
+  return geometry
+}
+
+/** Sparse curved sweep, with explicit rings for the turned-back mouth wall. */
 function axialSpout(path: readonly Vector3[], radii: readonly number[], radial = 10): BufferGeometry {
   const positions = new Float32Array(path.length * radial * 3)
   const indices: number[] = []
@@ -102,17 +113,11 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
   const emit = (slot: Slot, geometry: BufferGeometry, group: Group, name: string): void => {
     generated.push(geometry)
     const mesh = new Mesh(geometry, slots[slot])
-    mesh.name = name
+    mesh.name = `${ID} / ${name}`
     mesh.castShadow = true
     mesh.receiveShadow = true
     meshesBySlot[slot].push(mesh)
     group.add(mesh)
-  }
-
-  const orientAt = (geometry: BufferGeometry, point: Vector3, direction: Vector3): BufferGeometry => {
-    geometry.applyQuaternion(new Quaternion().setFromUnitVectors(Z_AXIS, direction.clone().normalize()))
-    geometry.translate(point.x, point.y, point.z)
-    return geometry
   }
 
   const orientAtY = (geometry: BufferGeometry, point: Vector3, direction: Vector3): BufferGeometry => {
@@ -127,64 +132,64 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
     generated.length = 0
     for (const slot of Object.keys(meshesBySlot) as Slot[]) meshesBySlot[slot].length = 0
 
-    const vessel = revolve([
-      [0, 0.028], [0.08, 0.047], [0.22, 0.055], [0.48, 0.057], [0.7, 0.053], [0.9, 0.039], [1, 0.030],
-    ], { yBot: 0.012, yTop: 0.088, segments: 16 })
+    const vessel = section([
+      [0, 0.006], [0.033, 0.006], [0.042, 0.014], [0.051, 0.027],
+      [0.057, 0.044], [0.058, 0.058], [0.055, 0.072], [0.049, 0.083],
+      [0.041, 0.090], [0.038, 0.091], [0.035, 0.089],
+      [0.040, 0.079], [0.048, 0.062], [0.043, 0.026], [0, 0.015],
+    ], 20)
     emit('ceramic', vessel, body, 'rounded-vessel')
 
-    const base = bevelRing(0.032, 0.048, 0.006, 0.0012, 8)
-    base.rotateX(Math.PI / 2)
-    base.translate(0, 0.012, 0)
+    const base = section([[0.031, 0.008], [0.031, 0], [0.034, 0], [0.035, 0.003], [0.035, 0.010]], 16)
     emit('metal', base, body, 'foot-ring')
 
     if (config.lid) {
-      const dome = revolve([
-        [0, 0.043], [0.22, 0.044], [0.5, 0.039], [0.76, 0.026], [1, 0.010],
-    ], { yBot: 0.084, yTop: 0.104, segments: 16 })
+      const dome = section([
+        [0, 0.0905], [0.037, 0.0905], [0.039, 0.092], [0.036, 0.097],
+        [0.029, 0.1015], [0.018, 0.105], [0, 0.106],
+      ], 20)
       emit('ceramic', dome, lid, 'domed-lid')
-      const rim = bevelRing(0.035, 0.047, 0.003, 0.0008, 8)
-      rim.rotateX(Math.PI / 2)
-      rim.translate(0, 0.086, 0)
+      const rim = section([[0.039, 0.089], [0.041, 0.0895], [0.041, 0.091], [0.039, 0.092]], 20)
       emit('metal', rim, lid, 'lid-rim')
       // Local ordered profile closes both axis ends; `revolve()` sorts normalized stations and cannot
       // express this returning inner edge without reopening the crown.
-      const knob = new LatheGeometry([
-        new Vector2(0, 0.102), new Vector2(0.008, 0.102), new Vector2(0.013, 0.106),
-        new Vector2(0.015, 0.112), new Vector2(0.010, 0.118), new Vector2(0, 0.119),
-      ], 8)
-      const knobSeat = bevelDisc(0.012, 0.004, 0.0008, 8)
-      knobSeat.rotateX(Math.PI / 2)
-      knobSeat.translate(0, 0.103, 0)
-      emit('metal', knobSeat, lid, 'knob-seat')
+      const knob = section([
+        [0.010, 0.104], [0.009, 0.107], [0.008, 0.110], [0.0105, 0.114],
+        [0.012, 0.118], [0.010, 0.121], [0.006, 0.1225], [0, 0.123],
+      ], 16)
+      const knobSeat = section([[0.007, 0.104], [0.012, 0.1045], [0.011, 0.106], [0.008, 0.107]], 12)
+      emit('moss', knobSeat, lid, 'knob-seat')
       emit('moss', knob, lid, 'lid-knob')
     }
 
     const side = config.handleSide
-    const handleRoot = new Vector3(side * 0.050, 0.064, -0.002)
-    const handleDirection = new Vector3(side, 0.18, 0.02).normalize()
-    const handleProfile = [
-      new Vector2(0, 0), new Vector2(0.012, 0), new Vector2(0.014, 0.014),
-      new Vector2(0.018, 0.050), new Vector2(0.015, 0.052), new Vector2(0.015, 0.032),
-      new Vector2(0, 0.032), new Vector2(0, 0),
+    const handleRoot = new Vector3(side * 0.049, 0.059, -0.002)
+    const handleDirection = new Vector3(side, 0.30, 0.02).normalize()
+    const handleProfile: readonly (readonly [number, number])[] = [
+      [0.017, -0.004], [0.013, 0.008], [0.013, 0.018], [0.016, 0.036],
+      [0.020, 0.052], [0.0195, 0.055], [0.017, 0.055], [0.015, 0.034], [0, 0.025],
     ]
-    emit('moss', orientAtY(new LatheGeometry(handleProfile, 10), handleRoot, handleDirection), handle, 'side-cylinder-handle')
+    emit('moss', orientAtY(section(handleProfile, 16), handleRoot, handleDirection), handle, 'side-cylinder-handle')
+    emit('metal', orientAtY(section([[0.0198, 0.052], [0.0202, 0.054], [0.019, 0.056], [0.017, 0.055]], 16), handleRoot, handleDirection), handle, 'handle-lip')
 
     const spoutRings = [
-      new Vector3(-0.010, 0.057, 0.036),
-      new Vector3(-0.011, 0.064, 0.053),
-      new Vector3(-0.012, 0.073, 0.073),
-      new Vector3(-0.014, 0.082, 0.092),
+      new Vector3(-0.010, 0.048, 0.039),
+      new Vector3(-0.011, 0.054, 0.056),
+      new Vector3(-0.012, 0.065, 0.066),
+      new Vector3(-0.013, 0.078, 0.075),
+      new Vector3(-0.014, 0.090, 0.086),
     ]
-    emit('ceramic', axialSpout(spoutRings, [0.016, 0.014, 0.011, 0.009], 10), spout, 'short-spout')
+    emit('ceramic', axialSpout(spoutRings, [0.020, 0.017, 0.013, 0.0095, 0.0085], 14), spout, 'short-spout')
     const baseDirection = spoutRings[1]!.clone().sub(spoutRings[0]!).normalize()
-    emit('metal', orientAt(bevelRing(0.010, 0.016, 0.004, 0.0006, 8), spoutRings[0]!, baseDirection), spout, 'spout-junction')
-    const direction = spoutRings[3]!.clone().sub(spoutRings[2]!).normalize()
-    emit('metal', orientAt(bevelRing(0.008, 0.010, 0.003, 0.0006, 8), spoutRings[3]!, direction), spout, 'spout-rim')
-    emit('opening', orientAt(bevelDisc(0.0065, 0.001, 0.0003, 8), spoutRings[3]!.clone().addScaledVector(direction, -0.001), direction), spout, 'spout-opening')
+    emit('moss', orientAtY(section([[0.017, -0.002], [0.0205, 0], [0.019, 0.004]], 14), spoutRings[0]!, baseDirection), spout, 'spout-junction')
+    const direction = spoutRings[4]!.clone().sub(spoutRings[3]!).normalize()
+    emit('metal', orientAtY(section([[0.0085, -0.001], [0.009, 0.001], [0.007, 0.002], [0.0065, 0]], 14), spoutRings[4]!, direction), spout, 'spout-rim')
+    emit('opening', orientAtY(section([[0.0065, 0], [0.006, -0.008], [0, -0.011]], 14), spoutRings[4]!, direction), spout, 'spout-opening')
   }
 
   rebuild()
   const finished = finishModel(root, bundle, { name: ID, geometries: generated })
+  let disposed = false
   return {
     root,
     parts: { body, lid, spout, handle },
@@ -200,7 +205,7 @@ export function createModel(options: KkKyusuOptions = {}): KkKyusuInstance {
       for (const mesh of meshesBySlot[slot]) mesh.material = material
     },
     update: () => {},
-    dispose: () => finished.dispose(),
+    dispose: () => { if (!disposed) { disposed = true; finished.dispose() } },
   }
 }
 

@@ -96,6 +96,33 @@ and render-headless union-type errors. Some Dawn preview processes crash during
 shutdown after writing the image; archive validation decodes PNG pixels and
 checks dimensions rather than trusting the emitted success JSON alone.
 
+## User-requested Astra-low rebuild
+
+Miguel rejected the matcha station and kyusu after reviewing the repaired batch,
+and explicitly requested Astra-low subagents to review and rebuild both. The
+ambiguous first item was confirmed as **kk-002 matcha station**, not espresso.
+The prior repair archive remains immutable evidence, not an accepted result.
+
+Two Astra-low workers have disjoint ownership of kk-002 and kk-033. No additional
+assets, shared framework replacement, main push, or deployment is authorized by
+this rebuild. Coordinator serializes renders and validates integration. The
+feeding station and caddy are unchanged and remain pending visual approval.
+
+Rebuild results: kk-002 now has a compact radial chasen on a ceramic holder,
+fitted tray, deep bowl, mat and scoop; 11,192 triangles. Its first render exposed
+angular ceramic color patches; these were removed before the final close
+iteration 005. kk-033 has a rounded vessel/lid/knob, curved tapered spout and
+complete flared handle lip; 1,878 triangles, close iteration 006. Both workers
+viewed coordinator renders, with final corrected matcha pixels also checked by
+the coordinator. No user acceptance is implied.
+
+The new archive is
+`/Volumes/zug1/kyoto-kat-kit/pilot-review/batch-01-astra-rebuild-2026-09-12-v1/README.md`.
+It includes the two unchanged batch assets for context. Prior archive retained.
+Remaining approximations include ceramic decoration, wood grain and textile
+print; kyusu spout-root/knob facets and shallow-looking handle cavity remain
+visible up close. Phone performance and target-viewer reimport remain pending.
+
 Runtime tests, compiled topology, and registry/export checks establish technical
 properties, not resemblance. GLB export success is not target-viewer reimport or
 phone performance validation. The batch must not silently advance from draft to
