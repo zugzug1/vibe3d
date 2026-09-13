@@ -10,9 +10,9 @@
  *
  * Hull names are applied at compile time; visual recipes stay unchanged.
  */
-import { readdir } from 'node:fs/promises'
+import { readdir, stat } from 'node:fs/promises'
 import { dirname, join, resolve } from 'node:path'
-import { fileURLToPath } from 'node:url'
+import { fileURLToPath, pathToFileURL } from 'node:url'
 import type { PropCompileStrategy } from './topology.ts'
 
 export type CatalogEntry = {
@@ -115,20 +115,26 @@ export const furnishing = (id: string, config: Record<string, unknown> = {}): Ca
 export const KIT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
 
 /** Every worker-owned model directory (`kk-0NN-<slug>`), sorted. Never `kk-core` or `kk-scene`. */
-export async function listModelIds(): Promise<string[]> {
-  const entries = await readdir(KIT_ROOT, { withFileTypes: true })
+export async function listModelIds(root = KIT_ROOT): Promise<string[]> {
+  const entries = await readdir(root, { withFileTypes: true })
   const ids: string[] = []
   for (const entry of entries) {
     if (!entry.isDirectory()) continue
     if (!/^kk-\d{3}-[a-z0-9-]+$/.test(entry.name)) continue
-    try {
-      await import(`../${entry.name}/model.ts`)
-      ids.push(entry.name)
-    } catch {
-      // no model barrel yet — a worker's directory in progress
-    }
+    const source = join(root, entry.name, 'model.ts')
+    if (!await fileExists(source)) continue // Directory has not received its source yet.
+    await import(pathToFileURL(source).href) // Broken source must fail validation, not disappear.
+    ids.push(entry.name)
   }
   return ids.sort()
+}
+
+async function fileExists(path: string): Promise<boolean> {
+  try { return (await stat(path)).isFile() }
+  catch (error) {
+    if ((error as NodeJS.ErrnoException).code === 'ENOENT') return false
+    throw error
+  }
 }
 
 /** The catalog: a worker's `catalog.ts#entry` when present, else the furnishing default. */
@@ -137,11 +143,11 @@ export async function loadCatalog(): Promise<CatalogEntry[]> {
   const catalog: CatalogEntry[] = []
   for (const id of ids) {
     let entry: CatalogEntry | undefined
-    try {
-      const mod = await import(`../${id}/catalog.ts`) as { entry?: CatalogEntry }
+    const source = join(KIT_ROOT, id, 'catalog.ts')
+    if (await fileExists(source)) {
+      const mod = await import(pathToFileURL(source).href) as { entry?: CatalogEntry }
       entry = mod.entry
-    } catch {
-      entry = undefined
+      if (!entry) throw new Error(`${id}/catalog.ts must export entry`)
     }
     if (entry && entry.id !== id) {
       throw new Error(`${id}/catalog.ts exports entry.id "${entry.id}" — it must equal the directory name`)
