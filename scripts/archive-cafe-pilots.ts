@@ -38,6 +38,9 @@ for (const id of ids) {
   if (reimported && existsSync(join(root, '.asset-forge/previews', id + '-glb-inspection', 'latest.png'))) {
     captures.push(['-glb-inspection', 'glb-inspection.png'])
   }
+  for (const [suffix, name] of [['-contrast', 'contrast.png'], ['-glb-contrast', 'glb-contrast.png']]) {
+    if (existsSync(join(root, '.asset-forge/previews', id + suffix, 'latest.png'))) captures.push([suffix!, name!])
+  }
   for (const [suffix, name] of captures) {
     const image = join(root, '.asset-forge/previews', id + suffix, 'latest.png')
     const { info } = await sharp(image).raw().toBuffer({ resolveWithObject: true })
@@ -60,8 +63,25 @@ for (const id of ids) {
   }
   copy(join(root, 'assets/cafe-kit', id, `${id}.vtopo`), `${id}/${id}.vtopo`)
   copy(join(root, 'assets/cafe-kit', id, 'review/REVIEW.md'), `${id}/REVIEW.md`)
+  const constructionReview = join(root, 'assets/cafe-kit', id, 'REVIEW.md')
+  if (existsSync(constructionReview)) copy(constructionReview, `${id}/CONSTRUCTION.md`)
+  for (const variant of ['default', 'min', 'max']) {
+    const candidates = [
+      join(root, '.asset-forge/previews', `${id}-controls`, `${variant}.png`),
+      join(root, 'assets/cafe-kit', id, 'controls-renders', `${variant}.png`),
+    ]
+    const source = candidates.find(existsSync)
+    if (!source) continue
+    const { info } = await sharp(source).raw().toBuffer({ resolveWithObject: true })
+    if (info.width < 768 || info.height < 768) throw new Error(`Invalid controls capture: ${source}`)
+    copy(source, `${id}/controls-${variant}.png`)
+  }
 }
 copy(join(root, 'docs/kyoto-kat/CALIBRATION.md'), 'CALIBRATION.md')
+for (const document of ['CONTROLS.md', 'PRODUCTION.md']) {
+  const source = join(root, 'docs/kyoto-kat', document)
+  if (existsSync(source)) copy(source, document)
+}
 if (batch) copy(join(root, 'docs/kyoto-kat/BATCH-01.md'), 'BATCH-01.md')
 if (selected) copy(join(root, 'docs/kyoto-kat/NEXT-11.md'), 'NEXT-11.md')
 writeFileSync(join(destination, 'manifest.json'), JSON.stringify({
@@ -74,5 +94,8 @@ writeFileSync(join(destination, 'manifest.json'), JSON.stringify({
 writeFileSync(join(destination, 'SHA256SUMS'), entries.map((e) => `${e.sha256}  ${e.path}`).join('\n') + '\n')
 writeFileSync(join(destination, 'README.md'), `# Café-kit: ${selected ? 'production batch review' : batch ? 'batch 01 repair review' : 'seven-pilot approval gate'}\n\nNot the completed 50-asset collection. Visual approval is pending.\n\n`
   + ids.map((id) => `## ${id}\n\n![Close view](${id}/${reimported ? 'glb-close.png' : 'close.png'})\n\n[Gameplay view](${id}/${reimported ? 'glb-gameplay.png' : 'gameplay.png'}) · [GLB](${id}/${id}.glb) · [Review](${id}/REVIEW.md)`
-    + (entries.some(e => e.path === `${id}/glb-inspection.png`) ? ` · [Cavity inspection](${id}/glb-inspection.png)` : '') + '\n').join('\n'))
+    + (entries.some(e => e.path === `${id}/glb-inspection.png`) ? ` · [Cavity inspection](${id}/glb-inspection.png)` : '')
+    + (entries.some(e => e.path === `${id}/contrast.png`) ? ` · [Contrast lighting](${id}/contrast.png)` : '')
+    + (entries.some(e => e.path === `${id}/glb-contrast.png`) ? ` · [GLB contrast lighting](${id}/glb-contrast.png)` : '')
+    + ['default', 'min', 'max'].filter(variant => entries.some(e => e.path === `${id}/controls-${variant}.png`)).map(variant => ` · [Shape ${variant}](${id}/controls-${variant}.png)`).join('') + '\n').join('\n'))
 console.log(`Archived ${ids.length} assets, ${entries.length} checksum-verified files: ${destination}`)

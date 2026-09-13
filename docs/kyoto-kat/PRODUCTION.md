@@ -13,8 +13,8 @@ Baseline at `2f0726c`: 22 model sources. Appearance approved: 001–006, 008, 01
 At most two builders; each owns explicitly assigned asset directories. Coordinator owns shared helpers, integration and commits. Serialize GPU/browser renders. Reuse existing palette, material ownership, preview and export tooling.
 
 1. Controls checkpoint: shared owned-wood tint/roughness/reset; entrance opening, chair bow and trolley handle dimensions. Preserve default appearance.
-2. Timber utility: 020 shoe cubby, 021 wall cat walkway, 024 litter enclosure, 027 waste cabinet.
-3. Guest services: 025 adoption cabinet, 026 register counter, 028 coat stand, 030 menu stand.
+2. Timber utility and adoption: 020 shoe cubby, 021 wall cat walkway, 024 litter enclosure, 025 adoption cabinet, 027 waste cabinet. Sources and GLB reimports ready for review; explicit appearance approval pending.
+3. Guest services: 026 register counter, 028 coat stand, 030 menu stand.
 4. Ceramic/cat care: 019 umbrella stand, 022 scratching column, 023 sleeping basket, 029 planter.
 5. Tea and coffee: 031 whisk/holder, 035 wagashi plate, 036 bean jar, 037 grinder.
 6. Service and memory: 038 kettle, 039 tray, 041 adoption ledger, 042 photo display.
@@ -24,6 +24,8 @@ At most two builders; each owns explicitly assigned asset directories. Coordinat
 Each batch: inspect references and original dimensions → early silhouette → finish → affected tests and coplanarity coverage → source and gameplay previews → one bounded critique/correction pass → GLB export/reimport → versioned review package → explicit-path commit. Recurring defects pause expansion until their common cause is repaired. Unresolved visual issues remain visible in the repair queue.
 
 ## Review package
+
+Current source inventory: 27 of 50; 23 remain unstarted. The 15 previously approved appearances remain approved. The seven earlier repairs and five new utility/adoption models require explicit appearance approval. Controls are implemented and tested without changing approved default geometry. Current batch uses an opt-in contrast-lighting review alongside legacy captures; this is not a mobile performance claim.
 
 Use the existing preview pipeline and `scripts/archive-cafe-pilots.ts`. Each batch gets a unique directory under `/Volumes/zug1/kyoto-kat-kit/pilot-review/`, with README, close/gameplay previews, reimport previews, source helpers, topology and checksums. Local drive paths are not remote download links. Present the batch with asset IDs and unresolved findings; record Miguel's approval separately.
 

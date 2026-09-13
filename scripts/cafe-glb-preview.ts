@@ -80,7 +80,8 @@ async function preview(aspect: number, framing: 'close' | 'cafe', pitch?: number
   if (!/^kk-\d{3}-[a-z0-9-]+$/.test(id)) throw new Error('Set KK_GLB_ID to a café-kit asset ID')
   const model = await reimportCafeGlb(await readFile(resolve('dist/cafe-kit-glb', `${id}.glb`)))
   console.log(`Reimported ${id}: ${model.textureCount} texture objects`)
-  return createKkPreview(model, { aspect, framing, pitch })
+  const lighting = process.env.KK_REVIEW_LIGHTING === 'contrast' ? 'contrast' : 'legacy'
+  return createKkPreview(model, { aspect, framing, pitch, lighting })
 }
 export const createPreview = ({ aspect }: { aspect: number }) => preview(aspect, 'close')
 export const createCafePreview = ({ aspect }: { aspect: number }) => preview(aspect, 'cafe')

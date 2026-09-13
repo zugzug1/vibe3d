@@ -47,6 +47,8 @@ export interface KkPreviewOptions {
   /** Ivory receive card. On by default under `cafe`, off under `close`. */
   readonly ground?: boolean
   readonly bloom?: boolean
+  /** Opt-in stronger form separation for production review; legacy captures remain reproducible. */
+  readonly lighting?: 'legacy' | 'contrast'
 }
 
 export interface KkPreviewModel {
@@ -121,6 +123,19 @@ export function createKkPreview(model: KkPreviewModel, options: KkPreviewOptions
   const box = new Box3().setFromObject(model.root as never)
   const centre = box.getCenter(new Vector3())
   const diagonal = Math.max(0.2, box.getSize(new Vector3()).length())
+  if (options.lighting === 'contrast') {
+    model.root.traverse((object) => { if (object instanceof Mesh) { object.castShadow = true; object.receiveShadow = true } })
+    scene.children.forEach((object) => { if (object instanceof HemisphereLight) object.intensity = 0.18 })
+    key.intensity = 1.35; fill.intensity = 0.12; rim.intensity = 0.22
+    key.castShadow = true
+    key.target.position.copy(centre); scene.add(key.target)
+    const extent = Math.max(0.3, diagonal * 0.65)
+    Object.assign(key.shadow.camera, { left: -extent, right: extent, top: extent, bottom: -extent, near: 0.1, far: 60 })
+    key.shadow.camera.updateProjectionMatrix()
+    key.shadow.mapSize.set(2048, 2048)
+    key.shadow.bias = -0.00005
+    extras.push({ dispose: () => key.shadow.dispose() })
+  }
 
   const target: Vec3 = options.target ?? [centre.x, centre.y, centre.z]
   const distance = options.distance ?? (framing === 'cafe' ? CAFE_DISTANCE : diagonal * 1.6)
