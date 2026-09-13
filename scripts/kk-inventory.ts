@@ -25,6 +25,7 @@ const EXCEPTIONS = resolve('docs/kyoto-kat/exceptions.md')
 
 const argv = process.argv.slice(2)
 const check = argv.includes('--check')
+const complete = argv.includes('--complete')
 const writeIdx = argv.indexOf('--write')
 const writeTo = writeIdx >= 0 ? argv[writeIdx + 1] : undefined
 const onlyIdx = argv.indexOf('--only')
@@ -44,7 +45,12 @@ interface Row {
   movable: string[]
   breaches: string[]
   warnings: string[]
+  artifacts: Record<string, string | null>
+  appearance: 'approved' | 'pending'
 }
+
+// Explicit user approvals only; source existence and critic scores are not approval.
+const approved = new Set([1, 2, 3, 4, 5, 6, 8, 11, 12, 16, 17, 32, 33, 34, 40])
 
 const exceptions = new Set<string>(
   existsSync(EXCEPTIONS)
@@ -57,6 +63,8 @@ const ids = readdirSync(KIT_ROOT, { withFileTypes: true })
   .map((d) => d.name)
   .filter((id) => !only || id === only)
   .sort()
+
+if (!ids.length) throw new Error('No matching café model sources; inventory cannot pass empty coverage')
 
 const rows: Row[] = []
 for (const id of ids) {
@@ -103,6 +111,8 @@ for (const id of ids) {
   const budget = TIER_BUDGET[tier]
   const breaches: string[] = []
   const warnings: string[] = []
+  if (!meshes || !Number.isFinite(triangles) || triangles <= 0) breaches.push('empty or invalid geometry')
+  if (![size.x, size.y, size.z].every(value => Number.isFinite(value) && value > 0)) breaches.push('invalid dimensions')
   if (triangles > budget.triangles) breaches.push(`triangles ${Math.round(triangles)} > ${budget.triangles}`)
   else if (triangles > budget.triangles * 0.85) warnings.push(`triangles ${Math.round(triangles)} within 15 % of ${budget.triangles}`)
   const materialCap = tier === 'storytelling' ? 2 : 3
@@ -119,6 +129,21 @@ for (const id of ids) {
 
   const glbPath = join(GLB_ROOT, `${id}.glb`)
   const glbBytes = existsSync(glbPath) ? statSync(glbPath).size : null
+  const candidates = {
+    source: `assets/cafe-kit/${id}/model.ts`,
+    topology: `assets/cafe-kit/${id}/${id}.vtopo`,
+    glb: `dist/cafe-kit-glb/${id}.glb`,
+    preview: `.asset-forge/previews/${id}/latest.png`,
+    gameplay: `.asset-forge/previews/${id}-gameplay/latest.png`,
+    reimport: `.asset-forge/previews/${id}-glb/latest.png`,
+    reimportGameplay: `.asset-forge/previews/${id}-glb-gameplay/latest.png`,
+    review: `assets/cafe-kit/${id}/review/REVIEW.md`,
+  }
+  const artifacts = Object.fromEntries(Object.entries(candidates).map(([key, path]) =>
+    [key, existsSync(resolve(path)) ? path : null]))
+  if (complete) for (const [key, path] of Object.entries(artifacts)) {
+    if (!path) breaches.push(`missing ${key}`)
+  }
 
   rows.push({
     id,
@@ -134,6 +159,8 @@ for (const id of ids) {
     movable,
     breaches,
     warnings,
+    artifacts,
+    appearance: approved.has(Number(id.slice(3, 6))) ? 'approved' : 'pending',
   })
   model.dispose()
 }
@@ -164,7 +191,12 @@ if (writeTo) {
 }
 
 const failed = rows.filter((row) => row.breaches.length)
-if (check && failed.length) {
+if (complete && (only || rows.length !== 50 || new Set(rows.map(row => row.id.slice(0, 6))).size !== 50
+  || rows.some(row => Number(row.id.slice(3, 6)) < 1 || Number(row.id.slice(3, 6)) > 50))) {
+  console.error('Complete inventory requires all 50 distinct asset IDs; do not use --only.')
+  process.exitCode = 1
+}
+if ((check || complete) && failed.length) {
   console.error(`\n${failed.length} model(s) breach their tier budget: ${failed.map((row) => row.id).join(', ')}`)
   process.exit(1)
 }
