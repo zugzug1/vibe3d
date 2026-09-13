@@ -148,6 +148,26 @@ code { font-family: "SFMono-Regular", Consolas, monospace; }
 .pit-link-button { left: 15px; }
 .export-button:hover, .pit-link-button:hover { background: #1a2128; }
 .export-button:disabled { opacity: .6; }
+.preview-status { position: absolute; inset: 50% auto auto 50%; z-index: 3; max-width: calc(100% - 32px); padding: 10px 14px; transform: translate(-50%, -50%); border: 1px solid #3c4650; border-radius: 8px; color: #e6e9ec; background: rgba(12,15,18,.88); font-size: 12px; text-align: center; }
+.preview-status--error { color: #ffd5d5; border-color: #a65353; }
+.cafe-finish-controls { position: absolute; top: 15px; left: 15px; z-index: 2; min-width: 190px; margin: 0; padding: 10px 12px 12px; display: grid; gap: 9px; border: 1px solid #3c4650; border-radius: 8px; color: #e6e9ec; background: rgba(12,15,18,.88); backdrop-filter: blur(10px); font-size: 12px; }
+.cafe-finish-controls legend { padding: 0 4px; font-weight: 650; }
+.cafe-finish-controls label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.cafe-finish-controls input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #c98d68; }
+.cafe-finish-controls input[type="color"] { width: 34px; height: 24px; padding: 0; border: 1px solid #65717c; border-radius: 4px; background: transparent; }
+.cafe-finish-controls output { color: #c9cfd6; font-variant-numeric: tabular-nums; }
+.cafe-finish-controls button { min-height: 30px; border: 1px solid #3c4650; border-radius: 6px; color: #e6e9ec; background: #1a2128; font: inherit; cursor: pointer; }
+.cafe-finish-controls button:hover { background: #26313b; }
+.cafe-finish-controls button:disabled { opacity: .6; cursor: default; }
+.cafe-finish-error { color: #ffd5d5; }
+.cafe-shape-controls { position: absolute; top: 15px; right: 15px; z-index: 2; min-width: 230px; margin: 0; padding: 10px 12px 12px; display: grid; gap: 9px; border: 1px solid #3c4650; border-radius: 8px; color: #e6e9ec; background: rgba(12,15,18,.88); backdrop-filter: blur(10px); font-size: 12px; }
+.cafe-shape-controls legend { padding: 0 4px; font-weight: 650; }
+.cafe-shape-controls label { display: grid; grid-template-columns: 1fr auto; align-items: center; gap: 8px; }
+.cafe-shape-controls input[type="range"] { grid-column: 1 / -1; width: 100%; accent-color: #a7f3cf; }
+.cafe-shape-controls output { color: #c9cfd6; font-variant-numeric: tabular-nums; }
+.cafe-shape-controls button { min-height: 30px; border: 1px solid #3c4650; border-radius: 6px; color: #e6e9ec; background: #1a2128; font: inherit; cursor: pointer; }
+.cafe-shape-controls button:hover { background: #26313b; }
+.cafe-shape-controls button:disabled { opacity: .6; cursor: default; }
 .reference-section { margin-top: 72px; scroll-margin-top: 92px; }
 
 .pit-inspect-page {

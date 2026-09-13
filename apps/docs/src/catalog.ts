@@ -1,5 +1,6 @@
 import { categoryFromId as f1CategoryFromId } from '../../../registries/f1-kit/src/categories.ts'
 import { categoryFromId as kkCategoryFromId } from '../../../registries/cafe-kit/src/categories.ts'
+import type { CafeShapeConfig, ShapeControls } from '../../../assets/cafe-kit/kk-core/shape-controls.ts'
 
 export interface CatalogModel {
   id: string
@@ -19,8 +20,17 @@ export interface ModelPreview {
   dispose(): void
 }
 
+export interface CafeShapeInstance {
+  readonly root: import('three/webgpu').Group
+  getConfig(): Readonly<CafeShapeConfig>
+  configure(patch: Partial<CafeShapeConfig>): void
+  dispose(): void
+}
+
 export interface ModelModule {
   createPreview(options: { aspect: number; time?: number }): ModelPreview | Promise<ModelPreview>
+  cafeShapeControls?: ShapeControls
+  createModel?: () => CafeShapeInstance
 }
 
 const modules = {

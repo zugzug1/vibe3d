@@ -82,10 +82,16 @@ import {
 } from '../kk-core/index.ts'
 
 const ID = 'kk-012-spindle-back-chair'
+import { shapeConfig, finiteOption, type CafeShapeConfig, type ShapeControls } from '../kk-core/shape-controls.ts'
+export const cafeShapeControls = {
+  archSpan: { min: 0.30, max: 0.35, default: 0.336, step: 0.002, label: 'Bow centreline span (m)' },
+  archRise: { min: 0.34, max: 0.49, default: 0.421, step: 0.005, label: 'Bow centreline rise (m)' },
+  archThickness: { min: 0.024, max: 0.032, default: 0.028, step: 0.001, label: 'Bow diameter (m)' },
+} as const satisfies ShapeControls
 
 type Slot = 'cedar' | 'cedarDark'
 
-export interface KkSpindleChairConfig {
+export interface KkSpindleChairConfig extends CafeShapeConfig {
   /** Spindles between the bow's stiles. 3–7; the reference reads as five. */
   spindles: number
   /** How far the bow's crown leans back per metre of rise. */
@@ -107,7 +113,7 @@ export interface KkSpindleChairInstance {
   dispose(): void
 }
 
-const defaults: KkSpindleChairConfig = { spindles: 5, rake: 0.25 }
+const defaults: KkSpindleChairConfig = { ...shapeConfig(cafeShapeControls, {}), spindles: 5, rake: 0.25 }
 
 // --- the datum, in metres ----------------------------------------------------------------------------
 
@@ -132,7 +138,6 @@ const SEAT_BACK = -0.185
 /** Bow. Vertical stiles tangent into a semicircular crown; the whole plane rakes back. */
 const CROWN_Y = 0.668
 const CROWN_R = 0.168
-const BOW_R = 0.014
 const BOW_FOOT_X = 0.168
 const BOW_FOOT_Y = 0.415
 const BOW_Z0 = -0.145
@@ -259,7 +264,7 @@ function seatOutline(samples: number): Pt[] {
  * hoop reads as one bent stick, not two sticks and a kink), then a semicircular crown, then the mirror.
  * The whole plane is raked back about the seat.
  */
-function bowPath(rake: number): Vector3[] {
+function bowPath(rake: number, span: number, rise: number): Vector3[] {
   const plane = (u: number, y: number): Vector3 => new Vector3(u, y, BOW_Z0 + rake * (SEAT_TOP - y))
   const stileRun = CROWN_Y - BOW_FOOT_Y
   const flare = BOW_FOOT_X - CROWN_R
@@ -275,6 +280,11 @@ function bowPath(rake: number): Vector3[] {
     path.push(plane(CROWN_R * Math.cos(a), CROWN_Y + CROWN_R * Math.sin(a)))
   }
   for (let i = stileYs.length - 1; i >= 0; i--) path.push(plane(stileX(stileYs[i]!), stileYs[i]!))
+  for (const point of path) {
+    point.x *= span / defaults.archSpan
+    point.y = BOW_FOOT_Y + (point.y - BOW_FOOT_Y) * (rise / defaults.archRise)
+    point.z = BOW_Z0 + rake * (SEAT_TOP - point.y)
+  }
   return path
 }
 
@@ -333,13 +343,14 @@ function sweepTube(path: Vector3[], radius: number, radial: number, segments: nu
 
 export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChairInstance {
   const config: KkSpindleChairConfig = {
-    spindles: Math.min(7, Math.max(3, Math.round(options.spindles ?? defaults.spindles))),
-    rake: Math.min(0.4, Math.max(0, options.rake ?? defaults.rake)),
+    ...shapeConfig(cafeShapeControls, options),
+    spindles: Math.min(7, Math.max(3, Math.round(finiteOption(options.spindles ?? defaults.spindles, 'spindles')))),
+    rake: Math.min(0.4, Math.max(0, finiteOption(options.rake ?? defaults.rake, 'rake'))),
   }
 
-  const bundle = acquireKkMaterials({ overrides: options.materials })
+  const bundle = acquireKkMaterials()
   const kit = bundle.materials
-  const materialSlots: Record<Slot, Material> = { cedar: kit.cedar, cedarDark: kit.cedarDark }
+  const materialSlots: Record<Slot, Material> = { cedar: options.materials?.cedar ?? kit.cedar, cedarDark: options.materials?.cedarDark ?? kit.cedarDark }
 
   // One shared 256 px grain map across BOTH cedar slots. It has to be both or neither: the map multiplies
   // its slot's base colour, so mapping only the seat sank it a full value step below the frame and
@@ -359,6 +370,8 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
   const back = new Group(); back.name = 'back'
   const legs = new Group(); legs.name = 'legs'
   root.add(seat, back, legs)
+  const content = new Map([seat, back, legs].map(part => { const group = new Group(); part.add(group); return [part, group] as const }))
+  let disposed = false
 
   const generated: BufferGeometry[] = []
   const meshesBySlot: Record<Slot, Mesh[]> = { cedar: [], cedarDark: [] }
@@ -370,11 +383,11 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
     mesh.castShadow = true
     mesh.receiveShadow = true
     meshesBySlot[slot].push(mesh)
-    group.add(mesh)
+    content.get(group)!.add(mesh)
   }
 
   const release = (): void => {
-    seat.clear(); back.clear(); legs.clear()
+    content.forEach(group => group.clear())
     for (const geometry of generated) geometry.dispose()
     generated.length = 0
     meshesBySlot.cedar.length = 0
@@ -392,7 +405,7 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
 
     // Back — one bent hoop and the turned spindles that land on its centreline.
     const backParts: BufferGeometry[] = []
-    backParts.push(sweepTube(bowPath(config.rake), BOW_R, BOW_RADIAL, 60))
+    backParts.push(sweepTube(bowPath(config.rake, config.archSpan, config.archRise), config.archThickness / 2, BOW_RADIAL, 60))
     const count = config.spindles
     for (let i = 0; i < count; i++) {
       const f = count === 1 ? 0 : (i / (count - 1)) * 2 - 1
@@ -407,8 +420,10 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
       const landing = SPINDLE_LANDING_R * SPINDLE_LANDING_R - x * x
       if (landing <= 0) throw new Error(`${ID}: spindle ${i} at x=${x} cannot reach the bow`)
       const topY = CROWN_Y + Math.sqrt(landing)
-      const from = new Vector3(x, SPINDLE_FOOT_Y, BOW_Z0 + config.rake * (SEAT_TOP - SPINDLE_FOOT_Y))
-      const to = new Vector3(x, topY, BOW_Z0 + config.rake * (SEAT_TOP - topY))
+      const scaledX = x * (config.archSpan / defaults.archSpan)
+      const scaledTopY = BOW_FOOT_Y + (topY - BOW_FOOT_Y) * (config.archRise / defaults.archRise)
+      const from = new Vector3(scaledX, SPINDLE_FOOT_Y, BOW_Z0 + config.rake * (SEAT_TOP - SPINDLE_FOOT_Y))
+      const to = new Vector3(scaledX, scaledTopY, BOW_Z0 + config.rake * (SEAT_TOP - scaledTopY))
       const length = from.distanceTo(to)
       backParts.push(alongAxis(
         revolve(SPINDLE_PROFILE, { yBot: 0, yTop: length, segments: LATHE_SEGMENTS }), from, to,
@@ -446,18 +461,22 @@ export function createModel(options: KkSpindleChairOptions = {}): KkSpindleChair
     materials: materialSlots,
     getConfig: () => ({ ...config }),
     configure(patch) {
-      if (patch.spindles !== undefined) {
-        config.spindles = Math.min(7, Math.max(3, Math.round(patch.spindles)))
-      }
-      if (patch.rake !== undefined) config.rake = Math.min(0.4, Math.max(0, patch.rake))
+      if (disposed) return
+      const next = { ...config, ...shapeConfig(cafeShapeControls, patch, config),
+        spindles: Math.min(7, Math.max(3, Math.round(finiteOption(patch.spindles ?? config.spindles, 'spindles')))),
+        rake: Math.min(0.4, Math.max(0, finiteOption(patch.rake ?? config.rake, 'rake'))) }
+      Object.assign(config, next)
       rebuild()
     },
     setMaterial(slot, material) {
+      if (disposed) return
       materialSlots[slot] = material
       for (const mesh of meshesBySlot[slot]) mesh.material = material
     },
     update: () => {},
     dispose() {
+      if (disposed) return
+      disposed = true
       finished.dispose()
       grain?.dispose()
       grain = undefined
